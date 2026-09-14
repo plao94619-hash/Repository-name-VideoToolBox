@@ -73,7 +73,7 @@ jobs:
           }
           Copy-Item $ffmpeg.FullName "tools\ffmpeg.exe"
           Copy-Item $ffprobe.FullName "tools\ffprobe.exe"
-          Invoke-WebRequest -Uri "https://www.gnu.org/licenses/gpl-3.0.txt" -OutFile "tools\FFmpeg-GPL-3.0.txt"
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/FFmpeg/FFmpeg/master/COPYING.GPLv3" -OutFile "tools\FFmpeg-GPL-3.0.txt"
           & "tools\ffmpeg.exe" -version
           & "tools\ffprobe.exe" -version
 
