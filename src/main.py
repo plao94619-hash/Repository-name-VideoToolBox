@@ -763,7 +763,8 @@ class MainWindow(QMainWindow):
 
 def run_self_test() -> int:
     ok, message = self_test()
-    print(message)
+    safe_message = message.encode("ascii", errors="backslashreplace").decode("ascii")
+    print(safe_message)
     return 0 if ok else 1
 
 
