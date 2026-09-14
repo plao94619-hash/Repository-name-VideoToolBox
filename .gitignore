@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+build/
+dist/
+release/
+tools/*.exe
+tools/*.dll
+assets/app.ico
+.pytest_cache/
