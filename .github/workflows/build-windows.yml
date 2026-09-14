@@ -92,9 +92,9 @@ jobs:
           if (-not (Test-Path $exe)) {
             throw "Packaged executable was not created."
           }
-          & $exe --self-test
-          if ($LASTEXITCODE -ne 0) {
-            throw "Packaged application self-test failed."
+          $process = Start-Process -FilePath $exe -ArgumentList "--self-test" -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            throw "Packaged application self-test failed with exit code $($process.ExitCode)."
           }
 
       - name: Install Inno Setup
