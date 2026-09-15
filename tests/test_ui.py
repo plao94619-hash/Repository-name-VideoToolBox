@@ -78,3 +78,66 @@ class LanguageUITests(unittest.TestCase):
         self.assertEqual(self.window.mode_combo.currentData(), MODE_EXTRACT)
         self.assertEqual(self.window.target_combo.currentData(), RAW_AUDIO)
         self.assertEqual(self.window.start_button.text(), "Start")
+
+    def test_theme_and_saved_geometry_do_not_change_task_settings(self):
+        self.window.theme_combo.setCurrentIndex(self.window.theme_combo.findData("dark"))
+        self.assertEqual(self.window.theme, "dark")
+        self.assertEqual(self.window.effective_theme, "dark")
+        self.assertEqual(self.settings.value("appearance/theme"), "dark")
+        self.assertEqual(self.window.mode_combo.currentData(), MODE_EXTRACT)
+        self.window.resize(860, 640)
+        self.window._save_settings()
+        self.assertIsNotNone(self.settings.value("window/geometry"))
+        self.window.close()
+        with patch("main.QSettings", return_value=self.settings):
+            self.window = MainWindow()
+        self.addCleanup(self.window.close)
+        self.assertEqual(self.window.theme_combo.currentData(), "dark")
+        self.assertEqual(self.window.mode_combo.currentData(), MODE_EXTRACT)
+        self.assertEqual(self.window.target_combo.currentData(), RAW_AUDIO)
+
+    def test_result_path_and_full_error_details_are_accessible(self):
+        source = self.root / "clip.mp4"
+        source.write_bytes(b"test")
+        self.window._add_paths([source])
+        result = str(self.root / "clip_audio.m4a")
+        self.window._item_finished(0, True, "Completed", result)
+        self.window._table_double_clicked(0, 4)
+        self.assertEqual(QApplication.clipboard().text(), result)
+        self.assertEqual(self.window.table.item(0, 4).text(), "clip_audio.m4a")
+        self.window._item_finished(0, False, "FFmpeg: full diagnostic text", "")
+        self.assertEqual(self.window._error_details_box(0).detailedText(),
+                         "FFmpeg: full diagnostic text")
+
+    def test_narrow_layout_keeps_controls_visible_in_all_languages(self):
+        self.window.mode_combo.setCurrentIndex(self.window.mode_combo.findData("视频格式转换"))
+        self.window.resize(850, 640)
+        self.window.show()
+        for locale in ("en_US", "zh_TW", "zh_CN"):
+            self.window.language_combo.setCurrentIndex(
+                self.window.language_combo.findData(locale))
+            QApplication.processEvents()
+            self.assertEqual(self.window.field_columns, 2)
+            self.assertTrue(self.window.start_button.isVisible())
+            self.assertTrue(self.window.output_edit.isVisible())
+            self.assertGreaterEqual(self.window.output_edit.width(), 300)
+            self.assertGreaterEqual(self.window.mode_combo.width(), 190)
+            for button in (self.window.add_files_button, self.window.add_folder_button,
+                           self.window.remove_button, self.window.clear_button,
+                           self.window.start_button):
+                self.assertGreaterEqual(button.width(),
+                                        button.fontMetrics().horizontalAdvance(button.text()) + 16,
+                                        f"{locale}: {button.text()}")
+            preview_dir = os.environ.get("UI_SCREENSHOT_DIR")
+            if preview_dir:
+                Path(preview_dir).mkdir(parents=True, exist_ok=True)
+                self.window.grab().save(str(Path(preview_dir) / f"ui-{locale}-light.png"))
+                self.window.theme_combo.setCurrentIndex(
+                    self.window.theme_combo.findData("dark"))
+                QApplication.processEvents()
+                self.window.grab().save(str(Path(preview_dir) / f"ui-{locale}-dark.png"))
+                self.window.theme_combo.setCurrentIndex(
+                    self.window.theme_combo.findData("light"))
+        self.window.resize(1200, 800)
+        QApplication.processEvents()
+        self.assertEqual(self.window.field_columns, 3)

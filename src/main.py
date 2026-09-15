@@ -6,13 +6,12 @@ from pathlib import Path
 from threading import Event
 
 from PySide6.QtCore import QObject, QLocale, QSettings, QThread, QUrl, Qt, Signal, Slot
-from PySide6.QtGui import QAction, QCloseEvent, QDesktopServices, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QAction, QBrush, QColor, QCloseEvent, QDesktopServices, QDragEnterEvent, QDropEvent, QGuiApplication, QResizeEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QComboBox,
     QFileDialog,
-    QFormLayout,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -20,9 +19,11 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMenu,
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QStatusBar,
     QTableWidget,
@@ -53,111 +54,7 @@ from version import APP_NAME, APP_VERSION
 from i18n import (
     LANGUAGE_LABELS, SUPPORTED_LANGUAGES, language_for_system_locale, translate,
 )
-
-
-APP_STYLE = """
-QMainWindow, QWidget {
-    background: #f6f8fb;
-    color: #172033;
-    font-family: "Microsoft YaHei UI", "Segoe UI";
-    font-size: 13px;
-}
-QFrame#HeroCard {
-    background: #16233f;
-    border-radius: 16px;
-}
-QLabel#HeroTitle {
-    color: white;
-    font-size: 26px;
-    font-weight: 700;
-}
-QLabel#HeroSubtitle {
-    color: #b9c8e6;
-    font-size: 13px;
-}
-QFrame#Panel {
-    background: white;
-    border: 1px solid #e3e8f1;
-    border-radius: 12px;
-}
-QPushButton {
-    min-height: 34px;
-    padding: 0 16px;
-    border: 1px solid #d4dbe7;
-    border-radius: 8px;
-    background: white;
-    color: #24324a;
-    font-weight: 600;
-}
-QPushButton:hover {
-    background: #f0f5ff;
-    border-color: #8eb2ff;
-}
-QPushButton:pressed {
-    background: #e5eeff;
-}
-QPushButton:disabled {
-    color: #a4adbb;
-    background: #f1f3f6;
-    border-color: #e1e5eb;
-}
-QPushButton#PrimaryButton {
-    background: #2864dc;
-    color: white;
-    border: none;
-    min-height: 42px;
-    font-size: 14px;
-}
-QPushButton#PrimaryButton:hover {
-    background: #1f56c5;
-}
-QPushButton#DangerButton {
-    color: #b42318;
-}
-QComboBox, QLineEdit {
-    min-height: 34px;
-    padding: 0 10px;
-    background: white;
-    border: 1px solid #d6dde9;
-    border-radius: 7px;
-}
-QComboBox:focus, QLineEdit:focus {
-    border: 1px solid #4b83eb;
-}
-QTableWidget {
-    background: white;
-    alternate-background-color: #f8faff;
-    border: 1px solid #e0e6ef;
-    border-radius: 8px;
-    gridline-color: #edf0f5;
-    selection-background-color: #dce9ff;
-    selection-color: #172033;
-}
-QHeaderView::section {
-    background: #eef3fa;
-    color: #3e4d66;
-    border: none;
-    border-bottom: 1px solid #dbe2ec;
-    padding: 8px;
-    font-weight: 600;
-}
-QProgressBar {
-    min-height: 16px;
-    border: none;
-    border-radius: 7px;
-    background: #e8edf5;
-    text-align: center;
-    color: #172033;
-}
-QProgressBar::chunk {
-    border-radius: 7px;
-    background: #3a75df;
-}
-QStatusBar {
-    background: white;
-    border-top: 1px solid #e2e7ef;
-}
-"""
+from ui_theme import COLORS, make_palette, make_stylesheet
 
 
 def readable_size(size: int) -> str:
@@ -227,8 +124,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"{APP_NAME} {APP_VERSION}")
-        self.setMinimumSize(980, 680)
-        self.resize(1120, 760)
+        self.setMinimumSize(850, 600)
+        self.resize(1200, 800)
         self.setAcceptDrops(True)
 
         self.settings = QSettings("UniversalMediaToolbox", "UniversalMediaToolbox")
@@ -239,6 +136,8 @@ class MainWindow(QMainWindow):
         saved_locale = str(self.settings.value(
             "locale", language_for_system_locale(preferred_locale)))
         self.language = saved_locale if saved_locale in SUPPORTED_LANGUAGES else "zh_CN"
+        saved_theme = str(self.settings.value("appearance/theme", "system"))
+        self.theme = saved_theme if saved_theme in {"system", "light", "dark"} else "system"
         self.worker: BatchWorker | None = None
         self.worker_thread: QThread | None = None
         self.progress_bars: dict[int, QProgressBar] = {}
@@ -252,6 +151,12 @@ class MainWindow(QMainWindow):
         if target_index >= 0:
             self.target_combo.setCurrentIndex(target_index)
         self._retranslate_ui()
+        geometry = self.settings.value("window/geometry")
+        if geometry is not None:
+            self.restoreGeometry(geometry)
+        QGuiApplication.styleHints().colorSchemeChanged.connect(self._apply_theme)
+        self._set_os_theme_preference()
+        self._apply_theme()
         self.statusBar().showMessage(self._t("就绪：可直接拖入音频或视频文件"))
 
     def _t(self, key: str, **values: object) -> str:
@@ -275,6 +180,49 @@ class MainWindow(QMainWindow):
         self._retranslate_ui()
         self.statusBar().showMessage(self._t("就绪：可直接拖入音频或视频文件"))
 
+    @Slot(int)
+    def _change_theme(self, _index: int) -> None:
+        selected = self.theme_combo.currentData()
+        if selected not in {"system", "light", "dark"} or selected == self.theme:
+            return
+        self.theme = selected
+        self.settings.setValue("appearance/theme", selected)
+        self._set_os_theme_preference()
+        self._apply_theme()
+
+    def _set_os_theme_preference(self) -> None:
+        scheme = {
+            "system": Qt.ColorScheme.Unknown,
+            "light": Qt.ColorScheme.Light,
+            "dark": Qt.ColorScheme.Dark,
+        }[self.theme]
+        QGuiApplication.styleHints().setColorScheme(scheme)
+
+    @Slot()
+    def _apply_theme(self, *_args: object) -> None:
+        system_dark = QGuiApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark
+        effective = self.theme if self.theme != "system" else ("dark" if system_dark else "light")
+        self.effective_theme = effective
+        app = QApplication.instance()
+        if app:
+            app.setPalette(make_palette(effective))
+            app.setStyleSheet(make_stylesheet(effective))
+        self._refresh_status_colors()
+
+    def _refresh_status_colors(self) -> None:
+        color = COLORS.get(getattr(self, "effective_theme", "light"), COLORS["light"])
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 3)
+            if item:
+                state = item.data(Qt.ItemDataRole.UserRole)
+                if state in ("success", "failed"):
+                    item.setForeground(QBrush(QColor(color["success" if state == "success" else "error"])))
+
+    def _set_task_state(self, state: str) -> None:
+        self.overall_label.setProperty("state", state)
+        self.overall_label.style().unpolish(self.overall_label)
+        self.overall_label.style().polish(self.overall_label)
+
     def _retranslate_ui(self) -> None:
         self.setWindowTitle(f"{self._t(APP_NAME)} {APP_VERSION}")
         for action, key in (
@@ -291,6 +239,11 @@ class MainWindow(QMainWindow):
             (self.hero_title, APP_NAME),
             (self.hero_subtitle, "格式转换 · 无损提取音轨 · 画质优先压缩 · 极限压缩"),
             (self.language_label, "语言"),
+            (self.theme_label, "外观"),
+            (self.files_title, "待处理文件"),
+            (self.files_hint, "将文件或文件夹拖入此处，或使用下方按钮添加"),
+            (self.options_title, "处理设置"),
+            (self.options_hint, "按任务需要选择输出格式与质量"),
             (self.add_files_button, "＋ 添加文件"),
             (self.add_folder_button, "添加文件夹"),
             (self.remove_button, "移除选中"),
@@ -307,6 +260,8 @@ class MainWindow(QMainWindow):
             (self.start_button, "开始处理"),
         ):
             widget.setText(self._t(key))
+        for index, key in enumerate(("跟随系统", "浅色", "深色")):
+            self.theme_combo.setItemText(index, self._t(key))
         for combo in (
             self.mode_combo, self.target_combo, self.quality_combo,
             self.encoder_combo, self.resolution_combo,
@@ -358,40 +313,76 @@ class MainWindow(QMainWindow):
     def _build_ui(self) -> None:
         central = QWidget()
         root = QVBoxLayout(central)
-        root.setContentsMargins(22, 18, 22, 18)
-        root.setSpacing(14)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        self.content_scroll = QScrollArea()
+        self.content_scroll.setObjectName("ContentScroll")
+        self.content_scroll.setWidgetResizable(True)
+        self.content_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.content_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        content = QWidget()
+        content.setObjectName("Content")
+        content_root = QVBoxLayout(content)
+        content_root.setContentsMargins(22, 18, 22, 18)
+        content_root.setSpacing(14)
 
         hero = QFrame()
-        hero.setObjectName("HeroCard")
+        hero.setObjectName("HeaderPanel")
         hero_layout = QVBoxLayout(hero)
-        hero_layout.setContentsMargins(24, 18, 24, 18)
+        hero_layout.setContentsMargins(22, 16, 22, 16)
+        hero_layout.setSpacing(5)
         hero_top = QHBoxLayout()
         self.hero_title = QLabel(self._t(APP_NAME))
-        self.hero_title.setObjectName("HeroTitle")
+        self.hero_title.setObjectName("AppTitle")
         hero_top.addWidget(self.hero_title)
         hero_top.addStretch()
         self.language_label = QLabel(self._t("语言"))
-        self.language_label.setObjectName("HeroSubtitle")
+        self.language_label.setObjectName("FieldLabel")
         hero_top.addWidget(self.language_label)
         self.language_combo = QComboBox()
         for locale in SUPPORTED_LANGUAGES:
             self.language_combo.addItem(LANGUAGE_LABELS[locale], locale)
         self.language_combo.setCurrentIndex(self.language_combo.findData(self.language))
-        self.language_combo.setMinimumWidth(140)
+        self.language_combo.setMinimumWidth(124)
         self.language_combo.currentIndexChanged.connect(self._change_language)
         hero_top.addWidget(self.language_combo)
+        hero_top.addSpacing(12)
+        self.theme_label = QLabel(self._t("外观"))
+        self.theme_label.setObjectName("FieldLabel")
+        hero_top.addWidget(self.theme_label)
+        self.theme_combo = QComboBox()
+        for value, key in (("system", "跟随系统"), ("light", "浅色"), ("dark", "深色")):
+            self.theme_combo.addItem(self._t(key), value)
+        self.theme_combo.setCurrentIndex(self.theme_combo.findData(self.theme))
+        self.theme_combo.setMinimumWidth(124)
+        self.theme_combo.currentIndexChanged.connect(self._change_theme)
+        hero_top.addWidget(self.theme_combo)
         self.hero_subtitle = QLabel(self._t(
             "格式转换 · 无损提取音轨 · 画质优先压缩 · 极限压缩"))
-        self.hero_subtitle.setObjectName("HeroSubtitle")
+        self.hero_subtitle.setObjectName("AppSubtitle")
+        self.hero_subtitle.setWordWrap(True)
         hero_layout.addLayout(hero_top)
         hero_layout.addWidget(self.hero_subtitle)
-        root.addWidget(hero)
+        content_root.addWidget(hero)
 
         file_panel = QFrame()
         file_panel.setObjectName("Panel")
         file_layout = QVBoxLayout(file_panel)
-        file_layout.setContentsMargins(14, 14, 14, 14)
-        file_layout.setSpacing(10)
+        file_layout.setContentsMargins(18, 16, 18, 18)
+        file_layout.setSpacing(12)
+        file_heading = QHBoxLayout()
+        self.files_title = QLabel(self._t("待处理文件"))
+        self.files_title.setObjectName("SectionTitle")
+        file_heading.addWidget(self.files_title)
+        file_heading.addStretch()
+        self.file_count_label = QLabel(self._t("{count} 个文件", count=0))
+        self.file_count_label.setObjectName("FileCount")
+        file_heading.addWidget(self.file_count_label)
+        file_layout.addLayout(file_heading)
+        self.files_hint = QLabel(self._t("将文件或文件夹拖入此处，或使用下方按钮添加"))
+        self.files_hint.setObjectName("SectionHint")
+        self.files_hint.setWordWrap(True)
+        file_layout.addWidget(self.files_hint)
 
         toolbar = QHBoxLayout()
         self.add_files_button = QPushButton(self._t("＋ 添加文件"))
@@ -408,8 +399,6 @@ class MainWindow(QMainWindow):
         toolbar.addWidget(self.remove_button)
         toolbar.addWidget(self.clear_button)
         toolbar.addStretch()
-        self.file_count_label = QLabel(self._t("{count} 个文件", count=0))
-        toolbar.addWidget(self.file_count_label)
         file_layout.addLayout(toolbar)
 
         self.table = QTableWidget(0, 5)
@@ -420,23 +409,37 @@ class MainWindow(QMainWindow):
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self._table_context_menu)
+        self.table.cellDoubleClicked.connect(self._table_double_clicked)
         self.table.verticalHeader().setVisible(False)
         self.table.setShowGrid(False)
+        self.table.verticalHeader().setDefaultSectionSize(43)
+        self.table.setMinimumHeight(230)
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
-        file_layout.addWidget(self.table)
-        root.addWidget(file_panel, 1)
+        file_layout.addWidget(self.table, 1)
+        content_root.addWidget(file_panel, 1)
 
         options_panel = QFrame()
         options_panel.setObjectName("Panel")
-        options_layout = QGridLayout(options_panel)
-        options_layout.setContentsMargins(16, 14, 16, 14)
-        options_layout.setHorizontalSpacing(16)
-        options_layout.setVerticalSpacing(10)
+        options_root = QVBoxLayout(options_panel)
+        options_root.setContentsMargins(18, 16, 18, 18)
+        options_root.setSpacing(12)
+        self.options_title = QLabel(self._t("处理设置"))
+        self.options_title.setObjectName("SectionTitle")
+        options_root.addWidget(self.options_title)
+        self.options_hint = QLabel(self._t("按任务需要选择输出格式与质量"))
+        self.options_hint.setObjectName("SectionHint")
+        options_root.addWidget(self.options_hint)
+        self.fields_layout = QGridLayout()
+        self.fields_layout.setHorizontalSpacing(16)
+        self.fields_layout.setVerticalSpacing(8)
+        options_root.addLayout(self.fields_layout)
 
         self.mode_combo = QComboBox()
         for item in (MODE_VIDEO, MODE_AUDIO, MODE_EXTRACT, MODE_COMPRESS):
@@ -457,26 +460,26 @@ class MainWindow(QMainWindow):
         self.target_combo.currentIndexChanged.connect(self._update_quality_hint)
 
         self.mode_label = QLabel(self._t("任务类型"))
-        options_layout.addWidget(self.mode_label, 0, 0)
-        options_layout.addWidget(self.mode_combo, 1, 0)
         self.target_label = QLabel(self._t("输出格式"))
-        options_layout.addWidget(self.target_label, 0, 1)
-        options_layout.addWidget(self.target_combo, 1, 1)
         self.quality_label = QLabel(self._t("质量方案"))
-        options_layout.addWidget(self.quality_label, 0, 2)
-        options_layout.addWidget(self.quality_combo, 1, 2)
-
         self.encoder_label = QLabel(self._t("视频编码"))
         self.resolution_label = QLabel(self._t("分辨率限制"))
-        options_layout.addWidget(self.encoder_label, 2, 0)
-        options_layout.addWidget(self.encoder_combo, 3, 0)
-        options_layout.addWidget(self.resolution_label, 2, 1)
-        options_layout.addWidget(self.resolution_combo, 3, 1)
+        self.field_pairs = (
+            (self.mode_label, self.mode_combo),
+            (self.target_label, self.target_combo),
+            (self.quality_label, self.quality_combo),
+            (self.encoder_label, self.encoder_combo),
+            (self.resolution_label, self.resolution_combo),
+        )
+        for label, combo in self.field_pairs:
+            label.setObjectName("FieldLabel")
+            combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._adapt_columns()
 
         self.quality_hint = QLabel()
         self.quality_hint.setWordWrap(True)
-        self.quality_hint.setStyleSheet("color:#68758b; padding:4px 0;")
-        options_layout.addWidget(self.quality_hint, 3, 2)
+        self.quality_hint.setObjectName("SecondaryText")
+        options_root.addWidget(self.quality_hint)
 
         self.output_label = QLabel(self._t("输出文件夹"))
         self.output_edit = QLineEdit()
@@ -486,34 +489,74 @@ class MainWindow(QMainWindow):
         self.browse_output_button.clicked.connect(self.choose_output_dir)
         self.open_output_button.clicked.connect(self.open_output_dir)
 
-        options_layout.addWidget(self.output_label, 4, 0)
-        options_layout.addWidget(self.output_edit, 5, 0, 1, 2)
+        self.output_label.setObjectName("FieldLabel")
+        options_root.addWidget(self.output_label)
         output_buttons = QHBoxLayout()
+        output_buttons.setSpacing(8)
+        output_buttons.addWidget(self.output_edit, 1)
         output_buttons.addWidget(self.browse_output_button)
         output_buttons.addWidget(self.open_output_button)
-        options_layout.addLayout(output_buttons, 5, 2)
+        options_root.addLayout(output_buttons)
 
-        root.addWidget(options_panel)
+        content_root.addWidget(options_panel)
+        self.content_scroll.setWidget(content)
+        root.addWidget(self.content_scroll, 1)
 
+        action_panel = QFrame()
+        action_panel.setObjectName("ActionPanel")
+        action_panel_layout = QVBoxLayout(action_panel)
+        action_panel_layout.setContentsMargins(22, 12, 22, 12)
+        action_panel_layout.setSpacing(7)
         action_bar = QHBoxLayout()
         self.overall_label = QLabel(self._t("等待任务"))
-        self.overall_label.setStyleSheet("color:#5f6d83;")
+        self.overall_label.setObjectName("TaskState")
+        self.overall_label.setMinimumWidth(200)
+        self.overall_label.setWordWrap(True)
+        self.overall_progress = QProgressBar()
+        self.overall_progress.setRange(0, 100)
+        self.overall_progress.setValue(0)
+        self.overall_progress.setTextVisible(False)
+        self.overall_progress.setVisible(False)
         self.cancel_button = QPushButton(self._t("取消任务"))
         self.cancel_button.setObjectName("DangerButton")
         self.cancel_button.setEnabled(False)
         self.cancel_button.clicked.connect(self.cancel_conversion)
         self.start_button = QPushButton(self._t("开始处理"))
         self.start_button.setObjectName("PrimaryButton")
-        self.start_button.setMinimumWidth(190)
+        self.start_button.setMinimumWidth(165)
         self.start_button.clicked.connect(self.start_conversion)
         action_bar.addWidget(self.overall_label)
         action_bar.addStretch()
         action_bar.addWidget(self.cancel_button)
         action_bar.addWidget(self.start_button)
-        root.addLayout(action_bar)
+        action_panel_layout.addLayout(action_bar)
+        action_panel_layout.addWidget(self.overall_progress)
+        root.addWidget(action_panel)
 
         self.setCentralWidget(central)
         self.setStatusBar(QStatusBar())
+
+    def _adapt_columns(self) -> None:
+        if not hasattr(self, "fields_layout") or not hasattr(self, "field_pairs"):
+            return
+        available = self.width() - 62  # card margins and a possible scroll bar
+        columns = 3 if available >= 1120 else (2 if available >= 720 else 1)
+        if getattr(self, "field_columns", None) == columns:
+            return
+        self.field_columns = columns
+        for label, combo in self.field_pairs:
+            self.fields_layout.removeWidget(label)
+            self.fields_layout.removeWidget(combo)
+        for index, (label, combo) in enumerate(self.field_pairs):
+            row, column = divmod(index, columns)
+            self.fields_layout.addWidget(label, row * 2, column)
+            self.fields_layout.addWidget(combo, row * 2 + 1, column)
+        for column in range(3):
+            self.fields_layout.setColumnStretch(column, 1 if column < columns else 0)
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self._adapt_columns()
 
     def _restore_settings(self) -> None:
         default_dir = Path.home() / "Videos" / APP_NAME
@@ -540,6 +583,7 @@ class MainWindow(QMainWindow):
         self.settings.setValue("encoder", self.encoder_combo.currentData())
         self.settings.setValue("resolution", self.resolution_combo.currentData())
         self.settings.setValue("locale", self.language)
+        self.settings.setValue("window/geometry", self.saveGeometry())
 
     @Slot()
     def add_files(self) -> None:
@@ -622,6 +666,55 @@ class MainWindow(QMainWindow):
     def _update_count(self) -> None:
         self.file_count_label.setText(self._t(
             "{count} 个文件", count=self.table.rowCount()))
+
+    @Slot(object)
+    def _table_context_menu(self, point: object) -> None:
+        index = self.table.indexAt(point)
+        if not index.isValid():
+            return
+        row = index.row()
+        status = self.table.item(row, 3)
+        output = self.table.item(row, 4)
+        menu = QMenu(self)
+        if output and output.data(Qt.ItemDataRole.UserRole):
+            menu.addAction(self._t("复制输出路径"), lambda: self._copy_output_path(row))
+        if status and status.data(Qt.ItemDataRole.UserRole) == "failed":
+            menu.addAction(self._t("查看错误详情"), lambda: self._show_error_details(row))
+        if not menu.actions():
+            return
+        menu.exec(self.table.viewport().mapToGlobal(point))
+
+    @Slot(int, int)
+    def _table_double_clicked(self, row: int, column: int) -> None:
+        if column == 4:
+            self._copy_output_path(row)
+        elif column == 3:
+            self._show_error_details(row)
+
+    def _copy_output_path(self, row: int) -> None:
+        item = self.table.item(row, 4)
+        path = item.data(Qt.ItemDataRole.UserRole) if item else None
+        if path:
+            QGuiApplication.clipboard().setText(str(path))
+            self.statusBar().showMessage(self._t("已复制输出路径"), 4000)
+
+    def _show_error_details(self, row: int) -> None:
+        box = self._error_details_box(row)
+        if box:
+            box.exec()
+
+    def _error_details_box(self, row: int) -> QMessageBox | None:
+        item = self.table.item(row, 3)
+        if not item or item.data(Qt.ItemDataRole.UserRole) != "failed":
+            return None
+        detail = str(item.data(Qt.ItemDataRole.UserRole.value + 1) or item.toolTip())
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle(self._t("错误详情"))
+        box.setText(self._t("此文件未能完成处理。"))
+        box.setDetailedText(detail)
+        box.addButton(self._t("关闭"), QMessageBox.ButtonRole.AcceptRole)
+        return box
 
     @Slot()
     def _update_mode(self) -> None:
@@ -771,6 +864,10 @@ class MainWindow(QMainWindow):
             widget.setEnabled(not running)
         self.start_button.setEnabled(not running)
         self.cancel_button.setEnabled(running)
+        self.overall_progress.setVisible(running)
+        if running:
+            self.overall_progress.setValue(0)
+        self._set_task_state("active" if running else "idle")
         if not running:
             self._update_quality_hint()
         self.overall_label.setText(
@@ -785,6 +882,7 @@ class MainWindow(QMainWindow):
         self.progress_bars[row] = progress
         self.table.setCellWidget(row, 3, progress)
         self.table.scrollToItem(self.table.item(row, 0))
+        self.overall_progress.setValue(int(100 * row / max(self.table.rowCount(), 1)))
         self.overall_label.setText(self._t(
             "正在处理第 {current}/{total} 个文件",
             current=row + 1, total=self.table.rowCount()))
@@ -796,6 +894,9 @@ class MainWindow(QMainWindow):
             return
         if percent >= 0:
             progress.setValue(percent)
+            self.overall_progress.setValue(int(
+                100 * (row + min(max(percent, 0), 100) / 100)
+                / max(self.table.rowCount(), 1)))
         progress.setFormat(text)
 
     @Slot(int, bool, str, str)
@@ -803,12 +904,18 @@ class MainWindow(QMainWindow):
         self.table.setCellWidget(row, 3, None)
         status = QTableWidgetItem(
             message if success else self._t("失败：{message}", message=message))
-        status.setForeground(Qt.GlobalColor.darkGreen if success else Qt.GlobalColor.darkRed)
+        status.setData(Qt.ItemDataRole.UserRole, "success" if success else "failed")
+        status.setData(Qt.ItemDataRole.UserRole.value + 1, message)
+        color = COLORS[getattr(self, "effective_theme", "light")]
+        status.setForeground(QBrush(QColor(color["success" if success else "error"])))
         status.setToolTip(message)
         self.table.setItem(row, 3, status)
         output_item = QTableWidgetItem(Path(output).name if output else "")
+        output_item.setData(Qt.ItemDataRole.UserRole, output)
         output_item.setToolTip(output)
         self.table.setItem(row, 4, output_item)
+        self.overall_progress.setValue(int(
+            100 * (row + 1) / max(self.table.rowCount(), 1)))
 
     @Slot(bool, int, int)
     def _batch_completed(self, cancelled: bool, successes: int, failures: int) -> None:
@@ -821,12 +928,14 @@ class MainWindow(QMainWindow):
                            successes=successes, failures=failures)
             self.statusBar().showMessage(text)
             self.overall_label.setText(self._t("任务已取消"))
+            self._set_task_state("warning")
             return
 
         text = self._t("全部完成：成功 {successes} 个，失败 {failures} 个。",
                        successes=successes, failures=failures)
         self.statusBar().showMessage(text)
         self.overall_label.setText(text)
+        self._set_task_state("warning" if failures else "success")
         if failures:
             self._notify(QMessageBox.Icon.Warning, self._t("处理完成"), text + "\n"
                          + self._t("可将鼠标停在失败状态上查看 FFmpeg 错误。"))
@@ -934,7 +1043,6 @@ def main() -> int:
     app.setApplicationVersion(APP_VERSION)
     app.setOrganizationName("UniversalMediaToolbox")
     app.setStyle("Fusion")
-    app.setStyleSheet(APP_STYLE)
     window = MainWindow()
     window.show()
     return app.exec()
