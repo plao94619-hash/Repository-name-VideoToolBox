@@ -11,11 +11,12 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PySide6.QtCore import QSettings, Qt
     from PySide6.QtWidgets import QApplication
-    from main import MainWindow
-except ImportError:
+except ModuleNotFoundError:
     QSettings = None
     QApplication = None
     MainWindow = None
+else:
+    from main import MainWindow
 
 from engine import MODE_EXTRACT, RAW_AUDIO
 
@@ -68,8 +69,8 @@ class LanguageUITests(unittest.TestCase):
             self.assertEqual(self.settings.value("locale"), locale)
 
     def test_previous_language_is_restored_on_restart(self):
-        self.settings.setValue("locale", "en_US")
         self.window.close()
+        self.settings.setValue("locale", "en_US")
         with patch("main.QSettings", return_value=self.settings):
             self.window = MainWindow()
         self.addCleanup(self.window.close)
