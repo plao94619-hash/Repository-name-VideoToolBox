@@ -14,15 +14,16 @@
 - 批量处理、拖放添加、实时进度、安全取消、自动避免覆盖同名文件
 - 使用临时输出文件，只有转换成功后才生成最终文件；失败和取消时清理临时文件
 - 跳过媒体中的封面图片，选择真正的视频流进行转换
-- 中文软件界面与简体中文安装向导
+- 软件界面支持简体中文、繁体中文和英语，即时切换并记住上次选择
+- 安装向导支持英语、简体中文和繁体中文，按照 Windows 界面语言自动匹配
 - 全程本地处理，不上传用户媒体文件
 
 ## 下载 Windows 安装包
 
 打开仓库的 [Releases 页面](https://github.com/plao94619-hash/Repository-name-VideoToolBox/releases/latest)，下载最新正式版：
 
-- Universal-Media-Toolbox-Setup-1.1.0.exe：安装版
-- Universal-Media-Toolbox-Portable-1.1.0.zip：免安装便携版
+- Universal-Media-Toolbox-Setup-1.2.0.exe：安装版
+- Universal-Media-Toolbox-Portable-1.2.0.zip：免安装便携版
 - SHA256SUMS.txt：校验值
 
 每次成功构建后也可在 Actions 下载近期构建产物。新版安装版可直接安装到旧版的位置，原有设置会保留。
@@ -35,6 +36,8 @@
 2. 选择任务类型、输出格式和质量方案。
 3. 选择输出目录。
 4. 点击“开始处理”。
+
+首次启动会按 Windows 界面语言选择最接近的界面语言。窗口右上角的语言下拉菜单可在简体中文、繁体中文和英语之间切换。切换不会改变正在选择的任务类型、格式或输出目录；之前版本保存的设置仍然可用。转换期间语言菜单暂时锁定，任务完成后即可切换。
 
 ### 质量方案
 
@@ -79,5 +82,7 @@ GitHub Actions 会自动下载 FFmpeg Windows GPL 静态构建、运行单元测
 - 应用源码：MIT License
 - FFmpeg：安装包内附 GNU GPL v3 文本；来源及源代码地址见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - Qt for Python / PySide6：LGPLv3/GPLv3 或商业许可
+
+界面翻译集中存放于 [src/i18n.py](src/i18n.py)，新增或更新界面提示时请同时更新英文和繁体中文翻译；自动测试会检查翻译表的键及模板占位符是否一致。安装向导的简繁体译文来自 Inno Setup 官方源码。
 
 FFmpeg、Qt 及各编解码器商标属于各自权利人。

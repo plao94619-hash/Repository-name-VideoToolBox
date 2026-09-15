@@ -1,6 +1,7 @@
 import subprocess
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from threading import Event
 from unittest.mock import patch
@@ -52,6 +53,20 @@ class FFmpegIntegrationTests(unittest.TestCase):
         self.assertEqual(probe_media(result.output_path).audio_codec, "flac")
         self.assertEqual(events[-1], 100)
         self.assertEqual(list(self.root.glob(".*.partial.flac")), [])
+
+    def test_real_conversion_reports_in_english(self):
+        progress = []
+        result = convert_file(
+            self.source, replace(self.options, locale="en_US"),
+            lambda percent, message: progress.append(message),
+        )
+        self.assertEqual(probe_media(result.output_path).audio_codec, "flac")
+        self.assertTrue(result.size_message.startswith("Completed"))
+        self.assertEqual(progress[-1], "Task finished")
+
+    def test_real_conversion_reports_in_traditional_chinese(self):
+        result = convert_file(self.source, replace(self.options, locale="zh_TW"))
+        self.assertTrue(result.size_message.startswith("已完成"))
 
     def test_failed_conversion_keeps_previous_file_and_cleans_partial(self):
         previous = self.root / "tone_converted.flac"

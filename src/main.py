@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from threading import Event
 
-from PySide6.QtCore import QObject, QSettings, QThread, QUrl, Qt, Signal, Slot
+from PySide6.QtCore import QObject, QLocale, QSettings, QThread, QUrl, Qt, Signal, Slot
 from PySide6.QtGui import QAction, QCloseEvent, QDesktopServices, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -50,6 +50,9 @@ from engine import (
     self_test,
 )
 from version import APP_NAME, APP_VERSION
+from i18n import (
+    LANGUAGE_LABELS, SUPPORTED_LANGUAGES, language_for_system_locale, translate,
+)
 
 
 APP_STYLE = """
@@ -209,7 +212,8 @@ class BatchWorker(QObject):
                 )
             except ConversionCancelled:
                 cancelled = True
-                self.item_finished.emit(index, False, "已取消", "")
+                self.item_finished.emit(index, False,
+                                        translate("已取消", self.options.locale), "")
                 break
             except Exception as exc:
                 failures += 1
@@ -228,6 +232,13 @@ class MainWindow(QMainWindow):
         self.setAcceptDrops(True)
 
         self.settings = QSettings("UniversalMediaToolbox", "UniversalMediaToolbox")
+        ui_languages = QLocale.system().uiLanguages()
+        preferred_locale = (
+            ui_languages[0] if ui_languages else QLocale.system().name()
+        )
+        saved_locale = str(self.settings.value(
+            "locale", language_for_system_locale(preferred_locale)))
+        self.language = saved_locale if saved_locale in SUPPORTED_LANGUAGES else "zh_CN"
         self.worker: BatchWorker | None = None
         self.worker_thread: QThread | None = None
         self.progress_bars: dict[int, QProgressBar] = {}
@@ -237,39 +248,112 @@ class MainWindow(QMainWindow):
         self._restore_settings()
         self._update_mode()
         last_target = str(self.settings.value("target", ""))
-        target_index = self.target_combo.findText(last_target)
+        target_index = self.target_combo.findData(last_target)
         if target_index >= 0:
             self.target_combo.setCurrentIndex(target_index)
-        self.statusBar().showMessage("就绪：可直接拖入音频或视频文件")
+        self._retranslate_ui()
+        self.statusBar().showMessage(self._t("就绪：可直接拖入音频或视频文件"))
+
+    def _t(self, key: str, **values: object) -> str:
+        return translate(key, self.language, **values)
+
+    def _notify(self, icon: QMessageBox.Icon, title: str, message: str) -> None:
+        box = QMessageBox(self)
+        box.setIcon(icon)
+        box.setWindowTitle(title)
+        box.setText(message)
+        box.addButton(self._t("确定"), QMessageBox.ButtonRole.AcceptRole)
+        box.exec()
+
+    @Slot(int)
+    def _change_language(self, _index: int) -> None:
+        selected = self.language_combo.currentData()
+        if selected not in SUPPORTED_LANGUAGES or selected == self.language or self.worker:
+            return
+        self.language = selected
+        self.settings.setValue("locale", selected)
+        self._retranslate_ui()
+        self.statusBar().showMessage(self._t("就绪：可直接拖入音频或视频文件"))
+
+    def _retranslate_ui(self) -> None:
+        self.setWindowTitle(f"{self._t(APP_NAME)} {APP_VERSION}")
+        for action, key in (
+            (self.add_action, "添加文件"),
+            (self.add_folder_action, "添加文件夹"),
+            (self.exit_action, "退出"),
+            (self.notices_action, "第三方许可"),
+            (self.about_action, "关于"),
+        ):
+            action.setText(self._t(key))
+        self.file_menu.setTitle(self._t("文件"))
+        self.help_menu.setTitle(self._t("帮助"))
+        for widget, key in (
+            (self.hero_title, APP_NAME),
+            (self.hero_subtitle, "格式转换 · 无损提取音轨 · 画质优先压缩 · 极限压缩"),
+            (self.language_label, "语言"),
+            (self.add_files_button, "＋ 添加文件"),
+            (self.add_folder_button, "添加文件夹"),
+            (self.remove_button, "移除选中"),
+            (self.clear_button, "清空列表"),
+            (self.mode_label, "任务类型"),
+            (self.target_label, "输出格式"),
+            (self.quality_label, "质量方案"),
+            (self.encoder_label, "视频编码"),
+            (self.resolution_label, "分辨率限制"),
+            (self.output_label, "输出文件夹"),
+            (self.browse_output_button, "浏览…"),
+            (self.open_output_button, "打开目录"),
+            (self.cancel_button, "取消任务"),
+            (self.start_button, "开始处理"),
+        ):
+            widget.setText(self._t(key))
+        for combo in (
+            self.mode_combo, self.target_combo, self.quality_combo,
+            self.encoder_combo, self.resolution_combo,
+        ):
+            for index in range(combo.count()):
+                combo.setItemText(index, self._t(str(combo.itemData(index))))
+        self.output_edit.setPlaceholderText(self._t("选择输出目录"))
+        self.table.setHorizontalHeaderLabels([
+            self._t(key) for key in ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
+        ])
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 3)
+            if item and item.data(Qt.ItemDataRole.UserRole) == "pending":
+                item.setText(self._t("等待处理"))
+        self._update_count()
+        self._update_quality_hint()
+        if not self.worker:
+            self.overall_label.setText(self._t("等待任务"))
 
     def _build_actions(self) -> None:
-        add_action = QAction("添加文件", self)
-        add_action.setShortcut("Ctrl+O")
-        add_action.triggered.connect(self.add_files)
+        self.add_action = QAction(self._t("添加文件"), self)
+        self.add_action.setShortcut("Ctrl+O")
+        self.add_action.triggered.connect(self.add_files)
 
-        add_folder_action = QAction("添加文件夹", self)
-        add_folder_action.setShortcut("Ctrl+Shift+O")
-        add_folder_action.triggered.connect(self.add_folder)
+        self.add_folder_action = QAction(self._t("添加文件夹"), self)
+        self.add_folder_action.setShortcut("Ctrl+Shift+O")
+        self.add_folder_action.triggered.connect(self.add_folder)
 
-        exit_action = QAction("退出", self)
-        exit_action.setShortcut("Alt+F4")
-        exit_action.triggered.connect(self.close)
+        self.exit_action = QAction(self._t("退出"), self)
+        self.exit_action.setShortcut("Alt+F4")
+        self.exit_action.triggered.connect(self.close)
 
-        notices_action = QAction("第三方许可", self)
-        notices_action.triggered.connect(self.open_notices)
+        self.notices_action = QAction(self._t("第三方许可"), self)
+        self.notices_action.triggered.connect(self.open_notices)
 
-        about_action = QAction("关于", self)
-        about_action.triggered.connect(self.show_about)
+        self.about_action = QAction(self._t("关于"), self)
+        self.about_action.triggered.connect(self.show_about)
 
-        file_menu = self.menuBar().addMenu("文件")
-        file_menu.addAction(add_action)
-        file_menu.addAction(add_folder_action)
-        file_menu.addSeparator()
-        file_menu.addAction(exit_action)
+        self.file_menu = self.menuBar().addMenu(self._t("文件"))
+        self.file_menu.addAction(self.add_action)
+        self.file_menu.addAction(self.add_folder_action)
+        self.file_menu.addSeparator()
+        self.file_menu.addAction(self.exit_action)
 
-        help_menu = self.menuBar().addMenu("帮助")
-        help_menu.addAction(notices_action)
-        help_menu.addAction(about_action)
+        self.help_menu = self.menuBar().addMenu(self._t("帮助"))
+        self.help_menu.addAction(self.notices_action)
+        self.help_menu.addAction(self.about_action)
 
     def _build_ui(self) -> None:
         central = QWidget()
@@ -281,12 +365,26 @@ class MainWindow(QMainWindow):
         hero.setObjectName("HeroCard")
         hero_layout = QVBoxLayout(hero)
         hero_layout.setContentsMargins(24, 18, 24, 18)
-        title = QLabel(APP_NAME)
-        title.setObjectName("HeroTitle")
-        subtitle = QLabel("格式转换 · 无损提取音轨 · 画质优先压缩 · 极限压缩")
-        subtitle.setObjectName("HeroSubtitle")
-        hero_layout.addWidget(title)
-        hero_layout.addWidget(subtitle)
+        hero_top = QHBoxLayout()
+        self.hero_title = QLabel(self._t(APP_NAME))
+        self.hero_title.setObjectName("HeroTitle")
+        hero_top.addWidget(self.hero_title)
+        hero_top.addStretch()
+        self.language_label = QLabel(self._t("语言"))
+        self.language_label.setObjectName("HeroSubtitle")
+        hero_top.addWidget(self.language_label)
+        self.language_combo = QComboBox()
+        for locale in SUPPORTED_LANGUAGES:
+            self.language_combo.addItem(LANGUAGE_LABELS[locale], locale)
+        self.language_combo.setCurrentIndex(self.language_combo.findData(self.language))
+        self.language_combo.setMinimumWidth(140)
+        self.language_combo.currentIndexChanged.connect(self._change_language)
+        hero_top.addWidget(self.language_combo)
+        self.hero_subtitle = QLabel(self._t(
+            "格式转换 · 无损提取音轨 · 画质优先压缩 · 极限压缩"))
+        self.hero_subtitle.setObjectName("HeroSubtitle")
+        hero_layout.addLayout(hero_top)
+        hero_layout.addWidget(self.hero_subtitle)
         root.addWidget(hero)
 
         file_panel = QFrame()
@@ -296,10 +394,10 @@ class MainWindow(QMainWindow):
         file_layout.setSpacing(10)
 
         toolbar = QHBoxLayout()
-        self.add_files_button = QPushButton("＋ 添加文件")
-        self.add_folder_button = QPushButton("添加文件夹")
-        self.remove_button = QPushButton("移除选中")
-        self.clear_button = QPushButton("清空列表")
+        self.add_files_button = QPushButton(self._t("＋ 添加文件"))
+        self.add_folder_button = QPushButton(self._t("添加文件夹"))
+        self.remove_button = QPushButton(self._t("移除选中"))
+        self.clear_button = QPushButton(self._t("清空列表"))
         self.remove_button.setObjectName("DangerButton")
         self.add_files_button.clicked.connect(self.add_files)
         self.add_folder_button.clicked.connect(self.add_folder)
@@ -310,12 +408,14 @@ class MainWindow(QMainWindow):
         toolbar.addWidget(self.remove_button)
         toolbar.addWidget(self.clear_button)
         toolbar.addStretch()
-        self.file_count_label = QLabel("0 个文件")
+        self.file_count_label = QLabel(self._t("{count} 个文件", count=0))
         toolbar.addWidget(self.file_count_label)
         file_layout.addLayout(toolbar)
 
         self.table = QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels(["文件名", "类型", "大小", "状态 / 进度", "输出文件"])
+        self.table.setHorizontalHeaderLabels([
+            self._t(key) for key in ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
+        ])
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
@@ -339,28 +439,35 @@ class MainWindow(QMainWindow):
         options_layout.setVerticalSpacing(10)
 
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems([MODE_VIDEO, MODE_AUDIO, MODE_EXTRACT, MODE_COMPRESS])
+        for item in (MODE_VIDEO, MODE_AUDIO, MODE_EXTRACT, MODE_COMPRESS):
+            self.mode_combo.addItem(self._t(item), item)
         self.target_combo = QComboBox()
         self.quality_combo = QComboBox()
-        self.quality_combo.addItems(QUALITY_PRESETS)
+        for item in QUALITY_PRESETS:
+            self.quality_combo.addItem(self._t(item), item)
         self.encoder_combo = QComboBox()
-        self.encoder_combo.addItems(ENCODER_PRESETS)
+        for item in ENCODER_PRESETS:
+            self.encoder_combo.addItem(self._t(item), item)
         self.resolution_combo = QComboBox()
-        self.resolution_combo.addItems(RESOLUTION_PRESETS)
+        for item in RESOLUTION_PRESETS:
+            self.resolution_combo.addItem(self._t(item), item)
 
-        self.mode_combo.currentTextChanged.connect(self._update_mode)
-        self.quality_combo.currentTextChanged.connect(self._update_quality_hint)
-        self.target_combo.currentTextChanged.connect(self._update_quality_hint)
+        self.mode_combo.currentIndexChanged.connect(self._update_mode)
+        self.quality_combo.currentIndexChanged.connect(self._update_quality_hint)
+        self.target_combo.currentIndexChanged.connect(self._update_quality_hint)
 
-        options_layout.addWidget(QLabel("任务类型"), 0, 0)
+        self.mode_label = QLabel(self._t("任务类型"))
+        options_layout.addWidget(self.mode_label, 0, 0)
         options_layout.addWidget(self.mode_combo, 1, 0)
-        options_layout.addWidget(QLabel("输出格式"), 0, 1)
+        self.target_label = QLabel(self._t("输出格式"))
+        options_layout.addWidget(self.target_label, 0, 1)
         options_layout.addWidget(self.target_combo, 1, 1)
-        options_layout.addWidget(QLabel("质量方案"), 0, 2)
+        self.quality_label = QLabel(self._t("质量方案"))
+        options_layout.addWidget(self.quality_label, 0, 2)
         options_layout.addWidget(self.quality_combo, 1, 2)
 
-        self.encoder_label = QLabel("视频编码")
-        self.resolution_label = QLabel("分辨率限制")
+        self.encoder_label = QLabel(self._t("视频编码"))
+        self.resolution_label = QLabel(self._t("分辨率限制"))
         options_layout.addWidget(self.encoder_label, 2, 0)
         options_layout.addWidget(self.encoder_combo, 3, 0)
         options_layout.addWidget(self.resolution_label, 2, 1)
@@ -371,15 +478,15 @@ class MainWindow(QMainWindow):
         self.quality_hint.setStyleSheet("color:#68758b; padding:4px 0;")
         options_layout.addWidget(self.quality_hint, 3, 2)
 
-        output_label = QLabel("输出文件夹")
+        self.output_label = QLabel(self._t("输出文件夹"))
         self.output_edit = QLineEdit()
-        self.output_edit.setPlaceholderText("选择输出目录")
-        self.browse_output_button = QPushButton("浏览…")
-        self.open_output_button = QPushButton("打开目录")
+        self.output_edit.setPlaceholderText(self._t("选择输出目录"))
+        self.browse_output_button = QPushButton(self._t("浏览…"))
+        self.open_output_button = QPushButton(self._t("打开目录"))
         self.browse_output_button.clicked.connect(self.choose_output_dir)
         self.open_output_button.clicked.connect(self.open_output_dir)
 
-        options_layout.addWidget(output_label, 4, 0)
+        options_layout.addWidget(self.output_label, 4, 0)
         options_layout.addWidget(self.output_edit, 5, 0, 1, 2)
         output_buttons = QHBoxLayout()
         output_buttons.addWidget(self.browse_output_button)
@@ -389,13 +496,13 @@ class MainWindow(QMainWindow):
         root.addWidget(options_panel)
 
         action_bar = QHBoxLayout()
-        self.overall_label = QLabel("等待任务")
+        self.overall_label = QLabel(self._t("等待任务"))
         self.overall_label.setStyleSheet("color:#5f6d83;")
-        self.cancel_button = QPushButton("取消任务")
+        self.cancel_button = QPushButton(self._t("取消任务"))
         self.cancel_button.setObjectName("DangerButton")
         self.cancel_button.setEnabled(False)
         self.cancel_button.clicked.connect(self.cancel_conversion)
-        self.start_button = QPushButton("开始处理")
+        self.start_button = QPushButton(self._t("开始处理"))
         self.start_button.setObjectName("PrimaryButton")
         self.start_button.setMinimumWidth(190)
         self.start_button.clicked.connect(self.start_conversion)
@@ -421,33 +528,35 @@ class MainWindow(QMainWindow):
             (self.encoder_combo, encoder),
             (self.resolution_combo, resolution),
         ):
-            index = combo.findText(str(value))
+            index = combo.findData(str(value))
             if index >= 0:
                 combo.setCurrentIndex(index)
 
     def _save_settings(self) -> None:
         self.settings.setValue("output_dir", self.output_edit.text().strip())
-        self.settings.setValue("mode", self.mode_combo.currentText())
-        self.settings.setValue("target", self.target_combo.currentText())
-        self.settings.setValue("quality", self.quality_combo.currentText())
-        self.settings.setValue("encoder", self.encoder_combo.currentText())
-        self.settings.setValue("resolution", self.resolution_combo.currentText())
+        self.settings.setValue("mode", self.mode_combo.currentData())
+        self.settings.setValue("target", self.target_combo.currentData())
+        self.settings.setValue("quality", self.quality_combo.currentData())
+        self.settings.setValue("encoder", self.encoder_combo.currentData())
+        self.settings.setValue("resolution", self.resolution_combo.currentData())
+        self.settings.setValue("locale", self.language)
 
     @Slot()
     def add_files(self) -> None:
         files, _ = QFileDialog.getOpenFileNames(
             self,
-            "选择音频或视频文件",
+            self._t("选择音频或视频文件"),
             "",
-            "媒体文件 (*.mp4 *.mkv *.mov *.avi *.webm *.wmv *.flv *.m4v *.ts *.mts *.m2ts "
+            self._t("媒体文件") + " (*.mp4 *.mkv *.mov *.avi *.webm *.wmv *.flv *.m4v *.ts *.mts *.m2ts "
             "*.3gp *.vob *.mpg *.mpeg *.mp3 *.wav *.flac *.aac *.m4a *.ogg *.opus *.wma "
-            "*.ac3 *.eac3 *.mka *.aiff *.ape *.amr);;所有文件 (*.*)",
+            "*.ac3 *.eac3 *.mka *.aiff *.ape *.amr);;"
+            + self._t("所有文件") + " (*.*)",
         )
         self._add_paths([Path(item) for item in files])
 
     @Slot()
     def add_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "选择媒体文件夹")
+        folder = QFileDialog.getExistingDirectory(self, self._t("选择媒体文件夹"))
         if not folder:
             return
         paths = [
@@ -483,16 +592,19 @@ class MainWindow(QMainWindow):
             try:
                 size_text = readable_size(resolved.stat().st_size)
             except OSError:
-                size_text = "未知"
+                size_text = self._t("未知")
             self.table.setItem(row, 2, QTableWidgetItem(size_text))
-            self.table.setItem(row, 3, QTableWidgetItem("等待处理"))
+            pending = QTableWidgetItem(self._t("等待处理"))
+            pending.setData(Qt.ItemDataRole.UserRole, "pending")
+            self.table.setItem(row, 3, pending)
             self.table.setItem(row, 4, QTableWidgetItem(""))
             existing.add(str(resolved))
             added += 1
 
         self._update_count()
         if added:
-            self.statusBar().showMessage(f"已添加 {added} 个文件", 4000)
+            self.statusBar().showMessage(self._t(
+                "已添加 {count} 个文件", count=added), 4000)
 
     @Slot()
     def remove_selected(self) -> None:
@@ -508,21 +620,23 @@ class MainWindow(QMainWindow):
         self._update_count()
 
     def _update_count(self) -> None:
-        self.file_count_label.setText(f"{self.table.rowCount()} 个文件")
+        self.file_count_label.setText(self._t(
+            "{count} 个文件", count=self.table.rowCount()))
 
     @Slot()
     def _update_mode(self) -> None:
-        mode = self.mode_combo.currentText()
+        mode = self.mode_combo.currentData()
         choices = {
             MODE_VIDEO: VIDEO_TARGETS,
             MODE_AUDIO: AUDIO_TARGETS,
             MODE_EXTRACT: EXTRACT_TARGETS,
             MODE_COMPRESS: COMPRESS_TARGETS,
         }.get(mode, VIDEO_TARGETS)
-        previous = self.target_combo.currentText()
+        previous = self.target_combo.currentData()
         self.target_combo.clear()
-        self.target_combo.addItems(choices)
-        index = self.target_combo.findText(previous)
+        for item in choices:
+            self.target_combo.addItem(self._t(item), item)
+        index = self.target_combo.findData(previous)
         if index >= 0:
             self.target_combo.setCurrentIndex(index)
 
@@ -535,31 +649,31 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def _update_quality_hint(self) -> None:
-        target = self.target_combo.currentText()
-        mode = self.mode_combo.currentText()
+        target = self.target_combo.currentData()
+        mode = self.mode_combo.currentData()
         raw_copy = mode == MODE_EXTRACT and target == EXTRACT_TARGETS[0]
         self.quality_combo.setEnabled(not raw_copy and target != "WAV")
         if raw_copy:
-            self.quality_hint.setText("直接复制原音轨，不重新编码；质量选项不影响无损提取。")
+            self.quality_hint.setText(self._t(
+                "直接复制原音轨，不重新编码；质量选项不影响无损提取。"))
             return
         if target in {"FLAC", "WAV"} and mode in {MODE_AUDIO, MODE_EXTRACT}:
-            self.quality_hint.setText(
-                "FLAC/WAV 输出为无损格式，但有损源文件已丢失的音质无法恢复。"
-            )
+            self.quality_hint.setText(self._t(
+                "FLAC/WAV 输出为无损格式，但有损源文件已丢失的音质无法恢复。"))
             return
-        quality = self.quality_combo.currentText()
+        quality = self.quality_combo.currentData()
         hints = {
             "画质优先": "接近视觉无损，输出文件通常较大。",
             "均衡压缩": "兼顾画质、速度和文件大小，推荐日常使用。",
             "极限压缩": "优先减小体积，可能非常耗时并损失部分细节。",
         }
-        self.quality_hint.setText(hints.get(quality, ""))
+        self.quality_hint.setText(self._t(hints[quality]) if quality in hints else "")
 
     @Slot()
     def choose_output_dir(self) -> None:
         folder = QFileDialog.getExistingDirectory(
             self,
-            "选择输出文件夹",
+            self._t("选择输出文件夹"),
             self.output_edit.text().strip(),
         )
         if folder:
@@ -574,7 +688,7 @@ class MainWindow(QMainWindow):
         try:
             folder.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            QMessageBox.warning(self, "无法打开目录", str(exc))
+            self._notify(QMessageBox.Icon.Warning, self._t("无法打开目录"), str(exc))
             return
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder.resolve())))
 
@@ -588,35 +702,41 @@ class MainWindow(QMainWindow):
     def start_conversion(self) -> None:
         paths = self._current_paths()
         if not paths:
-            QMessageBox.information(self, "尚未添加文件", "请先添加需要处理的音频或视频文件。")
+            self._notify(QMessageBox.Icon.Information, self._t("尚未添加文件"),
+                         self._t("请先添加需要处理的音频或视频文件。"))
             return
 
         output_text = self.output_edit.text().strip()
         if not output_text:
-            QMessageBox.information(self, "请选择输出目录", "请先指定转换后的文件保存位置。")
+            self._notify(QMessageBox.Icon.Information, self._t("请选择输出目录"),
+                         self._t("请先指定转换后的文件保存位置。"))
             return
 
         output_dir = Path(output_text)
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            QMessageBox.critical(self, "无法创建输出目录", str(exc))
+            self._notify(QMessageBox.Icon.Critical,
+                         self._t("无法创建输出目录"), str(exc))
             return
 
         options = ConversionOptions(
-            mode=self.mode_combo.currentText(),
-            target=self.target_combo.currentText(),
-            quality=self.quality_combo.currentText(),
-            encoder=self.encoder_combo.currentText(),
-            resolution=self.resolution_combo.currentText(),
+            mode=self.mode_combo.currentData(),
+            target=self.target_combo.currentData(),
+            quality=self.quality_combo.currentData(),
+            encoder=self.encoder_combo.currentData(),
+            resolution=self.resolution_combo.currentData(),
             output_dir=output_dir,
+            locale=self.language,
         )
         self._save_settings()
         self._set_running(True)
 
         for row in range(self.table.rowCount()):
             self.table.setCellWidget(row, 3, None)
-            self.table.setItem(row, 3, QTableWidgetItem("等待处理"))
+            pending = QTableWidgetItem(self._t("等待处理"))
+            pending.setData(Qt.ItemDataRole.UserRole, "pending")
+            self.table.setItem(row, 3, pending)
             self.table.setItem(row, 4, QTableWidgetItem(""))
         self.progress_bars.clear()
 
@@ -639,6 +759,7 @@ class MainWindow(QMainWindow):
             self.add_folder_button,
             self.remove_button,
             self.clear_button,
+            self.language_combo,
             self.mode_combo,
             self.target_combo,
             self.quality_combo,
@@ -652,18 +773,21 @@ class MainWindow(QMainWindow):
         self.cancel_button.setEnabled(running)
         if not running:
             self._update_quality_hint()
-        self.overall_label.setText("正在处理…" if running else "等待任务")
+        self.overall_label.setText(
+            self._t("正在处理…") if running else self._t("等待任务"))
 
     @Slot(int)
     def _item_started(self, row: int) -> None:
         progress = QProgressBar()
         progress.setRange(0, 100)
         progress.setValue(0)
-        progress.setFormat("正在准备…")
+        progress.setFormat(self._t("正在准备…"))
         self.progress_bars[row] = progress
         self.table.setCellWidget(row, 3, progress)
         self.table.scrollToItem(self.table.item(row, 0))
-        self.overall_label.setText(f"正在处理第 {row + 1}/{self.table.rowCount()} 个文件")
+        self.overall_label.setText(self._t(
+            "正在处理第 {current}/{total} 个文件",
+            current=row + 1, total=self.table.rowCount()))
 
     @Slot(int, int, str)
     def _item_progress(self, row: int, percent: int, text: str) -> None:
@@ -677,7 +801,8 @@ class MainWindow(QMainWindow):
     @Slot(int, bool, str, str)
     def _item_finished(self, row: int, success: bool, message: str, output: str) -> None:
         self.table.setCellWidget(row, 3, None)
-        status = QTableWidgetItem(message if success else f"失败：{message}")
+        status = QTableWidgetItem(
+            message if success else self._t("失败：{message}", message=message))
         status.setForeground(Qt.GlobalColor.darkGreen if success else Qt.GlobalColor.darkRed)
         status.setToolTip(message)
         self.table.setItem(row, 3, status)
@@ -692,30 +817,36 @@ class MainWindow(QMainWindow):
         self.worker_thread = None
 
         if cancelled:
-            text = f"任务已取消；成功 {successes} 个，失败 {failures} 个。"
+            text = self._t("任务已取消；成功 {successes} 个，失败 {failures} 个。",
+                           successes=successes, failures=failures)
             self.statusBar().showMessage(text)
-            self.overall_label.setText("任务已取消")
+            self.overall_label.setText(self._t("任务已取消"))
             return
 
-        text = f"全部完成：成功 {successes} 个，失败 {failures} 个。"
+        text = self._t("全部完成：成功 {successes} 个，失败 {failures} 个。",
+                       successes=successes, failures=failures)
         self.statusBar().showMessage(text)
         self.overall_label.setText(text)
         if failures:
-            QMessageBox.warning(self, "处理完成", text + "\n可将鼠标停在失败状态上查看 FFmpeg 错误。")
+            self._notify(QMessageBox.Icon.Warning, self._t("处理完成"), text + "\n"
+                         + self._t("可将鼠标停在失败状态上查看 FFmpeg 错误。"))
         else:
             box = QMessageBox(self)
-            box.setWindowTitle("处理完成")
+            box.setWindowTitle(self._t("处理完成"))
             box.setText(text)
-            box.setInformativeText("是否打开输出文件夹？")
-            box.setStandardButtons(QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Close)
-            if box.exec() == QMessageBox.StandardButton.Open:
+            box.setInformativeText(self._t("是否打开输出文件夹？"))
+            open_button = box.addButton(
+                self._t("打开"), QMessageBox.ButtonRole.AcceptRole)
+            box.addButton(self._t("关闭"), QMessageBox.ButtonRole.RejectRole)
+            box.exec()
+            if box.clickedButton() == open_button:
                 self.open_output_dir()
 
     @Slot()
     def cancel_conversion(self) -> None:
         if self.worker:
             self.cancel_button.setEnabled(False)
-            self.overall_label.setText("正在安全停止任务…")
+            self.overall_label.setText(self._t("正在安全停止任务…"))
             self.worker.request_cancel()
 
     def open_notices(self) -> None:
@@ -724,25 +855,27 @@ class MainWindow(QMainWindow):
         if notice.exists():
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(notice)))
         else:
-            QMessageBox.information(
-                self,
-                "第三方许可",
+            self._notify(
+                QMessageBox.Icon.Information, self._t("第三方许可"),
                 "FFmpeg：https://ffmpeg.org/\n"
                 "Qt for Python：https://doc.qt.io/qtforpython-6/\n"
-                "完整声明见项目 THIRD_PARTY_NOTICES.md。",
+                + self._t("完整声明见项目 THIRD_PARTY_NOTICES.md。"),
             )
 
     def show_about(self) -> None:
-        QMessageBox.about(
-            self,
-            f"关于 {APP_NAME}",
-            f"<h3>{APP_NAME}</h3>"
-            f"<p>版本 {APP_VERSION}</p>"
-            "<p>基于 FFmpeg 与 Qt for Python 构建的本地音视频转换工具。</p>"
-            "<p>转换全程在本机完成，不上传用户文件。</p>"
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(f"{self._t('关于')} {self._t(APP_NAME)}")
+        box.setText(
+            f"<h3>{self._t(APP_NAME)}</h3>"
+            f"<p>{self._t('版本 {version}', version=APP_VERSION)}</p>"
+            f"<p>{self._t('基于 FFmpeg 与 Qt for Python 构建的本地音视频转换工具。')}</p>"
+            f"<p>{self._t('转换全程在本机完成，不上传用户文件。')}</p>"
             '<p><a href="https://github.com/plao94619-hash/Repository-name-VideoToolBox">'
-            "项目主页</a></p>",
+            + self._t("项目主页") + "</a></p>"
         )
+        box.addButton(self._t("关闭"), QMessageBox.ButtonRole.AcceptRole)
+        box.exec()
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         if not self.worker and event.mimeData().hasUrls():
@@ -768,13 +901,14 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         self._save_settings()
         if self.worker:
-            answer = QMessageBox.question(
-                self,
-                "任务仍在运行",
-                "需要先停止当前转换。是否取消任务？",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            )
-            if answer == QMessageBox.StandardButton.Yes:
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Icon.Question)
+            box.setWindowTitle(self._t("任务仍在运行"))
+            box.setText(self._t("需要先停止当前转换。是否取消任务？"))
+            yes_button = box.addButton(self._t("是"), QMessageBox.ButtonRole.YesRole)
+            box.addButton(self._t("否"), QMessageBox.ButtonRole.NoRole)
+            box.exec()
+            if box.clickedButton() == yes_button:
                 self.cancel_conversion()
             event.ignore()
             return

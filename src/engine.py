@@ -12,6 +12,8 @@ from pathlib import Path
 from threading import Event
 from typing import Callable
 
+from i18n import translate
+
 
 CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 VIDEO_EXTENSIONS = {
@@ -95,6 +97,7 @@ class ConversionOptions:
     resolution: str
     output_dir: Path
     overwrite: bool = False
+    locale: str = "zh_CN"
 
 
 @dataclass
@@ -107,6 +110,7 @@ class MediaInfo:
     size: int = 0
     video_stream_index: int | None = None
     audio_stream_index: int | None = None
+    locale: str = "zh_CN"
 
     @property
     def summary(self) -> str:
@@ -119,7 +123,7 @@ class MediaInfo:
         if self.duration:
             seconds = int(self.duration)
             parts.append(f"{seconds // 60:02d}:{seconds % 60:02d}")
-        return " / ".join(parts) or "媒体文件"
+        return " / ".join(parts) or translate("媒体文件", self.locale)
 
 
 @dataclass
@@ -127,15 +131,18 @@ class ConversionResult:
     output_path: Path
     input_size: int
     output_size: int
+    locale: str = "zh_CN"
 
     @property
     def size_message(self) -> str:
         if self.input_size <= 0:
-            return "已完成"
+            return translate("已完成", self.locale)
         ratio = self.output_size / self.input_size
         if ratio < 1:
-            return f"已完成，体积减少 {(1 - ratio) * 100:.1f}%"
-        return f"已完成，输出为原文件的 {ratio * 100:.1f}%"
+            return translate("已完成，体积减少 {percent:.1f}%", self.locale,
+                             percent=(1 - ratio) * 100)
+        return translate("已完成，输出为原文件的 {percent:.1f}%", self.locale,
+                         percent=ratio * 100)
 
 
 def _runtime_root() -> Path:
@@ -145,7 +152,7 @@ def _runtime_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def binary_path(name: str) -> Path:
+def binary_path(name: str, language: str = "zh_CN") -> Path:
     executable = f"{name}.exe" if os.name == "nt" else name
     candidates = [
         _runtime_root() / "tools" / executable,
@@ -158,18 +165,22 @@ def binary_path(name: str) -> Path:
     found = shutil.which(executable) or shutil.which(name)
     if found:
         return Path(found)
-    raise ConversionError(f"没有找到 {executable}。请重新安装软件或检查程序文件是否完整。")
+    raise ConversionError(translate(
+        "没有找到 {executable}。请重新安装软件或检查程序文件是否完整。",
+        language, executable=executable))
 
 
-def ffmpeg_path() -> Path:
-    return binary_path("ffmpeg")
+def ffmpeg_path(language: str = "zh_CN") -> Path:
+    return binary_path("ffmpeg", language)
 
 
-def ffprobe_path() -> Path:
-    return binary_path("ffprobe")
+def ffprobe_path(language: str = "zh_CN") -> Path:
+    return binary_path("ffprobe", language)
 
 
-def _run_capture(command: list[str], timeout: int = 30) -> str:
+def _run_capture(
+    command: list[str], timeout: int = 30, language: str = "zh_CN"
+) -> str:
     try:
         completed = subprocess.run(
             command,
@@ -186,13 +197,14 @@ def _run_capture(command: list[str], timeout: int = 30) -> str:
         raise ConversionError(str(exc)) from exc
     if completed.returncode != 0:
         detail = (completed.stderr or completed.stdout).strip()
-        raise ConversionError(detail[-1500:] or "外部程序执行失败")
+        raise ConversionError(detail[-1500:] or translate(
+            "外部程序执行失败", language))
     return completed.stdout or completed.stderr
 
 
-def probe_media(path: Path) -> MediaInfo:
+def probe_media(path: Path, language: str = "zh_CN") -> MediaInfo:
     command = [
-        str(ffprobe_path()),
+        str(ffprobe_path(language)),
         "-v", "error",
         "-show_entries",
         "format=duration,size:stream=index,codec_type,codec_name,width,height:"
@@ -201,9 +213,10 @@ def probe_media(path: Path) -> MediaInfo:
         str(path),
     ]
     try:
-        data = json.loads(_run_capture(command))
+        data = json.loads(_run_capture(command, language=language))
     except (json.JSONDecodeError, ValueError) as exc:
-        raise ConversionError(f"无法读取媒体信息：{path.name}") from exc
+        raise ConversionError(translate("无法读取媒体信息：{name}",
+                                        language, name=path.name)) from exc
 
     format_info = data.get("format") or {}
     try:
@@ -215,7 +228,7 @@ def probe_media(path: Path) -> MediaInfo:
     except (TypeError, ValueError, OSError):
         size = 0
 
-    info = MediaInfo(duration=duration, size=size)
+    info = MediaInfo(duration=duration, size=size, locale=language)
     for stream in data.get("streams") or []:
         kind = stream.get("codec_type")
         if (
@@ -235,8 +248,10 @@ def probe_media(path: Path) -> MediaInfo:
     return info
 
 
-def encoder_names() -> set[str]:
-    output = _run_capture([str(ffmpeg_path()), "-hide_banner", "-encoders"], timeout=30)
+def encoder_names(language: str = "zh_CN") -> set[str]:
+    output = _run_capture(
+        [str(ffmpeg_path(language)), "-hide_banner", "-encoders"],
+        timeout=30, language=language)
     names: set[str] = set()
     for line in output.splitlines():
         match = re.match(r"^\s*[VAS][A-Z\.]{5}\s+(\S+)", line)
@@ -287,7 +302,7 @@ def _working_hardware(names: set[str], candidates: tuple[str, ...]) -> str | Non
 
 
 def choose_video_encoder(options: ConversionOptions, target: str) -> str:
-    names = encoder_names()
+    names = encoder_names(options.locale)
 
     if target == "WebM":
         if options.encoder.startswith("AV1"):
@@ -372,7 +387,9 @@ def _scale_args(resolution: str) -> list[str]:
     return ["-vf", expression]
 
 
-def _audio_codec_args(target: str, quality: str = "均衡压缩") -> list[str]:
+def _audio_codec_args(
+    target: str, quality: str = "均衡压缩", language: str = "zh_CN"
+) -> list[str]:
     high = quality == "画质优先"
     compact = quality == "极限压缩"
     if target == "MP3":
@@ -387,7 +404,8 @@ def _audio_codec_args(target: str, quality: str = "均衡压缩") -> list[str]:
         return ["-c:a", "libvorbis", "-q:a", "8" if high else ("3" if compact else "6")]
     if target == "OPUS":
         return ["-c:a", "libopus", "-b:a", "256k" if high else ("96k" if compact else "160k"), "-vbr", "on"]
-    raise ConversionError(f"不支持的音频输出格式：{target}")
+    raise ConversionError(translate("不支持的音频输出格式：{target}",
+                                    language, target=target))
 
 
 def raw_audio_extension(codec: str) -> str:
@@ -401,7 +419,8 @@ def make_output_path(source: Path, options: ConversionOptions, info: MediaInfo) 
     else:
         extension = TARGET_EXTENSION.get(options.target)
         if not extension:
-            raise ConversionError(f"不支持的输出格式：{options.target}")
+            raise ConversionError(translate("不支持的输出格式：{target}",
+                                            options.locale, target=options.target))
         suffix = {
             MODE_VIDEO: "_converted",
             MODE_AUDIO: "_converted",
@@ -422,35 +441,35 @@ def make_output_path(source: Path, options: ConversionOptions, info: MediaInfo) 
 
 def build_command(source: Path, output: Path, options: ConversionOptions, info: MediaInfo) -> list[str]:
     command = [
-        str(ffmpeg_path()), "-hide_banner", "-y", "-nostdin",
+        str(ffmpeg_path(options.locale)), "-hide_banner", "-y", "-nostdin",
         "-stats_period", "0.5", "-i", str(source),
     ]
 
     if options.mode == MODE_EXTRACT:
         if not info.audio_codec:
-            raise ConversionError("该文件没有可提取的音轨。")
+            raise ConversionError(translate("该文件没有可提取的音轨。", options.locale))
         audio_map = (
             f"0:{info.audio_stream_index}"
             if info.audio_stream_index is not None else "0:a:0"
         )
         command += ["-map", audio_map, "-vn", "-map_metadata", "0"]
         command += ["-c:a", "copy"] if options.target == RAW_AUDIO else _audio_codec_args(
-            options.target, options.quality
+            options.target, options.quality, options.locale
         )
 
     elif options.mode == MODE_AUDIO:
         if not info.audio_codec:
-            raise ConversionError("该文件没有可转换的音轨。")
+            raise ConversionError(translate("该文件没有可转换的音轨。", options.locale))
         audio_map = (
             f"0:{info.audio_stream_index}"
             if info.audio_stream_index is not None else "0:a:0"
         )
         command += ["-map", audio_map, "-vn", "-map_metadata", "0"]
-        command += _audio_codec_args(options.target, options.quality)
+        command += _audio_codec_args(options.target, options.quality, options.locale)
 
     elif options.mode in {MODE_VIDEO, MODE_COMPRESS}:
         if not info.video_codec:
-            raise ConversionError("该文件没有视频画面。")
+            raise ConversionError(translate("该文件没有视频画面。", options.locale))
         encoder = choose_video_encoder(options, options.target)
         video_map = (
             f"0:{info.video_stream_index}"
@@ -473,7 +492,8 @@ def build_command(source: Path, output: Path, options: ConversionOptions, info: 
                 command += ["-movflags", "+faststart"]
 
     else:
-        raise ConversionError(f"未知任务类型：{options.mode}")
+        raise ConversionError(translate("未知任务类型：{mode}",
+                                        options.locale, mode=options.mode))
 
     command += ["-progress", "pipe:1", "-nostats", str(output)]
     return command
@@ -484,6 +504,7 @@ def _run_ffmpeg(
     info: MediaInfo,
     progress_callback: Callable[[int, str], None] | None,
     cancel_event: Event,
+    language: str = "zh_CN",
 ) -> None:
     if cancel_event.is_set():
         raise ConversionCancelled("任务已取消")
@@ -500,7 +521,8 @@ def _run_ffmpeg(
             creationflags=CREATE_NO_WINDOW,
         )
     except OSError as exc:
-        raise ConversionError(f"无法启动 FFmpeg：{exc}") from exc
+        raise ConversionError(translate("无法启动 FFmpeg：{error}",
+                                        language, error=exc)) from exc
 
     recent_lines: list[str] = []
     try:
@@ -522,11 +544,13 @@ def _run_ffmpeg(
                     elapsed = int(value) / 1_000_000
                     percent = int(min(99, max(0, elapsed / info.duration * 100))) if info.duration else 0
                     if progress_callback:
-                        progress_callback(percent, f"正在处理 {percent}%")
+                        progress_callback(percent, translate(
+                            "正在处理 {percent}%", language, percent=percent))
                 except (ValueError, ZeroDivisionError):
                     pass
             elif key == "speed" and progress_callback:
-                progress_callback(-1, f"处理速度 {value}")
+                progress_callback(-1, translate(
+                    "处理速度 {speed}", language, speed=value))
         return_code = process.wait()
         if cancel_event.is_set():
             raise ConversionCancelled("任务已取消")
@@ -543,7 +567,8 @@ def _run_ffmpeg(
 
     if return_code != 0:
         detail = "\n".join(recent_lines[-12:])
-        raise ConversionError(detail or f"FFmpeg 返回错误代码 {return_code}")
+        raise ConversionError(detail or translate(
+            "FFmpeg 返回错误代码 {code}", language, code=return_code))
 
 def convert_file(
     source: Path,
@@ -553,13 +578,13 @@ def convert_file(
 ) -> ConversionResult:
     source = source.resolve()
     if not source.is_file():
-        raise ConversionError("输入文件不存在。")
+        raise ConversionError(translate("输入文件不存在。", options.locale))
     options.output_dir.mkdir(parents=True, exist_ok=True)
     cancel_event = cancel_event or Event()
     if cancel_event.is_set():
         raise ConversionCancelled("任务已取消")
 
-    info = probe_media(source)
+    info = probe_media(source, options.locale)
     if cancel_event.is_set():
         raise ConversionCancelled("任务已取消")
     output = make_output_path(source, options, info)
@@ -571,7 +596,7 @@ def convert_file(
 
     try:
         try:
-            _run_ffmpeg(command, info, progress_callback, cancel_event)
+            _run_ffmpeg(command, info, progress_callback, cancel_event, options.locale)
         except ConversionError:
             if options.encoder != "自动选择" or not encoder.endswith(("_nvenc", "_qsv", "_amf")):
                 raise
@@ -583,29 +608,33 @@ def convert_file(
             if temporary.exists():
                 temporary.unlink()
             if progress_callback:
-                progress_callback(0, "硬件编码失败，已切换 CPU 重试")
-            _run_ffmpeg(cpu_command, info, progress_callback, cancel_event)
+                progress_callback(0, translate(
+                    "硬件编码失败，已切换 CPU 重试", options.locale))
+            _run_ffmpeg(cpu_command, info, progress_callback, cancel_event, options.locale)
 
         if cancel_event.is_set():
             raise ConversionCancelled("任务已取消")
         if not temporary.is_file() or temporary.stat().st_size == 0:
-            raise ConversionError("转换结束，但没有生成有效的输出文件。")
+            raise ConversionError(translate(
+                "转换结束，但没有生成有效的输出文件。", options.locale))
         if not options.overwrite and output.exists():
             output = make_output_path(source, options, info)
         try:
             temporary.replace(output)
         except OSError as exc:
-            raise ConversionError(f"无法保存输出文件：{exc}") from exc
+            raise ConversionError(translate("无法保存输出文件：{error}",
+                                            options.locale, error=exc)) from exc
     finally:
         if temporary.exists():
             temporary.unlink()
 
     if progress_callback:
-        progress_callback(100, "处理完成")
+        progress_callback(100, translate("处理完成", options.locale))
     return ConversionResult(
         output_path=output,
         input_size=info.size or source.stat().st_size,
         output_size=output.stat().st_size,
+        locale=options.locale,
     )
 
 

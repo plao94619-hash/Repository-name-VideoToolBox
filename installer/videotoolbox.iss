@@ -1,5 +1,5 @@
 #ifndef MyAppVersion
-  #define MyAppVersion "1.1.0"
+  #define MyAppVersion "1.2.0"
 #endif
 
 #define MyAppName "万能音视频工具箱"
@@ -40,10 +40,23 @@ VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#MyAppVersion}
 
 [Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "chinese"; MessagesFile: "languages\ChineseSimplified.isl"
+Name: "traditional"; MessagesFile: "languages\ChineseTraditional.isl"
+
+[CustomMessages]
+english.DesktopIcon=Create a desktop shortcut
+chinese.DesktopIcon=创建桌面快捷方式
+traditional.DesktopIcon=建立桌面捷徑
+english.ExtraIcons=Optional shortcuts:
+chinese.ExtraIcons=附加图标：
+traditional.ExtraIcons=其他捷徑：
+english.LaunchApp=Launch {#MyAppName}
+chinese.LaunchApp=启动 {#MyAppName}
+traditional.LaunchApp=啟動 {#MyAppName}
 
 [Tasks]
-Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: "附加图标："; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:DesktopIcon}"; GroupDescription: "{cm:ExtraIcons}"; Flags: unchecked
 
 [Files]
 Source: "..\dist\万能音视频工具箱\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -53,4 +66,4 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "启动 {#MyAppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchApp}"; Flags: nowait postinstall skipifsilent
