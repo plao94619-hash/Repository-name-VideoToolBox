@@ -11,6 +11,9 @@ on:
 permissions:
   contents: write
 
+env:
+  APP_VERSION: "1.1.0"
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -77,6 +80,12 @@ jobs:
           & "tools\ffmpeg.exe" -version
           & "tools\ffprobe.exe" -version
 
+      - name: Run FFmpeg integration tests
+        shell: pwsh
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -v
+
       - name: Generate application icon
         shell: pwsh
         run: python scripts\make_icon.py
@@ -113,14 +122,14 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           New-Item -ItemType Directory -Force -Path release | Out-Null
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=1.0.0" "installer\videotoolbox.iss"
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$env:APP_VERSION" "installer\videotoolbox.iss"
           if ($LASTEXITCODE -ne 0) {
             throw "Inno Setup compilation failed."
           }
 
-          Compress-Archive -Path "dist\万能音视频工具箱\*" -DestinationPath "release\Universal-Media-Toolbox-Portable-1.0.0.zip" -CompressionLevel Optimal -Force
+          Compress-Archive -Path "dist\万能音视频工具箱\*" -DestinationPath "release\Universal-Media-Toolbox-Portable-$($env:APP_VERSION).zip" -CompressionLevel Optimal -Force
 
-          $installer = "release\Universal-Media-Toolbox-Setup-1.0.0.exe"
+          $installer = "release\Universal-Media-Toolbox-Setup-$($env:APP_VERSION).exe"
           if (-not (Test-Path $installer)) {
             throw "Installer output was not created."
           }
@@ -148,7 +157,10 @@ jobs:
           if ($env:GITHUB_REF -like "refs/tags/*") {
             $tag = $env:GITHUB_REF_NAME
           } else {
-            $tag = "v1.0.0"
+            $tag = "v$($env:APP_VERSION)"
+          }
+          if ($tag -ne "v$($env:APP_VERSION)") {
+            throw "Release tag $tag does not match application version $env:APP_VERSION."
           }
           gh release view $tag *> $null
           if ($LASTEXITCODE -eq 0) {

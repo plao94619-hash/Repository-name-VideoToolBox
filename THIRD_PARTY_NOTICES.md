@@ -20,3 +20,6 @@ Windows 安装包内附相应的 GNU GPL v3 许可文本。软件菜单“帮助
 ## Other components
 
 Python, PyInstaller, Inno Setup, Pillow 及其依赖项保留各自的许可证和版权声明。
+
+安装向导的简体中文语言文件保留了原文件的贡献者标注，来源：
+https://github.com/jrsoftware/issrc/blob/main/Files/Languages/ChineseSimplified.isl

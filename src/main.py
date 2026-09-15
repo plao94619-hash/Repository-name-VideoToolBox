@@ -236,6 +236,10 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self._restore_settings()
         self._update_mode()
+        last_target = str(self.settings.value("target", ""))
+        target_index = self.target_combo.findText(last_target)
+        if target_index >= 0:
+            self.target_combo.setCurrentIndex(target_index)
         self.statusBar().showMessage("就绪：可直接拖入音频或视频文件")
 
     def _build_actions(self) -> None:
@@ -346,6 +350,7 @@ class MainWindow(QMainWindow):
 
         self.mode_combo.currentTextChanged.connect(self._update_mode)
         self.quality_combo.currentTextChanged.connect(self._update_quality_hint)
+        self.target_combo.currentTextChanged.connect(self._update_quality_hint)
 
         options_layout.addWidget(QLabel("任务类型"), 0, 0)
         options_layout.addWidget(self.mode_combo, 1, 0)
@@ -423,6 +428,7 @@ class MainWindow(QMainWindow):
     def _save_settings(self) -> None:
         self.settings.setValue("output_dir", self.output_edit.text().strip())
         self.settings.setValue("mode", self.mode_combo.currentText())
+        self.settings.setValue("target", self.target_combo.currentText())
         self.settings.setValue("quality", self.quality_combo.currentText())
         self.settings.setValue("encoder", self.encoder_combo.currentText())
         self.settings.setValue("resolution", self.resolution_combo.currentText())
@@ -529,6 +535,18 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def _update_quality_hint(self) -> None:
+        target = self.target_combo.currentText()
+        mode = self.mode_combo.currentText()
+        raw_copy = mode == MODE_EXTRACT and target == EXTRACT_TARGETS[0]
+        self.quality_combo.setEnabled(not raw_copy and target != "WAV")
+        if raw_copy:
+            self.quality_hint.setText("直接复制原音轨，不重新编码；质量选项不影响无损提取。")
+            return
+        if target in {"FLAC", "WAV"} and mode in {MODE_AUDIO, MODE_EXTRACT}:
+            self.quality_hint.setText(
+                "FLAC/WAV 输出为无损格式，但有损源文件已丢失的音质无法恢复。"
+            )
+            return
         quality = self.quality_combo.currentText()
         hints = {
             "画质优先": "接近视觉无损，输出文件通常较大。",
@@ -632,6 +650,8 @@ class MainWindow(QMainWindow):
             widget.setEnabled(not running)
         self.start_button.setEnabled(not running)
         self.cancel_button.setEnabled(running)
+        if not running:
+            self._update_quality_hint()
         self.overall_label.setText("正在处理…" if running else "等待任务")
 
     @Slot(int)

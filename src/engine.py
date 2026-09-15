@@ -6,7 +6,8 @@ import re
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass
+import uuid
+from dataclasses import dataclass, replace
 from pathlib import Path
 from threading import Event
 from typing import Callable
@@ -104,6 +105,8 @@ class MediaInfo:
     width: int = 0
     height: int = 0
     size: int = 0
+    video_stream_index: int | None = None
+    audio_stream_index: int | None = None
 
     @property
     def summary(self) -> str:
@@ -192,7 +195,8 @@ def probe_media(path: Path) -> MediaInfo:
         str(ffprobe_path()),
         "-v", "error",
         "-show_entries",
-        "format=duration,size:stream=codec_type,codec_name,width,height",
+        "format=duration,size:stream=index,codec_type,codec_name,width,height:"
+        "stream_disposition=attached_pic",
         "-of", "json",
         str(path),
     ]
@@ -214,12 +218,20 @@ def probe_media(path: Path) -> MediaInfo:
     info = MediaInfo(duration=duration, size=size)
     for stream in data.get("streams") or []:
         kind = stream.get("codec_type")
-        if kind == "video" and not info.video_codec:
+        if (
+            kind == "video"
+            and not info.video_codec
+            and not (stream.get("disposition") or {}).get("attached_pic")
+        ):
             info.video_codec = str(stream.get("codec_name") or "")
             info.width = int(stream.get("width") or 0)
             info.height = int(stream.get("height") or 0)
+            if stream.get("index") is not None:
+                info.video_stream_index = int(stream["index"])
         elif kind == "audio" and not info.audio_codec:
             info.audio_codec = str(stream.get("codec_name") or "")
+            if stream.get("index") is not None:
+                info.audio_stream_index = int(stream["index"])
     return info
 
 
@@ -417,7 +429,11 @@ def build_command(source: Path, output: Path, options: ConversionOptions, info: 
     if options.mode == MODE_EXTRACT:
         if not info.audio_codec:
             raise ConversionError("该文件没有可提取的音轨。")
-        command += ["-map", "0:a:0", "-vn", "-map_metadata", "0"]
+        audio_map = (
+            f"0:{info.audio_stream_index}"
+            if info.audio_stream_index is not None else "0:a:0"
+        )
+        command += ["-map", audio_map, "-vn", "-map_metadata", "0"]
         command += ["-c:a", "copy"] if options.target == RAW_AUDIO else _audio_codec_args(
             options.target, options.quality
         )
@@ -425,14 +441,22 @@ def build_command(source: Path, output: Path, options: ConversionOptions, info: 
     elif options.mode == MODE_AUDIO:
         if not info.audio_codec:
             raise ConversionError("该文件没有可转换的音轨。")
-        command += ["-map", "0:a:0", "-vn", "-map_metadata", "0"]
+        audio_map = (
+            f"0:{info.audio_stream_index}"
+            if info.audio_stream_index is not None else "0:a:0"
+        )
+        command += ["-map", audio_map, "-vn", "-map_metadata", "0"]
         command += _audio_codec_args(options.target, options.quality)
 
     elif options.mode in {MODE_VIDEO, MODE_COMPRESS}:
         if not info.video_codec:
             raise ConversionError("该文件没有视频画面。")
         encoder = choose_video_encoder(options, options.target)
-        command += ["-map", "0:v:0", "-map", "0:a?", "-map_metadata", "0", "-map_chapters", "0"]
+        video_map = (
+            f"0:{info.video_stream_index}"
+            if info.video_stream_index is not None else "0:v:0"
+        )
+        command += ["-map", video_map, "-map", "0:a?", "-map_metadata", "0", "-map_chapters", "0"]
         command += ["-c:v", encoder]
         command += _video_quality_args(encoder, options.quality)
         command += _scale_args(options.resolution)
@@ -455,22 +479,14 @@ def build_command(source: Path, output: Path, options: ConversionOptions, info: 
     return command
 
 
-def convert_file(
-    source: Path,
-    options: ConversionOptions,
-    progress_callback: Callable[[int, str], None] | None = None,
-    cancel_event: Event | None = None,
-) -> ConversionResult:
-    source = source.resolve()
-    if not source.is_file():
-        raise ConversionError("输入文件不存在。")
-    options.output_dir.mkdir(parents=True, exist_ok=True)
-
-    info = probe_media(source)
-    output = make_output_path(source, options, info)
-    command = build_command(source, output, options, info)
-    cancel_event = cancel_event or Event()
-
+def _run_ffmpeg(
+    command: list[str],
+    info: MediaInfo,
+    progress_callback: Callable[[int, str], None] | None,
+    cancel_event: Event,
+) -> None:
+    if cancel_event.is_set():
+        raise ConversionCancelled("任务已取消")
     try:
         process = subprocess.Popen(
             command,
@@ -491,11 +507,6 @@ def convert_file(
         assert process.stdout is not None
         for raw_line in process.stdout:
             if cancel_event.is_set():
-                process.terminate()
-                try:
-                    process.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    process.kill()
                 raise ConversionCancelled("任务已取消")
 
             line = raw_line.strip()
@@ -516,33 +527,81 @@ def convert_file(
                     pass
             elif key == "speed" and progress_callback:
                 progress_callback(-1, f"处理速度 {value}")
-            elif key == "progress" and value == "end" and progress_callback:
-                progress_callback(100, "处理完成")
-
         return_code = process.wait()
-    except ConversionCancelled:
-        try:
-            if output.exists():
-                output.unlink()
-        except OSError:
-            pass
-        raise
+        if cancel_event.is_set():
+            raise ConversionCancelled("任务已取消")
     finally:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
         if process.stdout:
             process.stdout.close()
 
     if return_code != 0:
-        try:
-            if output.exists():
-                output.unlink()
-        except OSError:
-            pass
         detail = "\n".join(recent_lines[-12:])
         raise ConversionError(detail or f"FFmpeg 返回错误代码 {return_code}")
 
-    if not output.is_file() or output.stat().st_size == 0:
-        raise ConversionError("转换结束，但没有生成有效的输出文件。")
+def convert_file(
+    source: Path,
+    options: ConversionOptions,
+    progress_callback: Callable[[int, str], None] | None = None,
+    cancel_event: Event | None = None,
+) -> ConversionResult:
+    source = source.resolve()
+    if not source.is_file():
+        raise ConversionError("输入文件不存在。")
+    options.output_dir.mkdir(parents=True, exist_ok=True)
+    cancel_event = cancel_event or Event()
+    if cancel_event.is_set():
+        raise ConversionCancelled("任务已取消")
 
+    info = probe_media(source)
+    if cancel_event.is_set():
+        raise ConversionCancelled("任务已取消")
+    output = make_output_path(source, options, info)
+    # Keep the real extension so FFmpeg selects the right muxer. Publish only
+    # after the entire file is successfully encoded.
+    temporary = output.with_name(f".{output.stem}.{uuid.uuid4().hex}.partial{output.suffix}")
+    command = build_command(source, temporary, options, info)
+    encoder = command[command.index("-c:v") + 1] if "-c:v" in command else ""
+
+    try:
+        try:
+            _run_ffmpeg(command, info, progress_callback, cancel_event)
+        except ConversionError:
+            if options.encoder != "自动选择" or not encoder.endswith(("_nvenc", "_qsv", "_amf")):
+                raise
+            _HARDWARE_CACHE[encoder] = False
+            fallback = "H.265 / HEVC（高压缩）" if encoder.startswith("hevc_") else "H.264（兼容优先）"
+            cpu_command = build_command(
+                source, temporary, replace(options, encoder=fallback), info
+            )
+            if temporary.exists():
+                temporary.unlink()
+            if progress_callback:
+                progress_callback(0, "硬件编码失败，已切换 CPU 重试")
+            _run_ffmpeg(cpu_command, info, progress_callback, cancel_event)
+
+        if cancel_event.is_set():
+            raise ConversionCancelled("任务已取消")
+        if not temporary.is_file() or temporary.stat().st_size == 0:
+            raise ConversionError("转换结束，但没有生成有效的输出文件。")
+        if not options.overwrite and output.exists():
+            output = make_output_path(source, options, info)
+        try:
+            temporary.replace(output)
+        except OSError as exc:
+            raise ConversionError(f"无法保存输出文件：{exc}") from exc
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+    if progress_callback:
+        progress_callback(100, "处理完成")
     return ConversionResult(
         output_path=output,
         input_size=info.size or source.stat().st_size,

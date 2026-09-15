@@ -9,20 +9,23 @@
 - 视频提取音频：支持“原始音轨（无损提取）”，直接复制音频码流，不重新编码
 - 视频压缩：画质优先、均衡压缩、极限压缩
 - 编码器：H.264、H.265/HEVC、AV1
-- 硬件加速：自动检测 NVIDIA NVENC、Intel QSV、AMD AMF；不可用时回退 CPU
+- 硬件加速：自动检测 NVIDIA NVENC、Intel QSV、AMD AMF；编码中途失败时自动用 CPU 重试一次
 - 分辨率限制：保持原尺寸，或限制到 4K、1080p、720p、480p
 - 批量处理、拖放添加、实时进度、安全取消、自动避免覆盖同名文件
+- 使用临时输出文件，只有转换成功后才生成最终文件；失败和取消时清理临时文件
+- 跳过媒体中的封面图片，选择真正的视频流进行转换
+- 中文软件界面与简体中文安装向导
 - 全程本地处理，不上传用户媒体文件
 
 ## 下载 Windows 安装包
 
-打开仓库的 **Actions** 页面，进入最新成功的 **Build Windows Installer**，下载构建产物：
+打开仓库的 [Releases 页面](https://github.com/plao94619-hash/Repository-name-VideoToolBox/releases/latest)，下载最新正式版：
 
-- Universal-Media-Toolbox-Setup-1.0.0.exe：安装版
-- Universal-Media-Toolbox-Portable-1.0.0.zip：免安装便携版
+- Universal-Media-Toolbox-Setup-1.1.0.exe：安装版
+- Universal-Media-Toolbox-Portable-1.1.0.zip：免安装便携版
 - SHA256SUMS.txt：校验值
 
-正式版本也会发布在 Releases 页面。
+每次成功构建后也可在 Actions 下载近期构建产物。新版安装版可直接安装到旧版的位置，原有设置会保留。
 
 > 本项目暂未购买代码签名证书。Windows SmartScreen 可能显示“未知发布者”，这是未签名个人软件的常见提示，并不等于检测到病毒。建议从本仓库下载并核对 SHA-256。
 
@@ -69,7 +72,7 @@ pyinstaller build.spec --noconfirm --clean
 & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\videotoolbox.iss
 ~~~
 
-GitHub Actions 会自动下载 FFmpeg Windows GPL 静态构建、运行测试、打包程序、自检内置 FFmpeg，并生成安装包和便携包。
+GitHub Actions 会自动下载 FFmpeg Windows GPL 静态构建、运行单元测试与真实音频转换测试、打包程序、自检内置 FFmpeg，并生成安装包和便携包。
 
 ## 技术与许可
 
