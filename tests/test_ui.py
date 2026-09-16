@@ -143,7 +143,11 @@ class LanguageUITests(unittest.TestCase):
                 self.window.grab().save(str(Path(preview_dir) / f"ui-{locale}-dark.png"))
                 self.window.theme_combo.setCurrentIndex(
                     self.window.theme_combo.findData("light"))
+        # The hosted Windows desktop is only 1024 px wide and caps visible
+        # top-level windows. Re-check the desktop breakpoint while hidden.
+        self.window.hide()
         self.window.resize(1200, 800)
+        self.window._adapt_layout()
         QApplication.processEvents()
         self.assertTrue(self.window.workspace_wide)
         self.assertFalse(self.window.header_compact)
@@ -179,7 +183,8 @@ class LanguageUITests(unittest.TestCase):
         )
         self.window._item_finished(1, False, "FFmpeg: sample diagnostic text", "")
         self.window.resize(1280, 820)
-        self.window.show()
+        self.window.ensurePolished()
+        self.window._adapt_layout()
         QApplication.processEvents()
         self.assertTrue(self.window.workspace_wide)
         self.assertEqual(self.window.table.item(0, 3).data(Qt.ItemDataRole.UserRole), "success")
