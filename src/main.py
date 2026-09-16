@@ -5,8 +5,8 @@ import sys
 from pathlib import Path
 from threading import Event
 
-from PySide6.QtCore import QObject, QLocale, QSettings, QThread, QUrl, Qt, Signal, Slot
-from PySide6.QtGui import QAction, QBrush, QColor, QCloseEvent, QDesktopServices, QDragEnterEvent, QDropEvent, QGuiApplication, QResizeEvent
+from PySide6.QtCore import QObject, QLocale, QSettings, QSize, QThread, QUrl, Qt, Signal, Slot
+from PySide6.QtGui import QAction, QBrush, QColor, QCloseEvent, QDesktopServices, QDragEnterEvent, QDragLeaveEvent, QDropEvent, QGuiApplication, QResizeEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QStatusBar,
+    QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -55,6 +56,7 @@ from i18n import (
     LANGUAGE_LABELS, SUPPORTED_LANGUAGES, language_for_system_locale, translate,
 )
 from ui_theme import COLORS, make_palette, make_stylesheet
+from ui_components import BrandMark, EmptyDropZone, MediaTableDelegate, make_icon
 
 
 def readable_size(size: int) -> str:
@@ -207,7 +209,29 @@ class MainWindow(QMainWindow):
         if app:
             app.setPalette(make_palette(effective))
             app.setStyleSheet(make_stylesheet(effective))
+        colors = COLORS[effective]
+        self.brand_mark.set_accent(colors["primary"])
+        self.empty_state.set_theme(colors)
+        self.table_delegate.set_colors(colors)
+        self.table.viewport().update()
+        self._apply_icons(colors)
         self._refresh_status_colors()
+
+    def _apply_icons(self, colors: dict[str, str]) -> None:
+        for widget, name, tone in self._icon_bindings:
+            icon_color = {
+                "primary": "#ffffff",
+                "danger": colors["error"],
+                "normal": colors["muted"],
+            }[tone]
+            widget.setIcon(make_icon(name, icon_color, 17))
+            widget.setIconSize(QSize(17, 17))
+        for label, name in self._section_icons:
+            label.setPixmap(make_icon(name, colors["accent"], 18).pixmap(18, 18))
+        self.add_action.setIcon(make_icon("add", colors["muted"], 16))
+        self.add_folder_action.setIcon(make_icon("folder", colors["muted"], 16))
+        self.notices_action.setIcon(make_icon("shield", colors["muted"], 16))
+        self.about_action.setIcon(make_icon("info", colors["muted"], 16))
 
     def _refresh_status_colors(self) -> None:
         color = COLORS.get(getattr(self, "effective_theme", "light"), COLORS["light"])
@@ -238,13 +262,14 @@ class MainWindow(QMainWindow):
         for widget, key in (
             (self.hero_title, APP_NAME),
             (self.hero_subtitle, "格式转换 · 无损提取音轨 · 画质优先压缩 · 极限压缩"),
+            (self.privacy_badge, "本地处理 · 文件不会上传"),
             (self.language_label, "语言"),
             (self.theme_label, "外观"),
             (self.files_title, "待处理文件"),
             (self.files_hint, "将文件或文件夹拖入此处，或使用下方按钮添加"),
             (self.options_title, "处理设置"),
             (self.options_hint, "按任务需要选择输出格式与质量"),
-            (self.add_files_button, "＋ 添加文件"),
+            (self.add_files_button, "添加文件"),
             (self.add_folder_button, "添加文件夹"),
             (self.remove_button, "移除选中"),
             (self.clear_button, "清空列表"),
@@ -260,6 +285,11 @@ class MainWindow(QMainWindow):
             (self.start_button, "开始处理"),
         ):
             widget.setText(self._t(key))
+        self.empty_state.set_texts(
+            self._t("把媒体文件拖到这里"),
+            self._t("支持常见音频和视频格式，也可以直接拖入整个文件夹"),
+            self._t("选择文件"),
+        )
         for index, key in enumerate(("跟随系统", "浅色", "深色")):
             self.theme_combo.setItemText(index, self._t(key))
         for combo in (
@@ -267,7 +297,12 @@ class MainWindow(QMainWindow):
             self.encoder_combo, self.resolution_combo,
         ):
             for index in range(combo.count()):
-                combo.setItemText(index, self._t(str(combo.itemData(index))))
+                text = self._t(str(combo.itemData(index)))
+                combo.setItemText(index, text)
+                combo.setItemData(index, text, Qt.ItemDataRole.ToolTipRole)
+        for combo in (self.language_combo, self.theme_combo):
+            for index in range(combo.count()):
+                combo.setItemData(index, combo.itemText(index), Qt.ItemDataRole.ToolTipRole)
         self.output_edit.setPlaceholderText(self._t("选择输出目录"))
         self.table.setHorizontalHeaderLabels([
             self._t(key) for key in ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
@@ -315,6 +350,7 @@ class MainWindow(QMainWindow):
         root = QVBoxLayout(central)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
+
         self.content_scroll = QScrollArea()
         self.content_scroll.setObjectName("ContentScroll")
         self.content_scroll.setWidgetResizable(True)
@@ -322,74 +358,132 @@ class MainWindow(QMainWindow):
         self.content_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         content = QWidget()
         content.setObjectName("Content")
-        content_root = QVBoxLayout(content)
-        content_root.setContentsMargins(22, 18, 22, 18)
-        content_root.setSpacing(14)
+        self.content_root = QVBoxLayout(content)
+        self.content_root.setContentsMargins(24, 20, 24, 20)
+        self.content_root.setSpacing(16)
 
-        hero = QFrame()
-        hero.setObjectName("HeaderPanel")
-        hero_layout = QVBoxLayout(hero)
-        hero_layout.setContentsMargins(22, 16, 22, 16)
-        hero_layout.setSpacing(5)
-        hero_top = QHBoxLayout()
+        self.header_panel = QFrame()
+        self.header_panel.setObjectName("HeaderPanel")
+        self.header_layout = QGridLayout(self.header_panel)
+        self.header_layout.setContentsMargins(20, 17, 20, 17)
+        self.header_layout.setHorizontalSpacing(24)
+        self.header_layout.setVerticalSpacing(14)
+
+        brand_block = QWidget()
+        brand_layout = QHBoxLayout(brand_block)
+        brand_layout.setContentsMargins(0, 0, 0, 0)
+        brand_layout.setSpacing(14)
+        self.brand_mark = BrandMark()
+        brand_layout.addWidget(self.brand_mark, 0, Qt.AlignmentFlag.AlignTop)
+        brand_copy = QVBoxLayout()
+        brand_copy.setContentsMargins(0, 0, 0, 0)
+        brand_copy.setSpacing(3)
+        title_row = QHBoxLayout()
+        title_row.setSpacing(9)
         self.hero_title = QLabel(self._t(APP_NAME))
         self.hero_title.setObjectName("AppTitle")
-        hero_top.addWidget(self.hero_title)
-        hero_top.addStretch()
-        self.language_label = QLabel(self._t("语言"))
-        self.language_label.setObjectName("FieldLabel")
-        hero_top.addWidget(self.language_label)
-        self.language_combo = QComboBox()
-        for locale in SUPPORTED_LANGUAGES:
-            self.language_combo.addItem(LANGUAGE_LABELS[locale], locale)
-        self.language_combo.setCurrentIndex(self.language_combo.findData(self.language))
-        self.language_combo.setMinimumWidth(124)
-        self.language_combo.currentIndexChanged.connect(self._change_language)
-        hero_top.addWidget(self.language_combo)
-        hero_top.addSpacing(12)
-        self.theme_label = QLabel(self._t("外观"))
-        self.theme_label.setObjectName("FieldLabel")
-        hero_top.addWidget(self.theme_label)
-        self.theme_combo = QComboBox()
-        for value, key in (("system", "跟随系统"), ("light", "浅色"), ("dark", "深色")):
-            self.theme_combo.addItem(self._t(key), value)
-        self.theme_combo.setCurrentIndex(self.theme_combo.findData(self.theme))
-        self.theme_combo.setMinimumWidth(124)
-        self.theme_combo.currentIndexChanged.connect(self._change_theme)
-        hero_top.addWidget(self.theme_combo)
+        title_row.addWidget(self.hero_title)
+        self.version_label = QLabel(f"v{APP_VERSION}")
+        self.version_label.setObjectName("AppVersion")
+        title_row.addWidget(self.version_label, 0, Qt.AlignmentFlag.AlignBottom)
+        title_row.addStretch()
+        brand_copy.addLayout(title_row)
         self.hero_subtitle = QLabel(self._t(
             "格式转换 · 无损提取音轨 · 画质优先压缩 · 极限压缩"))
         self.hero_subtitle.setObjectName("AppSubtitle")
         self.hero_subtitle.setWordWrap(True)
-        hero_layout.addLayout(hero_top)
-        hero_layout.addWidget(self.hero_subtitle)
-        content_root.addWidget(hero)
+        brand_copy.addWidget(self.hero_subtitle)
+        self.privacy_badge = QLabel(self._t("本地处理 · 文件不会上传"))
+        self.privacy_badge.setObjectName("PrivacyBadge")
+        self.privacy_badge.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+        brand_copy.addWidget(self.privacy_badge, 0, Qt.AlignmentFlag.AlignLeft)
+        brand_layout.addLayout(brand_copy, 1)
 
-        file_panel = QFrame()
-        file_panel.setObjectName("Panel")
-        file_layout = QVBoxLayout(file_panel)
-        file_layout.setContentsMargins(18, 16, 18, 18)
-        file_layout.setSpacing(12)
+        self.header_controls = QWidget()
+        self.header_controls.setObjectName("HeaderControls")
+        controls_layout = QHBoxLayout(self.header_controls)
+        controls_layout.setContentsMargins(0, 0, 0, 0)
+        controls_layout.setSpacing(12)
+        language_group = QVBoxLayout()
+        language_group.setContentsMargins(0, 0, 0, 0)
+        language_group.setSpacing(5)
+        self.language_label = QLabel(self._t("语言"))
+        self.language_label.setObjectName("FieldLabel")
+        language_group.addWidget(self.language_label)
+        self.language_combo = QComboBox()
+        for locale in SUPPORTED_LANGUAGES:
+            self.language_combo.addItem(LANGUAGE_LABELS[locale], locale)
+        self.language_combo.setCurrentIndex(self.language_combo.findData(self.language))
+        self.language_combo.setMinimumWidth(136)
+        self.language_combo.currentIndexChanged.connect(self._change_language)
+        language_group.addWidget(self.language_combo)
+        controls_layout.addLayout(language_group)
+        theme_group = QVBoxLayout()
+        theme_group.setContentsMargins(0, 0, 0, 0)
+        theme_group.setSpacing(5)
+        self.theme_label = QLabel(self._t("外观"))
+        self.theme_label.setObjectName("FieldLabel")
+        theme_group.addWidget(self.theme_label)
+        self.theme_combo = QComboBox()
+        for value, key in (("system", "跟随系统"), ("light", "浅色"), ("dark", "深色")):
+            self.theme_combo.addItem(self._t(key), value)
+        self.theme_combo.setCurrentIndex(self.theme_combo.findData(self.theme))
+        self.theme_combo.setMinimumWidth(136)
+        self.theme_combo.currentIndexChanged.connect(self._change_theme)
+        theme_group.addWidget(self.theme_combo)
+        controls_layout.addLayout(theme_group)
+        self.header_layout.addWidget(brand_block, 0, 0)
+        self.header_layout.addWidget(
+            self.header_controls, 0, 1,
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+        )
+        self.header_layout.setColumnStretch(0, 1)
+        self.content_root.addWidget(self.header_panel)
+
+        self.workspace_layout = QGridLayout()
+        self.workspace_layout.setContentsMargins(0, 0, 0, 0)
+        self.workspace_layout.setHorizontalSpacing(16)
+        self.workspace_layout.setVerticalSpacing(16)
+
+        self.file_panel = QFrame()
+        self.file_panel.setObjectName("Panel")
+        file_layout = QVBoxLayout(self.file_panel)
+        file_layout.setContentsMargins(18, 17, 18, 18)
+        file_layout.setSpacing(13)
         file_heading = QHBoxLayout()
+        file_heading.setSpacing(10)
+        self.file_section_icon = QLabel()
+        self.file_section_icon.setObjectName("SectionIcon")
+        self.file_section_icon.setFixedSize(34, 34)
+        self.file_section_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        file_heading.addWidget(self.file_section_icon)
+        file_heading_copy = QVBoxLayout()
+        file_heading_copy.setContentsMargins(0, 0, 0, 0)
+        file_heading_copy.setSpacing(2)
         self.files_title = QLabel(self._t("待处理文件"))
         self.files_title.setObjectName("SectionTitle")
-        file_heading.addWidget(self.files_title)
+        file_heading_copy.addWidget(self.files_title)
+        self.files_hint = QLabel(self._t("将文件或文件夹拖入此处，或使用下方按钮添加"))
+        self.files_hint.setObjectName("SectionHint")
+        self.files_hint.setWordWrap(True)
+        file_heading_copy.addWidget(self.files_hint)
+        file_heading.addLayout(file_heading_copy, 1)
         file_heading.addStretch()
         self.file_count_label = QLabel(self._t("{count} 个文件", count=0))
         self.file_count_label.setObjectName("FileCount")
         file_heading.addWidget(self.file_count_label)
         file_layout.addLayout(file_heading)
-        self.files_hint = QLabel(self._t("将文件或文件夹拖入此处，或使用下方按钮添加"))
-        self.files_hint.setObjectName("SectionHint")
-        self.files_hint.setWordWrap(True)
-        file_layout.addWidget(self.files_hint)
 
         toolbar = QHBoxLayout()
-        self.add_files_button = QPushButton(self._t("＋ 添加文件"))
+        toolbar.setSpacing(8)
+        self.add_files_button = QPushButton(self._t("添加文件"))
         self.add_folder_button = QPushButton(self._t("添加文件夹"))
         self.remove_button = QPushButton(self._t("移除选中"))
         self.clear_button = QPushButton(self._t("清空列表"))
-        self.remove_button.setObjectName("DangerButton")
+        for button in (self.add_files_button, self.add_folder_button,
+                       self.remove_button, self.clear_button):
+            button.setProperty("role", "toolbar")
+        self.remove_button.setProperty("role", "danger")
         self.add_files_button.clicked.connect(self.add_files)
         self.add_folder_button.clicked.connect(self.add_folder)
         self.remove_button.clicked.connect(self.remove_selected)
@@ -401,6 +495,11 @@ class MainWindow(QMainWindow):
         toolbar.addStretch()
         file_layout.addLayout(toolbar)
 
+        self.file_stack = QStackedWidget()
+        self.file_stack.setMinimumHeight(280)
+        self.empty_state = EmptyDropZone()
+        self.empty_state.add_requested.connect(self.add_files)
+        self.file_stack.addWidget(self.empty_state)
         self.table = QTableWidget(0, 5)
         self.table.setHorizontalHeaderLabels([
             self._t(key) for key in ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
@@ -412,33 +511,50 @@ class MainWindow(QMainWindow):
         self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self._table_context_menu)
         self.table.cellDoubleClicked.connect(self._table_double_clicked)
+        self.table.itemSelectionChanged.connect(self._update_selection_actions)
         self.table.verticalHeader().setVisible(False)
         self.table.setShowGrid(False)
-        self.table.verticalHeader().setDefaultSectionSize(43)
-        self.table.setMinimumHeight(230)
+        self.table.verticalHeader().setDefaultSectionSize(47)
+        self.table.setMinimumHeight(280)
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
-        file_layout.addWidget(self.table, 1)
-        content_root.addWidget(file_panel, 1)
+        self.table_delegate = MediaTableDelegate(COLORS["light"], self.table)
+        self.table.setItemDelegate(self.table_delegate)
+        self.file_stack.addWidget(self.table)
+        file_layout.addWidget(self.file_stack, 1)
 
-        options_panel = QFrame()
-        options_panel.setObjectName("Panel")
-        options_root = QVBoxLayout(options_panel)
-        options_root.setContentsMargins(18, 16, 18, 18)
-        options_root.setSpacing(12)
+        self.options_panel = QFrame()
+        self.options_panel.setObjectName("Panel")
+        options_root = QVBoxLayout(self.options_panel)
+        options_root.setContentsMargins(18, 17, 18, 18)
+        options_root.setSpacing(13)
+        options_heading = QHBoxLayout()
+        options_heading.setSpacing(10)
+        self.options_section_icon = QLabel()
+        self.options_section_icon.setObjectName("SectionIcon")
+        self.options_section_icon.setFixedSize(34, 34)
+        self.options_section_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        options_heading.addWidget(self.options_section_icon)
+        options_heading_copy = QVBoxLayout()
+        options_heading_copy.setContentsMargins(0, 0, 0, 0)
+        options_heading_copy.setSpacing(2)
         self.options_title = QLabel(self._t("处理设置"))
         self.options_title.setObjectName("SectionTitle")
-        options_root.addWidget(self.options_title)
+        options_heading_copy.addWidget(self.options_title)
         self.options_hint = QLabel(self._t("按任务需要选择输出格式与质量"))
         self.options_hint.setObjectName("SectionHint")
-        options_root.addWidget(self.options_hint)
+        self.options_hint.setWordWrap(True)
+        options_heading_copy.addWidget(self.options_hint)
+        options_heading.addLayout(options_heading_copy, 1)
+        options_root.addLayout(options_heading)
+        options_root.addSpacing(2)
         self.fields_layout = QGridLayout()
         self.fields_layout.setHorizontalSpacing(16)
-        self.fields_layout.setVerticalSpacing(8)
+        self.fields_layout.setVerticalSpacing(7)
         options_root.addLayout(self.fields_layout)
 
         self.mode_combo = QComboBox()
@@ -478,14 +594,18 @@ class MainWindow(QMainWindow):
 
         self.quality_hint = QLabel()
         self.quality_hint.setWordWrap(True)
-        self.quality_hint.setObjectName("SecondaryText")
+        self.quality_hint.setObjectName("QualityHint")
         options_root.addWidget(self.quality_hint)
+        options_root.addSpacing(1)
 
         self.output_label = QLabel(self._t("输出文件夹"))
         self.output_edit = QLineEdit()
         self.output_edit.setPlaceholderText(self._t("选择输出目录"))
+        self.output_edit.textChanged.connect(self.output_edit.setToolTip)
         self.browse_output_button = QPushButton(self._t("浏览…"))
         self.open_output_button = QPushButton(self._t("打开目录"))
+        self.browse_output_button.setProperty("role", "toolbar")
+        self.open_output_button.setProperty("role", "ghost")
         self.browse_output_button.clicked.connect(self.choose_output_dir)
         self.open_output_button.clicked.connect(self.open_output_dir)
 
@@ -497,33 +617,38 @@ class MainWindow(QMainWindow):
         output_buttons.addWidget(self.browse_output_button)
         output_buttons.addWidget(self.open_output_button)
         options_root.addLayout(output_buttons)
+        options_root.addStretch(1)
 
-        content_root.addWidget(options_panel)
+        self.workspace_layout.addWidget(self.file_panel, 0, 0)
+        self.workspace_layout.addWidget(self.options_panel, 0, 1)
+        self.content_root.addLayout(self.workspace_layout, 1)
         self.content_scroll.setWidget(content)
         root.addWidget(self.content_scroll, 1)
 
         action_panel = QFrame()
         action_panel.setObjectName("ActionPanel")
         action_panel_layout = QVBoxLayout(action_panel)
-        action_panel_layout.setContentsMargins(22, 12, 22, 12)
-        action_panel_layout.setSpacing(7)
+        action_panel_layout.setContentsMargins(24, 12, 24, 12)
+        action_panel_layout.setSpacing(8)
         action_bar = QHBoxLayout()
+        action_bar.setSpacing(10)
         self.overall_label = QLabel(self._t("等待任务"))
         self.overall_label.setObjectName("TaskState")
         self.overall_label.setMinimumWidth(200)
         self.overall_label.setWordWrap(True)
         self.overall_progress = QProgressBar()
+        self.overall_progress.setObjectName("OverallProgress")
         self.overall_progress.setRange(0, 100)
         self.overall_progress.setValue(0)
         self.overall_progress.setTextVisible(False)
         self.overall_progress.setVisible(False)
         self.cancel_button = QPushButton(self._t("取消任务"))
-        self.cancel_button.setObjectName("DangerButton")
+        self.cancel_button.setProperty("role", "danger")
         self.cancel_button.setEnabled(False)
         self.cancel_button.clicked.connect(self.cancel_conversion)
         self.start_button = QPushButton(self._t("开始处理"))
         self.start_button.setObjectName("PrimaryButton")
-        self.start_button.setMinimumWidth(165)
+        self.start_button.setMinimumWidth(176)
         self.start_button.clicked.connect(self.start_conversion)
         action_bar.addWidget(self.overall_label)
         action_bar.addStretch()
@@ -534,13 +659,37 @@ class MainWindow(QMainWindow):
         root.addWidget(action_panel)
 
         self.setCentralWidget(central)
-        self.setStatusBar(QStatusBar())
+        status_bar = QStatusBar()
+        status_bar.setSizeGripEnabled(False)
+        self.setStatusBar(status_bar)
+
+        self._icon_bindings = (
+            (self.add_files_button, "add", "normal"),
+            (self.add_folder_button, "folder", "normal"),
+            (self.remove_button, "remove", "danger"),
+            (self.clear_button, "clear", "normal"),
+            (self.browse_output_button, "folder_open", "normal"),
+            (self.open_output_button, "external", "normal"),
+            (self.cancel_button, "stop", "danger"),
+            (self.start_button, "play", "primary"),
+        )
+        self._section_icons = (
+            (self.file_section_icon, "queue"),
+            (self.options_section_icon, "settings"),
+        )
+        self.add_files_button.setToolTip("Ctrl+O")
+        self.add_folder_button.setToolTip("Ctrl+Shift+O")
+        self._update_empty_state()
+        self._adapt_layout()
 
     def _adapt_columns(self) -> None:
         if not hasattr(self, "fields_layout") or not hasattr(self, "field_pairs"):
             return
-        available = self.width() - 62  # card margins and a possible scroll bar
-        columns = 3 if available >= 1120 else (2 if available >= 720 else 1)
+        if getattr(self, "workspace_wide", False):
+            columns = 2
+        else:
+            available = self.width() - 84
+            columns = 3 if available >= 1080 else (2 if available >= 700 else 1)
         if getattr(self, "field_columns", None) == columns:
             return
         self.field_columns = columns
@@ -554,9 +703,52 @@ class MainWindow(QMainWindow):
         for column in range(3):
             self.fields_layout.setColumnStretch(column, 1 if column < columns else 0)
 
+    def _adapt_layout(self) -> None:
+        if not hasattr(self, "workspace_layout"):
+            return
+        wide = self.width() >= 1160
+        header_compact = self.width() < 930
+        if getattr(self, "workspace_wide", None) != wide:
+            self.workspace_wide = wide
+            self.workspace_layout.removeWidget(self.file_panel)
+            self.workspace_layout.removeWidget(self.options_panel)
+            if wide:
+                self.workspace_layout.addWidget(self.file_panel, 0, 0)
+                self.workspace_layout.addWidget(self.options_panel, 0, 1)
+                self.workspace_layout.setColumnStretch(0, 7)
+                self.workspace_layout.setColumnStretch(1, 5)
+                self.workspace_layout.setRowStretch(0, 1)
+                self.file_panel.setMinimumHeight(465)
+                self.options_panel.setMinimumHeight(465)
+            else:
+                self.workspace_layout.addWidget(self.file_panel, 0, 0)
+                self.workspace_layout.addWidget(self.options_panel, 1, 0)
+                self.workspace_layout.setColumnStretch(0, 1)
+                self.workspace_layout.setColumnStretch(1, 0)
+                self.workspace_layout.setRowStretch(0, 1)
+                self.workspace_layout.setRowStretch(1, 0)
+                self.file_panel.setMinimumHeight(380)
+                self.options_panel.setMinimumHeight(0)
+            self.field_columns = None
+            self._adapt_columns()
+
+        if getattr(self, "header_compact", None) != header_compact:
+            self.header_compact = header_compact
+            self.header_layout.removeWidget(self.header_controls)
+            if header_compact:
+                self.header_layout.addWidget(
+                    self.header_controls, 1, 0, 1, 2,
+                    Qt.AlignmentFlag.AlignLeft,
+                )
+            else:
+                self.header_layout.addWidget(
+                    self.header_controls, 0, 1,
+                    Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+                )
+
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
-        self._adapt_columns()
+        self._adapt_layout()
 
     def _restore_settings(self) -> None:
         default_dir = Path.home() / "Videos" / APP_NAME
@@ -666,6 +858,22 @@ class MainWindow(QMainWindow):
     def _update_count(self) -> None:
         self.file_count_label.setText(self._t(
             "{count} 个文件", count=self.table.rowCount()))
+        self._update_empty_state()
+
+    def _update_empty_state(self) -> None:
+        if not hasattr(self, "file_stack"):
+            return
+        has_files = self.table.rowCount() > 0
+        self.file_stack.setCurrentWidget(self.table if has_files else self.empty_state)
+        self.clear_button.setEnabled(has_files and not self.worker)
+        self._update_selection_actions()
+
+    @Slot()
+    def _update_selection_actions(self) -> None:
+        if not hasattr(self, "remove_button"):
+            return
+        has_selection = bool(self.table.selectionModel().selectedRows())
+        self.remove_button.setEnabled(has_selection and not self.worker)
 
     @Slot(object)
     def _table_context_menu(self, point: object) -> None:
@@ -870,6 +1078,7 @@ class MainWindow(QMainWindow):
         self._set_task_state("active" if running else "idle")
         if not running:
             self._update_quality_hint()
+            self._update_empty_state()
         self.overall_label.setText(
             self._t("正在处理…") if running else self._t("等待任务"))
 
@@ -988,9 +1197,21 @@ class MainWindow(QMainWindow):
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         if not self.worker and event.mimeData().hasUrls():
+            self._set_drag_active(True)
             event.acceptProposedAction()
 
+    def dragLeaveEvent(self, event: QDragLeaveEvent) -> None:
+        self._set_drag_active(False)
+        event.accept()
+
+    def _set_drag_active(self, active: bool) -> None:
+        for widget in (self.file_panel, self.empty_state):
+            widget.setProperty("dragActive", active)
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+
     def dropEvent(self, event: QDropEvent) -> None:
+        self._set_drag_active(False)
         paths: list[Path] = []
         for url in event.mimeData().urls():
             local = url.toLocalFile()

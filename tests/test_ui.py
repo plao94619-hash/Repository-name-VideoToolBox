@@ -118,6 +118,8 @@ class LanguageUITests(unittest.TestCase):
                 self.window.language_combo.findData(locale))
             QApplication.processEvents()
             self.assertEqual(self.window.field_columns, 2)
+            self.assertFalse(self.window.workspace_wide)
+            self.assertTrue(self.window.header_compact)
             self.assertTrue(self.window.start_button.isVisible())
             self.assertTrue(self.window.output_edit.isVisible())
             self.assertGreaterEqual(self.window.output_edit.width(), 300)
@@ -140,4 +142,56 @@ class LanguageUITests(unittest.TestCase):
                     self.window.theme_combo.findData("light"))
         self.window.resize(1200, 800)
         QApplication.processEvents()
-        self.assertEqual(self.window.field_columns, 3)
+        self.assertTrue(self.window.workspace_wide)
+        self.assertFalse(self.window.header_compact)
+        self.assertEqual(self.window.field_columns, 2)
+
+    def test_empty_state_and_populated_queue_switch_cleanly(self):
+        self.window.show()
+        QApplication.processEvents()
+        self.assertIs(self.window.file_stack.currentWidget(), self.window.empty_state)
+        self.assertFalse(self.window.clear_button.isEnabled())
+        self.assertFalse(self.window.remove_button.isEnabled())
+
+        source = self.root / "clip.mp4"
+        source.write_bytes(b"test")
+        self.window._add_paths([source])
+        QApplication.processEvents()
+        self.assertIs(self.window.file_stack.currentWidget(), self.window.table)
+        self.assertTrue(self.window.clear_button.isEnabled())
+        self.window.table.selectRow(0)
+        QApplication.processEvents()
+        self.assertTrue(self.window.remove_button.isEnabled())
+        self.window.clear_files()
+        self.assertIs(self.window.file_stack.currentWidget(), self.window.empty_state)
+
+    def test_populated_workspace_visual_states(self):
+        sources = [self.root / name for name in ("holiday.mp4", "interview.wav", "archive.mkv")]
+        for source in sources:
+            source.write_bytes(b"test")
+        self.window._add_paths(sources)
+        self.window._item_finished(
+            0, True, "Completed: file size reduced by 42.0%",
+            str(self.root / "holiday_small.mp4"),
+        )
+        self.window._item_finished(1, False, "FFmpeg: sample diagnostic text", "")
+        self.window.resize(1280, 820)
+        self.window.show()
+        QApplication.processEvents()
+        self.assertTrue(self.window.workspace_wide)
+        self.assertEqual(self.window.table.item(0, 3).data(Qt.ItemDataRole.UserRole), "success")
+        self.assertEqual(self.window.table.item(1, 3).data(Qt.ItemDataRole.UserRole), "failed")
+
+        preview_dir = os.environ.get("UI_SCREENSHOT_DIR")
+        if not preview_dir:
+            return
+        Path(preview_dir).mkdir(parents=True, exist_ok=True)
+        for locale in ("zh_CN", "zh_TW", "en_US"):
+            self.window.language_combo.setCurrentIndex(
+                self.window.language_combo.findData(locale))
+            for theme in ("light", "dark"):
+                self.window.theme_combo.setCurrentIndex(
+                    self.window.theme_combo.findData(theme))
+                QApplication.processEvents()
+                self.window.grab().save(
+                    str(Path(preview_dir) / f"workspace-{locale}-{theme}.png"))

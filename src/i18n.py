@@ -38,6 +38,11 @@ EN_US = {
     "帮助": "Help",
     "格式转换 · 无损提取音轨 · 画质优先压缩 · 极限压缩":
         "Format conversion · Lossless audio extraction · Video compression",
+    "本地处理 · 文件不会上传": "Local processing · Files never leave your PC",
+    "把媒体文件拖到这里": "Drop media files here",
+    "支持常见音频和视频格式，也可以直接拖入整个文件夹":
+        "Supports common audio and video formats. You can also drop a whole folder.",
+    "选择文件": "Choose files",
     "＋ 添加文件": "＋ Add files",
     "移除选中": "Remove selected",
     "清空列表": "Clear list",
@@ -189,6 +194,11 @@ ZH_TW = {
     "帮助": "說明",
     "格式转换 · 无损提取音轨 · 画质优先压缩 · 极限压缩":
         "格式轉換 · 無損擷取音軌 · 畫質優先壓縮 · 極限壓縮",
+    "本地处理 · 文件不会上传": "本機處理 · 檔案不會上傳",
+    "把媒体文件拖到这里": "將媒體檔案拖到這裡",
+    "支持常见音频和视频格式，也可以直接拖入整个文件夹":
+        "支援常見音訊與影片格式，也可以直接拖入整個資料夾。",
+    "选择文件": "選擇檔案",
     "＋ 添加文件": "＋ 加入檔案",
     "移除选中": "移除所選",
     "清空列表": "清空清單",
