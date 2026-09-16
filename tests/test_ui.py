@@ -177,6 +177,7 @@ class LanguageUITests(unittest.TestCase):
         for source in sources:
             source.write_bytes(b"test")
         self.window._add_paths(sources)
+        self.assertGreaterEqual(self.window.table.columnWidth(1), 76)
         self.window._item_finished(
             0, True, "Completed: file size reduced by 42.0%",
             str(self.root / "holiday_small.mp4"),

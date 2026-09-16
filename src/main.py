@@ -518,7 +518,11 @@ class MainWindow(QMainWindow):
         self.table.setMinimumHeight(280)
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        # File extensions are short, but the custom pill needs more breathing
+        # room than the plain-text size hint reported by the default delegate.
+        # Keep a stable initial width so WAV/MKV/MPEG never render as W…/M….
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
+        header.resizeSection(1, 76)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
