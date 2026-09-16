@@ -62,8 +62,7 @@ def make_palette(theme: str) -> QPalette:
 def make_stylesheet(theme: str) -> str:
     c = COLORS[theme]
     return """
-QWidget { font-family: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI",
-                      "Microsoft YaHei UI"; font-size: 13px; color: %(text)s; }
+QWidget { font-size: 13px; color: %(text)s; }
 QMainWindow, QWidget#Content, QScrollArea#ContentScroll,
 QScrollArea#ContentScroll > QWidget > QWidget { background: %(canvas)s; }
 QFrame#Panel { background: %(surface)s; border: 1px solid %(stroke)s;
@@ -79,9 +78,7 @@ QFrame#DropZone:hover { border-color: %(accent)s; background: %(accent_soft)s; }
 QFrame#DropZone[dragActive="true"] { border: 2px dashed %(accent)s;
                                      background: %(accent_soft)s; }
 QWidget#HeaderControls { background: transparent; }
-QLabel#AppTitle { font-family: "Segoe UI Variable Display", "Segoe UI Variable",
-                              "Segoe UI", "Microsoft YaHei UI";
-                  font-size: 24px; font-weight: 700; color: %(text)s; }
+QLabel#AppTitle { font-size: 24px; font-weight: 700; color: %(text)s; }
 QLabel#SectionTitle { font-size: 16px; font-weight: 700; color: %(text)s; }
 QLabel#SectionIcon { background: %(accent_soft)s; border-radius: 9px; padding: 7px; }
 QLabel#PrivacyBadge { color: %(success)s; background: %(success_bg)s;
