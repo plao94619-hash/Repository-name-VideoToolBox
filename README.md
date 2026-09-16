@@ -25,8 +25,8 @@
 
 打开仓库的 [Releases 页面](https://github.com/plao94619-hash/Repository-name-VideoToolBox/releases/latest)，下载最新正式版：
 
-- Universal-Media-Toolbox-Setup-1.4.1.exe：安装版
-- Universal-Media-Toolbox-Portable-1.4.1.zip：免安装便携版
+- Universal-Media-Toolbox-Setup-1.4.2.exe：安装版
+- Universal-Media-Toolbox-Portable-1.4.2.zip：免安装便携版
 - SHA256SUMS.txt：校验值
 
 每次成功构建后也可在 Actions 下载近期构建产物。新版安装版可直接安装到旧版的位置，原有设置会保留。

@@ -6,7 +6,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+# Linux development environments need an offscreen backend. Windows CI uses
+# the native platform for visual previews so system font fallback is exercised.
+if os.name != "nt":
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
     from PySide6.QtCore import QSettings, Qt
