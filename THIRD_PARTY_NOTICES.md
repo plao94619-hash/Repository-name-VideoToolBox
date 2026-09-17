@@ -25,7 +25,7 @@ Windows 安装包内附相应的 GNU GPL v3 许可文本。软件菜单“帮助
 - Bundled version: v0.2.12
 - License: MIT License
 
-Windows 构建使用 Go 1.23.3 从固定版本 `unlock-music.dev/cli/cmd/um@v0.2.12` 构建独立的 `um.exe`。应用仅以离线参数调用它来处理用户选择的本地文件，不启用联网元数据更新，也不会删除源文件。安装包内附 `licenses/Unlock-Music-MIT.txt`。
+Windows 构建使用 Go 1.23.3 从固定版本 `unlock-music.dev/cli@v0.2.12` 构建独立的 `um.exe`。该版本依赖的 `unlock-music.dev/mmkv` vanity 地址已停止提供模块元数据；构建脚本因此从项目官方 GitHub 组织的 `https://github.com/unlock-music/go-mmkv` 读取完全相同的 v0.1.0 标签源码，并作为本地模块替代，不修改其实现。应用仅以离线参数调用 `um.exe` 来处理用户选择的本地文件，不启用联网元数据更新，也不会删除源文件。安装包内附 `licenses/Unlock-Music-MIT.txt`。
 
 ## Other components
 

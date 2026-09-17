@@ -94,7 +94,7 @@ pyinstaller build.spec --noconfirm --clean
 & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\videotoolbox.iss
 ~~~
 
-GitHub Actions 会自动下载 FFmpeg Windows GPL 静态构建、使用 Go 1.23.3 构建固定版本的 Unlock Music CLI v0.2.12、运行单元测试与真实音频转换测试、打包程序、自检两个内置处理组件，并生成安装包和便携包。
+GitHub Actions 会自动下载 FFmpeg Windows GPL 静态构建、使用 Go 1.23.3 构建固定版本的 Unlock Music CLI v0.2.12、运行单元测试与真实音频转换测试、打包程序、自检两个内置处理组件，并生成安装包和便携包。CLI v0.2.12 依赖的旧 vanity 地址现已停止提供模块元数据，因此构建脚本从 Unlock Music 官方 GitHub 组织读取完全相同的 `go-mmkv` v0.1.0 源码作为本地依赖，不修改其实现。
 
 ## 技术与许可
 
