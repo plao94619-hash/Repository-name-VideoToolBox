@@ -6,6 +6,7 @@
 
 - 视频格式转换：MP4、MKV、MOV、WebM、AVI
 - 音频格式转换：MP3、M4A、AAC、FLAC、WAV、OGG、OPUS
+- 本地音乐文件解锁：支持 NCM、QMC/MFLAC/MGG、KGM/KGMA/VPR、KWM、TM、XM/X2M/X3M 等格式，自动识别原始音频格式
 - 视频提取音频：支持“原始音轨（无损提取）”，直接复制音频码流，不重新编码
 - 视频压缩：画质优先、均衡压缩、极限压缩
 - 编码器：H.264、H.265/HEVC、AV1
@@ -26,8 +27,8 @@
 
 打开仓库的 [Releases 页面](https://github.com/plao94619-hash/Repository-name-VideoToolBox/releases/latest)，下载最新正式版：
 
-- Universal-Media-Toolbox-Setup-1.5.0.exe：安装版
-- Universal-Media-Toolbox-Portable-1.5.0.zip：免安装便携版
+- Universal-Media-Toolbox-Setup-1.6.0.exe：安装版
+- Universal-Media-Toolbox-Portable-1.6.0.zip：免安装便携版
 - SHA256SUMS.txt：校验值
 
 每次成功构建后也可在 Actions 下载近期构建产物。新版安装版可直接安装到旧版的位置，原有设置会保留。
@@ -40,6 +41,16 @@
 2. 选择任务类型、输出格式和质量方案。
 3. 选择输出目录。
 4. 点击“开始处理”。
+
+### 本地音乐解锁
+
+1. 将“任务类型”切换为“音乐文件解锁”。
+2. 添加待处理的本地音乐文件或整个文件夹；也可以直接拖入窗口。
+3. 选择输出目录，点击“开始解锁”。
+
+应用会自动识别解锁后的 MP3、FLAC、M4A、OGG、WAV 等原始音频格式。处理会先写入临时目录，成功后才发布结果；源文件不会删除，已有同名输出也不会被覆盖。该模式默认离线运行，不下载音乐、不访问账号，也不启用联网元数据更新。
+
+音乐解锁仅适用于你合法拥有或获授权处理的本地文件。请遵守内容来源平台的服务条款及所在地法律；本项目不提供音乐下载、流媒体抓取或账号绕过功能。
 
 首次启动会按 Windows 界面语言选择最接近的界面语言。窗口右上角的语言下拉菜单可在简体中文、繁体中文和英语之间切换。切换不会改变正在选择的任务类型、格式或输出目录；之前版本保存的设置仍然可用。转换期间语言菜单暂时锁定，任务完成后即可切换。
 
@@ -83,12 +94,13 @@ pyinstaller build.spec --noconfirm --clean
 & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\videotoolbox.iss
 ~~~
 
-GitHub Actions 会自动下载 FFmpeg Windows GPL 静态构建、运行单元测试与真实音频转换测试、打包程序、自检内置 FFmpeg，并生成安装包和便携包。
+GitHub Actions 会自动下载 FFmpeg Windows GPL 静态构建、使用 Go 1.23.3 构建固定版本的 Unlock Music CLI v0.2.12、运行单元测试与真实音频转换测试、打包程序、自检两个内置处理组件，并生成安装包和便携包。
 
 ## 技术与许可
 
 - 应用源码：MIT License
 - FFmpeg：安装包内附 GNU GPL v3 文本；来源及源代码地址见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+- Unlock Music CLI v0.2.12：MIT License；安装包内附许可文本，来源及源代码地址见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - Qt for Python / PySide6：LGPLv3/GPLv3 或商业许可
 
 界面翻译集中存放于 [src/i18n.py](src/i18n.py)，新增或更新界面提示时请同时更新英文和繁体中文翻译；自动测试会检查翻译表的键及模板占位符是否一致。安装向导的简繁体译文来自 Inno Setup 官方源码。

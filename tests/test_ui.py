@@ -23,6 +23,7 @@ else:
     from main import MainWindow
 
 from engine import MODE_EXTRACT, RAW_AUDIO
+from music_unlock import MODE_MUSIC_UNLOCK, UNLOCK_TARGET
 
 
 @unittest.skipIf(QApplication is None, "PySide6 not installed in this environment")
@@ -71,6 +72,54 @@ class LanguageUITests(unittest.TestCase):
             self.assertEqual(self.settings.value("mode"), MODE_EXTRACT)
             self.assertEqual(self.settings.value("target"), RAW_AUDIO)
             self.assertEqual(self.settings.value("locale"), locale)
+
+    def test_music_unlock_mode_is_localized_and_accepts_protected_files(self):
+        self.window.mode_combo.setCurrentIndex(
+            self.window.mode_combo.findData(MODE_MUSIC_UNLOCK))
+        self.assertEqual(self.window.target_combo.currentData(), UNLOCK_TARGET)
+        self.assertFalse(self.window.target_combo.isEnabled())
+        self.assertTrue(self.window.quality_combo.isHidden())
+        self.assertEqual(self.window.start_button.text(), "开始解锁")
+        self.assertIn("合法拥有", self.window.quality_hint.text())
+        self.assertGreaterEqual(self.window.quality_hint.minimumHeight(), 54)
+
+        source = self.root / "collection.NCM"
+        source.write_bytes(b"encrypted")
+        rejected = self.root / "clip.mp4"
+        rejected.write_bytes(b"video")
+        self.window._add_paths([source, rejected])
+        self.assertEqual(self.window._current_paths(), [source.resolve()])
+        self.assertEqual(self.window.table.item(0, 1).text(), "NCM")
+
+        for locale, mode_text, start_text in (
+            ("en_US", "Unlock local music files", "Start unlocking"),
+            ("zh_TW", "解鎖本機音樂檔案", "開始解鎖"),
+            ("zh_CN", MODE_MUSIC_UNLOCK, "开始解锁"),
+        ):
+            self.window.language_combo.setCurrentIndex(
+                self.window.language_combo.findData(locale))
+            self.assertEqual(self.window.mode_combo.currentText(), mode_text)
+            self.assertEqual(self.window.start_button.text(), start_text)
+            self.assertEqual(self.window.mode_combo.currentData(), MODE_MUSIC_UNLOCK)
+            self.assertEqual(self.window.target_combo.currentData(), UNLOCK_TARGET)
+
+        preview_dir = os.environ.get("UI_SCREENSHOT_DIR")
+        if preview_dir:
+            Path(preview_dir).mkdir(parents=True, exist_ok=True)
+            self.window.resize(1280, 820)
+            self.window.show()
+            for theme in ("light", "dark"):
+                self.window.theme_combo.setCurrentIndex(
+                    self.window.theme_combo.findData(theme))
+                QApplication.processEvents()
+                self.window.grab().save(
+                    str(Path(preview_dir) / f"music-unlock-zh_CN-{theme}.png")
+                )
+
+        self.window.mode_combo.setCurrentIndex(
+            self.window.mode_combo.findData(MODE_EXTRACT))
+        self.assertFalse(self.window.quality_combo.isHidden())
+        self.assertTrue(self.window.target_combo.isEnabled())
 
     def test_previous_language_is_restored_on_restart(self):
         self.window.close()

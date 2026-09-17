@@ -15,6 +15,8 @@ EN_US = {
     "音频格式转换": "Convert audio",
     "视频提取音频": "Extract audio from video",
     "视频压缩": "Compress video",
+    "音乐文件解锁": "Unlock local music files",
+    "自动识别原始音频格式": "Detect original audio format",
     "原始音轨（无损提取）": "Original audio track (lossless copy)",
     "画质优先": "Best quality",
     "均衡压缩": "Balanced compression",
@@ -29,6 +31,8 @@ EN_US = {
     "H.265 / HEVC（高压缩）": "H.265 / HEVC (smaller files)",
     "AV1（压缩率最高，速度慢）": "AV1 (smallest files, slower)",
     "就绪：可直接拖入音频或视频文件": "Ready: drag audio or video files here",
+    "就绪：可拖入待解锁的本地音乐文件":
+        "Ready: drop local music files to unlock",
     "添加文件": "Add files",
     "添加文件夹": "Add folder",
     "退出": "Exit",
@@ -38,6 +42,8 @@ EN_US = {
     "帮助": "Help",
     "格式转换 · 无损提取音轨 · 画质优先压缩 · 极限压缩":
         "Format conversion · Lossless audio extraction · Video compression",
+    "格式转换 · 音乐解锁 · 无损提取 · 智能压缩":
+        "Convert · Unlock music · Extract losslessly · Compress",
     "本地处理 · 文件不会上传": "Local processing · Files never leave your PC",
     "把媒体文件拖到这里": "Drop media files here",
     "支持常见音频和视频格式，也可以直接拖入整个文件夹":
@@ -91,12 +97,24 @@ EN_US = {
     "错误详情": "Error details",
     "此文件未能完成处理。": "This file could not be processed.",
     "选择音频或视频文件": "Choose audio or video files",
+    "选择待解锁音乐文件": "Choose music files to unlock",
+    "受支持的音乐文件": "Supported music files",
     "媒体文件": "Media files",
     "所有文件": "All files",
     "选择媒体文件夹": "Choose a media folder",
+    "选择待解锁音乐文件夹": "Choose a music folder to unlock",
     "未知": "Unknown",
     "等待处理": "Pending",
     "已添加 {count} 个文件": "Added {count} file(s)",
+    "离线解锁本地音乐，并保留原始文件":
+        "Unlock local music offline while keeping the source files.",
+    "把待解锁音乐拖到这里": "Drop music files to unlock here",
+    "支持网易云、QQ 音乐、酷狗、酷我等本地文件，可批量添加文件夹":
+        "Supports local files from NetEase, QQ Music, Kugou, Kuwo and more. Folders can be added in batches.",
+    "选择音乐文件": "Choose music files",
+    "开始解锁": "Start unlocking",
+    "仅处理你合法拥有或获授权的本地文件；源文件不会删除。\n应用不会联网下载音乐或访问账号。":
+        "Only process local files you own or are authorized to use; source files are kept.\nThe app never downloads music or accesses accounts.",
     "直接复制原音轨，不重新编码；质量选项不影响无损提取。":
         "Copies the original audio stream without re-encoding. Quality presets do not apply.",
     "FLAC/WAV 输出为无损格式，但有损源文件已丢失的音质无法恢复。":
@@ -112,11 +130,16 @@ EN_US = {
     "尚未添加文件": "No files added",
     "请先添加需要处理的音频或视频文件。":
         "Add an audio or video file before starting.",
+    "请先添加需要处理的文件。": "Add files before starting.",
+    "文件与任务类型不匹配": "Files do not match the task",
+    "当前任务不支持列表中的 {count} 个文件。请移除这些文件，或切换任务类型。":
+        "This task does not support {count} file(s) in the list. Remove them or switch tasks.",
     "请选择输出目录": "Choose an output folder",
     "请先指定转换后的文件保存位置。":
         "Choose where the output files will be saved.",
     "无法创建输出目录": "Cannot create output folder",
     "正在处理…": "Processing…",
+    "正在解锁…": "Unlocking…",
     "正在准备…": "Preparing…",
     "正在处理第 {current}/{total} 个文件":
         "Processing file {current} of {total}",
@@ -130,6 +153,8 @@ EN_US = {
     "处理完成": "Task finished",
     "可将鼠标停在失败状态上查看 FFmpeg 错误。":
         "Hover over a failed status to see the FFmpeg error.",
+    "可将鼠标停在失败状态上查看详细错误。":
+        "Hover over a failed status to view the full error.",
     "是否打开输出文件夹？": "Open the output folder?",
     "打开": "Open",
     "关闭": "Close",
@@ -141,6 +166,8 @@ EN_US = {
         "Local media conversion tool built with FFmpeg and Qt for Python.",
     "转换全程在本机完成，不上传用户文件。":
         "All processing stays on your computer; your files are not uploaded.",
+    "音乐解锁功能由 Unlock Music CLI 提供，仅供处理合法拥有或获授权的本地文件。":
+        "Music unlocking is provided by Unlock Music CLI and is only for local files you own or are authorized to use.",
     "项目主页": "Project home",
     "任务仍在运行": "Task still running",
     "需要先停止当前转换。是否取消任务？":
@@ -174,6 +201,24 @@ EN_US = {
     "无法保存输出文件：{error}": "Cannot save output file: {error}",
     "FFmpeg 或 FFprobe 版本信息异常":
         "FFmpeg or FFprobe returned invalid version information",
+    "解锁完成": "Unlocked",
+    "不支持的音乐文件格式：{extension}":
+        "Unsupported protected music format: {extension}",
+    "无法识别此音乐文件，文件可能不受支持或已经是普通音频。":
+        "This music file could not be recognized. It may be unsupported or already be a normal audio file.",
+    "输出文件已存在。": "The output file already exists.",
+    "音乐解锁组件未返回可用的错误信息。":
+        "The music unlock helper did not return a useful error.",
+    "音乐解锁失败：{message}": "Music unlock failed: {message}",
+    "无法启动音乐解锁组件：{error}":
+        "Cannot start the music unlock helper: {error}",
+    "正在解锁 {percent}%": "Unlocking {percent}%",
+    "解锁结束，但没有生成有效的音频文件。":
+        "Unlocking finished without a valid audio file.",
+    "音乐解锁组件版本信息异常":
+        "The music unlock helper returned invalid version information",
+    "音乐解锁组件格式列表异常":
+        "The music unlock helper returned an invalid format list",
 }
 
 ZH_TW = {
@@ -182,6 +227,8 @@ ZH_TW = {
     "音频格式转换": "音訊格式轉換",
     "视频提取音频": "從影片擷取音訊",
     "视频压缩": "影片壓縮",
+    "音乐文件解锁": "解鎖本機音樂檔案",
+    "自动识别原始音频格式": "自動辨識原始音訊格式",
     "原始音轨（无损提取）": "原始音軌（無損擷取）",
     "画质优先": "畫質優先",
     "均衡压缩": "均衡壓縮",
@@ -196,6 +243,8 @@ ZH_TW = {
     "H.265 / HEVC（高压缩）": "H.265 / HEVC（高壓縮）",
     "AV1（压缩率最高，速度慢）": "AV1（壓縮率最高，速度較慢）",
     "就绪：可直接拖入音频或视频文件": "就緒：可直接拖入音訊或影片檔案",
+    "就绪：可拖入待解锁的本地音乐文件":
+        "就緒：可拖入待解鎖的本機音樂檔案",
     "添加文件": "加入檔案",
     "添加文件夹": "加入資料夾",
     "退出": "結束",
@@ -205,6 +254,8 @@ ZH_TW = {
     "帮助": "說明",
     "格式转换 · 无损提取音轨 · 画质优先压缩 · 极限压缩":
         "格式轉換 · 無損擷取音軌 · 畫質優先壓縮 · 極限壓縮",
+    "格式转换 · 音乐解锁 · 无损提取 · 智能压缩":
+        "格式轉換 · 音樂解鎖 · 無損擷取 · 智慧壓縮",
     "本地处理 · 文件不会上传": "本機處理 · 檔案不會上傳",
     "把媒体文件拖到这里": "將媒體檔案拖到這裡",
     "支持常见音频和视频格式，也可以直接拖入整个文件夹":
@@ -258,12 +309,24 @@ ZH_TW = {
     "错误详情": "錯誤詳情",
     "此文件未能完成处理。": "此檔案無法完成處理。",
     "选择音频或视频文件": "選擇音訊或影片檔案",
+    "选择待解锁音乐文件": "選擇待解鎖音樂檔案",
+    "受支持的音乐文件": "支援的音樂檔案",
     "媒体文件": "媒體檔案",
     "所有文件": "所有檔案",
     "选择媒体文件夹": "選擇媒體資料夾",
+    "选择待解锁音乐文件夹": "選擇待解鎖音樂資料夾",
     "未知": "未知",
     "等待处理": "等待處理",
     "已添加 {count} 个文件": "已加入 {count} 個檔案",
+    "离线解锁本地音乐，并保留原始文件":
+        "離線解鎖本機音樂，並保留原始檔案。",
+    "把待解锁音乐拖到这里": "將待解鎖音樂拖到這裡",
+    "支持网易云、QQ 音乐、酷狗、酷我等本地文件，可批量添加文件夹":
+        "支援網易雲、QQ 音樂、酷狗、酷我等本機檔案，可批次加入資料夾。",
+    "选择音乐文件": "選擇音樂檔案",
+    "开始解锁": "開始解鎖",
+    "仅处理你合法拥有或获授权的本地文件；源文件不会删除。\n应用不会联网下载音乐或访问账号。":
+        "僅處理您合法擁有或獲授權的本機檔案；不會刪除來源檔案。\n應用程式不會連網下載音樂或存取帳號。",
     "直接复制原音轨，不重新编码；质量选项不影响无损提取。":
         "直接複製原始音軌，不重新編碼；畫質選項不影響無損擷取。",
     "FLAC/WAV 输出为无损格式，但有损源文件已丢失的音质无法恢复。":
@@ -279,11 +342,16 @@ ZH_TW = {
     "尚未添加文件": "尚未加入檔案",
     "请先添加需要处理的音频或视频文件。":
         "請先加入需要處理的音訊或影片檔案。",
+    "请先添加需要处理的文件。": "請先加入需要處理的檔案。",
+    "文件与任务类型不匹配": "檔案與工作類型不相符",
+    "当前任务不支持列表中的 {count} 个文件。请移除这些文件，或切换任务类型。":
+        "目前工作不支援清單中的 {count} 個檔案。請移除這些檔案，或切換工作類型。",
     "请选择输出目录": "請選擇輸出資料夾",
     "请先指定转换后的文件保存位置。":
         "請先指定轉換後檔案的儲存位置。",
     "无法创建输出目录": "無法建立輸出資料夾",
     "正在处理…": "正在處理…",
+    "正在解锁…": "正在解鎖…",
     "正在准备…": "正在準備…",
     "正在处理第 {current}/{total} 个文件":
         "正在處理第 {current}/{total} 個檔案",
@@ -297,6 +365,8 @@ ZH_TW = {
     "处理完成": "處理完成",
     "可将鼠标停在失败状态上查看 FFmpeg 错误。":
         "將滑鼠停在失敗狀態上可查看 FFmpeg 錯誤。",
+    "可将鼠标停在失败状态上查看详细错误。":
+        "將滑鼠停在失敗狀態上可查看完整錯誤。",
     "是否打开输出文件夹？": "是否開啟輸出資料夾？",
     "打开": "開啟",
     "关闭": "關閉",
@@ -308,6 +378,8 @@ ZH_TW = {
         "以 FFmpeg 和 Qt for Python 建構的本機影音轉換工具。",
     "转换全程在本机完成，不上传用户文件。":
         "所有轉換都在本機完成，不會上傳您的檔案。",
+    "音乐解锁功能由 Unlock Music CLI 提供，仅供处理合法拥有或获授权的本地文件。":
+        "音樂解鎖功能由 Unlock Music CLI 提供，僅供處理合法擁有或獲授權的本機檔案。",
     "项目主页": "專案首頁",
     "任务仍在运行": "工作仍在執行",
     "需要先停止当前转换。是否取消任务？":
@@ -340,6 +412,24 @@ ZH_TW = {
         "轉換結束，但沒有產生有效的輸出檔案。",
     "无法保存输出文件：{error}": "無法儲存輸出檔案：{error}",
     "FFmpeg 或 FFprobe 版本信息异常": "FFmpeg 或 FFprobe 版本資訊異常",
+    "解锁完成": "解鎖完成",
+    "不支持的音乐文件格式：{extension}":
+        "不支援的受保護音樂格式：{extension}",
+    "无法识别此音乐文件，文件可能不受支持或已经是普通音频。":
+        "無法辨識此音樂檔案；檔案可能不受支援，或已是一般音訊。",
+    "输出文件已存在。": "輸出檔案已存在。",
+    "音乐解锁组件未返回可用的错误信息。":
+        "音樂解鎖元件未傳回可用的錯誤資訊。",
+    "音乐解锁失败：{message}": "音樂解鎖失敗：{message}",
+    "无法启动音乐解锁组件：{error}":
+        "無法啟動音樂解鎖元件：{error}",
+    "正在解锁 {percent}%": "正在解鎖 {percent}%",
+    "解锁结束，但没有生成有效的音频文件。":
+        "解鎖結束，但沒有產生有效的音訊檔案。",
+    "音乐解锁组件版本信息异常":
+        "音樂解鎖元件版本資訊異常",
+    "音乐解锁组件格式列表异常":
+        "音樂解鎖元件格式清單異常",
 }
 
 CATALOGS = {"en_US": EN_US, "zh_TW": ZH_TW}

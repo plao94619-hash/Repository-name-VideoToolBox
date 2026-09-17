@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 env:
-  APP_VERSION: "1.5.0"
+  APP_VERSION: "1.6.0"
 
 jobs:
   build-windows:
@@ -29,6 +29,12 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: requirements-build.txt
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.3"
+          cache: false
 
       - name: Install build dependencies
         shell: pwsh
@@ -97,7 +103,25 @@ jobs:
           & "tools\ffmpeg.exe" -version
           & "tools\ffprobe.exe" -version
 
-      - name: Run FFmpeg integration tests
+      - name: Build pinned Unlock Music helper
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path tools | Out-Null
+          $env:GOBIN = (Resolve-Path tools).Path
+          $env:GOTOOLCHAIN = "local"
+          go install unlock-music.dev/cli/cmd/um@v0.2.12
+          if (-not (Test-Path "tools\um.exe")) {
+            throw "Unlock Music helper was not created."
+          }
+          & "tools\um.exe" --version
+          $extensions = & "tools\um.exe" --supported-ext
+          if ($LASTEXITCODE -ne 0 -or -not ($extensions -match "ncm:")) {
+            throw "Unlock Music helper did not report its expected decoders."
+          }
+          $extensions
+
+      - name: Run bundled-tool integration tests
         shell: pwsh
         env:
           PYTHONPATH: src

@@ -49,7 +49,16 @@ from engine import (
     ConversionCancelled,
     ConversionOptions,
     convert_file,
-    self_test,
+    self_test as media_self_test,
+)
+from music_unlock import (
+    MODE_MUSIC_UNLOCK,
+    UNLOCK_TARGET,
+    is_unlockable_path,
+    self_test as music_unlock_self_test,
+    supported_unlock_suffix,
+    unlock_file_patterns,
+    unlock_music_file,
 )
 from version import APP_NAME, APP_VERSION
 from i18n import (
@@ -68,6 +77,13 @@ def readable_size(size: int) -> str:
             return f"{value:.1f} {unit}" if unit != "B" else f"{int(value)} B"
         value /= 1024
     return f"{value:.1f} TB"
+
+
+def display_file_type(path: Path) -> str:
+    unlock_suffix = supported_unlock_suffix(path)
+    if unlock_suffix and len(unlock_suffix) > len(path.suffix):
+        return unlock_suffix.upper().lstrip(".")
+    return path.suffix.upper().lstrip(".")
 
 
 class BatchWorker(QObject):
@@ -98,12 +114,23 @@ class BatchWorker(QObject):
 
             self.item_started.emit(index)
             try:
-                result = convert_file(
-                    path,
-                    self.options,
-                    lambda percent, text, row=index: self.item_progress.emit(row, percent, text),
-                    self.cancel_event,
-                )
+                progress = lambda percent, text, row=index: self.item_progress.emit(
+                    row, percent, text)
+                if self.options.mode == MODE_MUSIC_UNLOCK:
+                    result = unlock_music_file(
+                        path,
+                        self.options.output_dir,
+                        self.options.locale,
+                        progress,
+                        self.cancel_event,
+                    )
+                else:
+                    result = convert_file(
+                        path,
+                        self.options,
+                        progress,
+                        self.cancel_event,
+                    )
                 successes += 1
                 self.item_finished.emit(
                     index,
@@ -163,10 +190,18 @@ class MainWindow(QMainWindow):
         QGuiApplication.styleHints().colorSchemeChanged.connect(self._apply_theme)
         self._set_os_theme_preference()
         self._apply_theme()
-        self.statusBar().showMessage(self._t("就绪：可直接拖入音频或视频文件"))
+        self.statusBar().showMessage(self._ready_message())
 
     def _t(self, key: str, **values: object) -> str:
         return translate(key, self.language, **values)
+
+    def _is_unlock_mode(self) -> bool:
+        return self.mode_combo.currentData() == MODE_MUSIC_UNLOCK
+
+    def _ready_message(self) -> str:
+        key = ("就绪：可拖入待解锁的本地音乐文件" if self._is_unlock_mode()
+               else "就绪：可直接拖入音频或视频文件")
+        return self._t(key)
 
     def _notify(self, icon: QMessageBox.Icon, title: str, message: str) -> None:
         box = QMessageBox(self)
@@ -184,7 +219,7 @@ class MainWindow(QMainWindow):
         self.language = selected
         self.settings.setValue("locale", selected)
         self._retranslate_ui()
-        self.statusBar().showMessage(self._t("就绪：可直接拖入音频或视频文件"))
+        self.statusBar().showMessage(self._ready_message())
 
     @Slot(int)
     def _change_theme(self, _index: int) -> None:
@@ -333,7 +368,7 @@ class MainWindow(QMainWindow):
         self.help_menu.setTitle(self._t("帮助"))
         for widget, key in (
             (self.hero_title, APP_NAME),
-            (self.hero_subtitle, "格式转换 · 无损提取音轨 · 画质优先压缩 · 极限压缩"),
+            (self.hero_subtitle, "格式转换 · 音乐解锁 · 无损提取 · 智能压缩"),
             (self.privacy_badge, "本地处理 · 文件不会上传"),
             (self.language_label, "语言"),
             (self.theme_label, "外观"),
@@ -387,6 +422,7 @@ class MainWindow(QMainWindow):
                 item.setText(self._t("等待处理"))
         self._update_count()
         self._update_quality_hint()
+        self._update_mode_copy()
         if not self.worker:
             self.overall_label.setText(self._t("等待任务"))
 
@@ -479,7 +515,7 @@ class MainWindow(QMainWindow):
         title_row.addStretch()
         brand_copy.addLayout(title_row)
         self.hero_subtitle = QLabel(self._t(
-            "格式转换 · 无损提取音轨 · 画质优先压缩 · 极限压缩"))
+            "格式转换 · 音乐解锁 · 无损提取 · 智能压缩"))
         self.hero_subtitle.setObjectName("AppSubtitle")
         self.hero_subtitle.setWordWrap(True)
         brand_copy.addWidget(self.hero_subtitle)
@@ -627,7 +663,7 @@ class MainWindow(QMainWindow):
         # room than the plain-text size hint reported by the default delegate.
         # Keep a stable initial width so WAV/MKV/MPEG never render as W…/M….
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
-        header.resizeSection(1, 76)
+        header.resizeSection(1, 94)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
@@ -667,7 +703,8 @@ class MainWindow(QMainWindow):
         options_root.addLayout(self.fields_layout)
 
         self.mode_combo = QComboBox()
-        for item in (MODE_VIDEO, MODE_AUDIO, MODE_EXTRACT, MODE_COMPRESS):
+        for item in (MODE_VIDEO, MODE_AUDIO, MODE_EXTRACT, MODE_COMPRESS,
+                     MODE_MUSIC_UNLOCK):
             self.mode_combo.addItem(self._t(item), item)
         self.target_combo = QComboBox()
         self.quality_combo = QComboBox()
@@ -889,27 +926,45 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def add_files(self) -> None:
+        if self._is_unlock_mode():
+            title = self._t("选择待解锁音乐文件")
+            file_filter = (
+                self._t("受支持的音乐文件") + f" ({unlock_file_patterns()});;"
+                + self._t("所有文件") + " (*.*)"
+            )
+        else:
+            title = self._t("选择音频或视频文件")
+            file_filter = (
+                self._t("媒体文件") + " (*.mp4 *.mkv *.mov *.avi *.webm *.wmv *.flv *.m4v *.ts *.mts *.m2ts "
+                "*.3gp *.vob *.mpg *.mpeg *.mp3 *.wav *.flac *.aac *.m4a *.ogg *.opus *.wma "
+                "*.ac3 *.eac3 *.mka *.aiff *.ape *.amr);;"
+                + self._t("所有文件") + " (*.*)"
+            )
         files, _ = QFileDialog.getOpenFileNames(
             self,
-            self._t("选择音频或视频文件"),
+            title,
             "",
-            self._t("媒体文件") + " (*.mp4 *.mkv *.mov *.avi *.webm *.wmv *.flv *.m4v *.ts *.mts *.m2ts "
-            "*.3gp *.vob *.mpg *.mpeg *.mp3 *.wav *.flac *.aac *.m4a *.ogg *.opus *.wma "
-            "*.ac3 *.eac3 *.mka *.aiff *.ape *.amr);;"
-            + self._t("所有文件") + " (*.*)",
+            file_filter,
         )
         self._add_paths([Path(item) for item in files])
 
     @Slot()
     def add_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, self._t("选择媒体文件夹"))
+        title = (self._t("选择待解锁音乐文件夹") if self._is_unlock_mode()
+                 else self._t("选择媒体文件夹"))
+        folder = QFileDialog.getExistingDirectory(self, title)
         if not folder:
             return
         paths = [
             path for path in Path(folder).rglob("*")
-            if path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS
+            if path.is_file() and self._path_matches_mode(path)
         ]
         self._add_paths(paths)
+
+    def _path_matches_mode(self, path: Path) -> bool:
+        if self._is_unlock_mode():
+            return is_unlockable_path(path)
+        return path.suffix.lower() in SUPPORTED_EXTENSIONS
 
     def _add_paths(self, paths: list[Path]) -> None:
         existing = {
@@ -924,7 +979,7 @@ class MainWindow(QMainWindow):
                 continue
             if (
                 not resolved.is_file()
-                or resolved.suffix.lower() not in SUPPORTED_EXTENSIONS
+                or not self._path_matches_mode(resolved)
                 or str(resolved) in existing
             ):
                 continue
@@ -934,7 +989,9 @@ class MainWindow(QMainWindow):
             name_item.setData(Qt.ItemDataRole.UserRole, str(resolved))
             name_item.setToolTip(str(resolved))
             self.table.setItem(row, 0, name_item)
-            self.table.setItem(row, 1, QTableWidgetItem(resolved.suffix.upper().lstrip(".")))
+            type_item = QTableWidgetItem(display_file_type(resolved))
+            type_item.setToolTip(type_item.text())
+            self.table.setItem(row, 1, type_item)
             try:
                 size_text = readable_size(resolved.stat().st_size)
             except OSError:
@@ -1042,6 +1099,7 @@ class MainWindow(QMainWindow):
             MODE_AUDIO: AUDIO_TARGETS,
             MODE_EXTRACT: EXTRACT_TARGETS,
             MODE_COMPRESS: COMPRESS_TARGETS,
+            MODE_MUSIC_UNLOCK: [UNLOCK_TARGET],
         }.get(mode, VIDEO_TARGETS)
         previous = self.target_combo.currentData()
         self.target_combo.clear()
@@ -1051,17 +1109,51 @@ class MainWindow(QMainWindow):
         if index >= 0:
             self.target_combo.setCurrentIndex(index)
 
+        unlock_mode = mode == MODE_MUSIC_UNLOCK
+        self.target_combo.setEnabled(not unlock_mode)
+        self.quality_label.setVisible(not unlock_mode)
+        self.quality_combo.setVisible(not unlock_mode)
         video_controls = mode in {MODE_VIDEO, MODE_COMPRESS}
         self.encoder_label.setVisible(video_controls)
         self.encoder_combo.setVisible(video_controls)
         self.resolution_label.setVisible(video_controls)
         self.resolution_combo.setVisible(video_controls)
         self._update_quality_hint()
+        self._update_mode_copy()
+
+    def _update_mode_copy(self) -> None:
+        if not hasattr(self, "empty_state"):
+            return
+        if self._is_unlock_mode():
+            self.options_hint.setText(self._t("离线解锁本地音乐，并保留原始文件"))
+            self.empty_state.set_texts(
+                self._t("把待解锁音乐拖到这里"),
+                self._t("支持网易云、QQ 音乐、酷狗、酷我等本地文件，可批量添加文件夹"),
+                self._t("选择音乐文件"),
+            )
+            self.start_button.setText(self._t("开始解锁"))
+        else:
+            self.options_hint.setText(self._t("按任务需要选择输出格式与质量"))
+            self.empty_state.set_texts(
+                self._t("把媒体文件拖到这里"),
+                self._t("支持常见音频和视频格式，也可以直接拖入整个文件夹"),
+                self._t("选择文件"),
+            )
+            self.start_button.setText(self._t("开始处理"))
+        if not self.worker:
+            self.statusBar().showMessage(self._ready_message())
 
     @Slot()
     def _update_quality_hint(self) -> None:
         target = self.target_combo.currentData()
         mode = self.mode_combo.currentData()
+        if mode == MODE_MUSIC_UNLOCK:
+            self.quality_combo.setEnabled(False)
+            self.quality_hint.setMinimumHeight(54)
+            self.quality_hint.setText(self._t(
+                "仅处理你合法拥有或获授权的本地文件；源文件不会删除。\n应用不会联网下载音乐或访问账号。"))
+            return
+        self.quality_hint.setMinimumHeight(0)
         raw_copy = mode == MODE_EXTRACT and target == EXTRACT_TARGETS[0]
         self.quality_combo.setEnabled(not raw_copy and target != "WAV")
         if raw_copy:
@@ -1114,7 +1206,19 @@ class MainWindow(QMainWindow):
         paths = self._current_paths()
         if not paths:
             self._notify(QMessageBox.Icon.Information, self._t("尚未添加文件"),
-                         self._t("请先添加需要处理的音频或视频文件。"))
+                         self._t("请先添加需要处理的文件。"))
+            return
+
+        incompatible = [path for path in paths if not self._path_matches_mode(path)]
+        if incompatible:
+            self._notify(
+                QMessageBox.Icon.Information,
+                self._t("文件与任务类型不匹配"),
+                self._t(
+                    "当前任务不支持列表中的 {count} 个文件。请移除这些文件，或切换任务类型。",
+                    count=len(incompatible),
+                ),
+            )
             return
 
         output_text = self.output_edit.text().strip()
@@ -1187,10 +1291,12 @@ class MainWindow(QMainWindow):
             self.overall_progress.setValue(0)
         self._set_task_state("active" if running else "idle")
         if not running:
+            self.target_combo.setEnabled(not self._is_unlock_mode())
             self._update_quality_hint()
             self._update_empty_state()
         self.overall_label.setText(
-            self._t("正在处理…") if running else self._t("等待任务"))
+            self._t("正在解锁…" if running and self._is_unlock_mode() else
+                    "正在处理…" if running else "等待任务"))
 
     @Slot(int)
     def _item_started(self, row: int) -> None:
@@ -1257,7 +1363,7 @@ class MainWindow(QMainWindow):
         self._set_task_state("warning" if failures else "success")
         if failures:
             self._notify(QMessageBox.Icon.Warning, self._t("处理完成"), text + "\n"
-                         + self._t("可将鼠标停在失败状态上查看 FFmpeg 错误。"))
+                         + self._t("可将鼠标停在失败状态上查看详细错误。"))
         else:
             box = QMessageBox(self)
             box.setWindowTitle(self._t("处理完成"))
@@ -1287,6 +1393,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.Icon.Information, self._t("第三方许可"),
                 "FFmpeg：https://ffmpeg.org/\n"
                 "Qt for Python：https://doc.qt.io/qtforpython-6/\n"
+                "Unlock Music：https://git.unlock-music.dev/um/cli\n"
                 + self._t("完整声明见项目 THIRD_PARTY_NOTICES.md。"),
             )
 
@@ -1299,6 +1406,7 @@ class MainWindow(QMainWindow):
             f"<p>{self._t('版本 {version}', version=APP_VERSION)}</p>"
             f"<p>{self._t('基于 FFmpeg 与 Qt for Python 构建的本地音视频转换工具。')}</p>"
             f"<p>{self._t('转换全程在本机完成，不上传用户文件。')}</p>"
+            f"<p>{self._t('音乐解锁功能由 Unlock Music CLI 提供，仅供处理合法拥有或获授权的本地文件。')}</p>"
             '<p><a href="https://github.com/plao94619-hash/Repository-name-VideoToolBox">'
             + self._t("项目主页") + "</a></p>"
         )
@@ -1331,7 +1439,7 @@ class MainWindow(QMainWindow):
             if path.is_dir():
                 paths.extend(
                     item for item in path.rglob("*")
-                    if item.is_file() and item.suffix.lower() in SUPPORTED_EXTENSIONS
+                    if item.is_file() and self._path_matches_mode(item)
                 )
             else:
                 paths.append(path)
@@ -1356,10 +1464,12 @@ class MainWindow(QMainWindow):
 
 
 def run_self_test() -> int:
-    ok, message = self_test()
+    media_ok, media_message = media_self_test()
+    unlock_ok, unlock_message = music_unlock_self_test()
+    message = f"{media_message}\n{unlock_message}"
     safe_message = message.encode("ascii", errors="backslashreplace").decode("ascii")
     print(safe_message)
-    return 0 if ok else 1
+    return 0 if media_ok and unlock_ok else 1
 
 
 def main() -> int:

@@ -8,11 +8,13 @@ a = Analysis(
     binaries=[
         (str(root / "tools" / "ffmpeg.exe"), "tools"),
         (str(root / "tools" / "ffprobe.exe"), "tools"),
+        (str(root / "tools" / "um.exe"), "tools"),
     ],
     datas=[
         (str(root / "LICENSE"), "."),
         (str(root / "THIRD_PARTY_NOTICES.md"), "."),
         (str(root / "tools" / "FFmpeg-GPL-3.0.txt"), "tools"),
+        (str(root / "licenses" / "Unlock-Music-MIT.txt"), "licenses"),
     ],
     hiddenimports=[],
     hookspath=[],
