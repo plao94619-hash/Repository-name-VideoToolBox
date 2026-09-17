@@ -56,7 +56,9 @@ from i18n import (
     LANGUAGE_LABELS, SUPPORTED_LANGUAGES, language_for_system_locale, translate,
 )
 from ui_theme import COLORS, make_palette, make_stylesheet
-from ui_components import BrandMark, EmptyDropZone, MediaTableDelegate, make_icon
+from ui_components import (
+    BackgroundCanvas, BrandMark, EmptyDropZone, MediaTableDelegate, make_icon,
+)
 
 
 def readable_size(size: int) -> str:
@@ -140,6 +142,7 @@ class MainWindow(QMainWindow):
         self.language = saved_locale if saved_locale in SUPPORTED_LANGUAGES else "zh_CN"
         saved_theme = str(self.settings.value("appearance/theme", "system"))
         self.theme = saved_theme if saved_theme in {"system", "light", "dark"} else "system"
+        self.background_path = ""
         self.worker: BatchWorker | None = None
         self.worker_thread: QThread | None = None
         self.progress_bars: dict[int, QProgressBar] = {}
@@ -147,6 +150,7 @@ class MainWindow(QMainWindow):
         self._build_actions()
         self._build_ui()
         self._restore_settings()
+        self._restore_background()
         self._update_mode()
         last_target = str(self.settings.value("target", ""))
         target_index = self.target_combo.findData(last_target)
@@ -192,6 +196,66 @@ class MainWindow(QMainWindow):
         self._set_os_theme_preference()
         self._apply_theme()
 
+    def _restore_background(self) -> None:
+        saved = str(self.settings.value("appearance/background_image", "") or "").strip()
+        if saved and Path(saved).is_file() and self.background_canvas.load_image(saved):
+            self.background_path = saved
+        else:
+            self.background_path = ""
+            self.background_canvas.clear_image()
+            if saved:
+                self.settings.remove("appearance/background_image")
+        self._update_background_ui()
+
+    def _update_background_ui(self) -> None:
+        if not hasattr(self, "background_button"):
+            return
+        active = self.background_canvas.has_image()
+        self.background_button.setText(self._t(
+            "自定义图片" if active else "默认背景"
+        ))
+        self.background_button.setToolTip(
+            self.background_path if active else self._t("选择背景图片…")
+        )
+        self.remove_background_action.setEnabled(active)
+
+    @Slot()
+    def choose_background_image(self) -> None:
+        current = Path(self.background_path).parent if self.background_path else Path.home() / "Pictures"
+        if not current.is_dir():
+            current = Path.home()
+        selected, _ = QFileDialog.getOpenFileName(
+            self,
+            self._t("选择背景图片"),
+            str(current),
+            self._t("图片文件") + " (*.png *.jpg *.jpeg *.webp *.bmp);;"
+            + self._t("所有文件") + " (*.*)",
+        )
+        if not selected:
+            return
+        path = str(Path(selected).resolve())
+        if not self.background_canvas.load_image(path):
+            self._notify(
+                QMessageBox.Icon.Warning,
+                self._t("无法使用背景图片"),
+                self._t("所选文件不是可读取的图片。"),
+            )
+            return
+        self.background_path = path
+        self.settings.setValue("appearance/background_image", path)
+        self._update_background_ui()
+        self._apply_theme()
+        self.statusBar().showMessage(self._t("自定义背景已启用"), 4000)
+
+    @Slot()
+    def remove_background_image(self) -> None:
+        self.background_path = ""
+        self.background_canvas.clear_image()
+        self.settings.remove("appearance/background_image")
+        self._update_background_ui()
+        self._apply_theme()
+        self.statusBar().showMessage(self._t("已恢复默认背景"), 4000)
+
     def _set_os_theme_preference(self) -> None:
         scheme = {
             "system": Qt.ColorScheme.Unknown,
@@ -205,10 +269,13 @@ class MainWindow(QMainWindow):
         system_dark = QGuiApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark
         effective = self.theme if self.theme != "system" else ("dark" if system_dark else "light")
         self.effective_theme = effective
+        self.background_canvas.set_theme(effective)
         app = QApplication.instance()
         if app:
             app.setPalette(make_palette(effective))
-            app.setStyleSheet(make_stylesheet(effective))
+            app.setStyleSheet(make_stylesheet(
+                effective, custom_background=self.background_canvas.has_image()
+            ))
         colors = COLORS[effective]
         self.brand_mark.set_accent(colors["primary"])
         self.empty_state.set_theme(colors)
@@ -230,6 +297,8 @@ class MainWindow(QMainWindow):
             label.setPixmap(make_icon(name, colors["accent"], 18).pixmap(18, 18))
         self.add_action.setIcon(make_icon("add", colors["muted"], 16))
         self.add_folder_action.setIcon(make_icon("folder", colors["muted"], 16))
+        self.choose_background_action.setIcon(make_icon("image", colors["muted"], 16))
+        self.remove_background_action.setIcon(make_icon("clear", colors["muted"], 16))
         self.notices_action.setIcon(make_icon("shield", colors["muted"], 16))
         self.about_action.setIcon(make_icon("info", colors["muted"], 16))
 
@@ -252,12 +321,15 @@ class MainWindow(QMainWindow):
         for action, key in (
             (self.add_action, "添加文件"),
             (self.add_folder_action, "添加文件夹"),
+            (self.choose_background_action, "选择背景图片…"),
+            (self.remove_background_action, "移除自定义背景"),
             (self.exit_action, "退出"),
             (self.notices_action, "第三方许可"),
             (self.about_action, "关于"),
         ):
             action.setText(self._t(key))
         self.file_menu.setTitle(self._t("文件"))
+        self.appearance_menu.setTitle(self._t("外观"))
         self.help_menu.setTitle(self._t("帮助"))
         for widget, key in (
             (self.hero_title, APP_NAME),
@@ -265,6 +337,7 @@ class MainWindow(QMainWindow):
             (self.privacy_badge, "本地处理 · 文件不会上传"),
             (self.language_label, "语言"),
             (self.theme_label, "外观"),
+            (self.background_label, "背景"),
             (self.files_title, "待处理文件"),
             (self.files_hint, "将文件或文件夹拖入此处，或使用下方按钮添加"),
             (self.options_title, "处理设置"),
@@ -303,6 +376,7 @@ class MainWindow(QMainWindow):
         for combo in (self.language_combo, self.theme_combo):
             for index in range(combo.count()):
                 combo.setItemData(index, combo.itemText(index), Qt.ItemDataRole.ToolTipRole)
+        self._update_background_ui()
         self.output_edit.setPlaceholderText(self._t("选择输出目录"))
         self.table.setHorizontalHeaderLabels([
             self._t(key) for key in ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
@@ -325,6 +399,14 @@ class MainWindow(QMainWindow):
         self.add_folder_action.setShortcut("Ctrl+Shift+O")
         self.add_folder_action.triggered.connect(self.add_folder)
 
+        self.choose_background_action = QAction(self._t("选择背景图片…"), self)
+        self.choose_background_action.setShortcut("Ctrl+Shift+B")
+        self.choose_background_action.triggered.connect(self.choose_background_image)
+
+        self.remove_background_action = QAction(self._t("移除自定义背景"), self)
+        self.remove_background_action.triggered.connect(self.remove_background_image)
+        self.remove_background_action.setEnabled(False)
+
         self.exit_action = QAction(self._t("退出"), self)
         self.exit_action.setShortcut("Alt+F4")
         self.exit_action.triggered.connect(self.close)
@@ -341,12 +423,17 @@ class MainWindow(QMainWindow):
         self.file_menu.addSeparator()
         self.file_menu.addAction(self.exit_action)
 
+        self.appearance_menu = self.menuBar().addMenu(self._t("外观"))
+        self.appearance_menu.addAction(self.choose_background_action)
+        self.appearance_menu.addAction(self.remove_background_action)
+
         self.help_menu = self.menuBar().addMenu(self._t("帮助"))
         self.help_menu.addAction(self.notices_action)
         self.help_menu.addAction(self.about_action)
 
     def _build_ui(self) -> None:
-        central = QWidget()
+        central = BackgroundCanvas()
+        self.background_canvas = central
         root = QVBoxLayout(central)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
@@ -356,8 +443,11 @@ class MainWindow(QMainWindow):
         self.content_scroll.setWidgetResizable(True)
         self.content_scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.content_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.content_scroll.setAutoFillBackground(False)
+        self.content_scroll.viewport().setAutoFillBackground(False)
         content = QWidget()
         content.setObjectName("Content")
+        content.setAutoFillBackground(False)
         self.content_root = QVBoxLayout(content)
         self.content_root.setContentsMargins(24, 20, 24, 20)
         self.content_root.setSpacing(16)
@@ -432,6 +522,21 @@ class MainWindow(QMainWindow):
         self.theme_combo.currentIndexChanged.connect(self._change_theme)
         theme_group.addWidget(self.theme_combo)
         controls_layout.addLayout(theme_group)
+        background_group = QVBoxLayout()
+        background_group.setContentsMargins(0, 0, 0, 0)
+        background_group.setSpacing(5)
+        self.background_label = QLabel(self._t("背景"))
+        self.background_label.setObjectName("FieldLabel")
+        background_group.addWidget(self.background_label)
+        self.background_button = QPushButton(self._t("默认背景"))
+        self.background_button.setProperty("role", "toolbar")
+        self.background_button.setMinimumWidth(148)
+        self.background_menu = QMenu(self.background_button)
+        self.background_menu.addAction(self.choose_background_action)
+        self.background_menu.addAction(self.remove_background_action)
+        self.background_button.setMenu(self.background_menu)
+        background_group.addWidget(self.background_button)
+        controls_layout.addLayout(background_group)
         self.header_layout.addWidget(brand_block, 0, 0)
         self.header_layout.addWidget(
             self.header_controls, 0, 1,
@@ -674,6 +779,7 @@ class MainWindow(QMainWindow):
             (self.clear_button, "clear", "normal"),
             (self.browse_output_button, "folder_open", "normal"),
             (self.open_output_button, "external", "normal"),
+            (self.background_button, "image", "normal"),
             (self.cancel_button, "stop", "danger"),
             (self.start_button, "play", "primary"),
         )
@@ -711,7 +817,7 @@ class MainWindow(QMainWindow):
         if not hasattr(self, "workspace_layout"):
             return
         wide = self.width() >= 1160
-        header_compact = self.width() < 930
+        header_compact = self.width() < 1110
         if getattr(self, "workspace_wide", None) != wide:
             self.workspace_wide = wide
             self.workspace_layout.removeWidget(self.file_panel)

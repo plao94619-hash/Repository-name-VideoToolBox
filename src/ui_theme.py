@@ -59,20 +59,48 @@ def make_palette(theme: str) -> QPalette:
     return palette
 
 
-def make_stylesheet(theme: str) -> str:
-    c = COLORS[theme]
+def _rgba(hex_color: str, alpha: int) -> str:
+    color = QColor(hex_color)
+    return f"rgba({color.red()}, {color.green()}, {color.blue()}, {alpha})"
+
+
+def make_stylesheet(theme: str, custom_background: bool = False) -> str:
+    c = dict(COLORS[theme])
+    if custom_background:
+        c.update({
+            "content_canvas": "transparent",
+            "panel_surface": _rgba(c["surface"], 232 if theme == "light" else 238),
+            "header_surface": _rgba(c["header"], 224 if theme == "light" else 232),
+            "action_surface": _rgba(c["surface"], 242),
+            "drop_surface": _rgba(c["surface_alt"], 222 if theme == "light" else 230),
+            "table_surface": _rgba(c["surface"], 228 if theme == "light" else 236),
+            "table_alt": _rgba(c["surface_alt"], 220 if theme == "light" else 226),
+        })
+    else:
+        c.update({
+            "content_canvas": c["canvas"],
+            "panel_surface": c["surface"],
+            "header_surface": c["header"],
+            "action_surface": c["surface"],
+            "drop_surface": c["surface_alt"],
+            "table_surface": c["surface"],
+            "table_alt": c["surface_alt"],
+        })
     return """
 QWidget { font-size: 13px; color: %(text)s; }
-QMainWindow, QWidget#Content, QScrollArea#ContentScroll,
-QScrollArea#ContentScroll > QWidget > QWidget { background: %(canvas)s; }
-QFrame#Panel { background: %(surface)s; border: 1px solid %(stroke)s;
+QMainWindow { background: %(canvas)s; }
+QWidget#BackgroundCanvas { background: transparent; }
+QWidget#Content, QScrollArea#ContentScroll,
+QScrollArea#ContentScroll > QWidget,
+QScrollArea#ContentScroll > QWidget > QWidget { background: %(content_canvas)s; }
+QFrame#Panel { background: %(panel_surface)s; border: 1px solid %(stroke)s;
                border-radius: 14px; }
 QFrame#Panel[dragActive="true"] { border: 2px dashed %(accent)s; }
-QFrame#HeaderPanel { background: %(header)s; border: 1px solid %(stroke)s;
+QFrame#HeaderPanel { background: %(header_surface)s; border: 1px solid %(stroke)s;
                      border-radius: 16px; }
-QFrame#ActionPanel { background: %(surface)s; border: none;
+QFrame#ActionPanel { background: %(action_surface)s; border: none;
                      border-top: 1px solid %(stroke)s; }
-QFrame#DropZone { background: %(surface_alt)s; border: 1px dashed %(stroke_strong)s;
+QFrame#DropZone { background: %(drop_surface)s; border: 1px dashed %(stroke_strong)s;
                   border-radius: 12px; }
 QFrame#DropZone:hover { border-color: %(accent)s; background: %(accent_soft)s; }
 QFrame#DropZone[dragActive="true"] { border: 2px dashed %(accent)s;
@@ -141,7 +169,7 @@ QComboBox QAbstractItemView { background: %(surface)s; color: %(text)s;
                               selection-background-color: %(selection)s;
                               selection-color: %(text)s; border: 1px solid %(stroke)s;
                               border-radius: 8px; padding: 4px; outline: 0; }
-QTableWidget { background: %(surface)s; alternate-background-color: %(surface_alt)s;
+QTableWidget { background: %(table_surface)s; alternate-background-color: %(table_alt)s;
                color: %(text)s; border: 1px solid %(stroke)s; border-radius: 10px;
                gridline-color: %(stroke)s; outline: 0;
                selection-background-color: %(selection)s; selection-color: %(text)s; }

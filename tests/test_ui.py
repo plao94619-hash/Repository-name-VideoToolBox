@@ -13,6 +13,7 @@ if os.name != "nt":
 
 try:
     from PySide6.QtCore import QSettings, Qt
+    from PySide6.QtGui import QColor, QImage, QPainter
     from PySide6.QtWidgets import QApplication
 except ModuleNotFoundError:
     QSettings = None
@@ -98,6 +99,78 @@ class LanguageUITests(unittest.TestCase):
         self.assertEqual(self.window.theme_combo.currentData(), "dark")
         self.assertEqual(self.window.mode_combo.currentData(), MODE_EXTRACT)
         self.assertEqual(self.window.target_combo.currentData(), RAW_AUDIO)
+
+    def test_custom_background_can_be_selected_persisted_and_removed(self):
+        background = self.root / "background.png"
+        image = QImage(640, 360, QImage.Format.Format_RGB32)
+        painter = QPainter(image)
+        painter.fillRect(0, 0, 320, 360, QColor("#264d8f"))
+        painter.fillRect(320, 0, 320, 180, QColor("#765a9e"))
+        painter.fillRect(320, 180, 320, 180, QColor("#2f7d72"))
+        painter.end()
+        self.assertTrue(image.save(str(background)))
+
+        with patch("main.QFileDialog.getOpenFileName",
+                   return_value=(str(background), "")):
+            self.window.choose_background_image()
+        QApplication.processEvents()
+        self.assertTrue(self.window.background_canvas.has_image())
+        self.assertEqual(self.window.background_path, str(background.resolve()))
+        self.assertEqual(
+            self.settings.value("appearance/background_image"),
+            str(background.resolve()),
+        )
+        self.assertEqual(self.window.background_button.text(), "自定义图片")
+        self.assertTrue(self.window.remove_background_action.isEnabled())
+
+        self.window.language_combo.setCurrentIndex(
+            self.window.language_combo.findData("en_US"))
+        self.assertEqual(self.window.background_button.text(), "Custom image")
+        self.window.language_combo.setCurrentIndex(
+            self.window.language_combo.findData("zh_CN"))
+
+        preview_dir = os.environ.get("UI_SCREENSHOT_DIR")
+        if preview_dir:
+            Path(preview_dir).mkdir(parents=True, exist_ok=True)
+            self.window.theme_combo.setCurrentIndex(
+                self.window.theme_combo.findData("light"))
+            self.window.resize(1000, 720)
+            self.window.show()
+            QApplication.processEvents()
+            self.window.grab().save(
+                str(Path(preview_dir) / "background-zh_CN-light.png")
+            )
+            self.window.theme_combo.setCurrentIndex(
+                self.window.theme_combo.findData("dark"))
+            QApplication.processEvents()
+            self.window.grab().save(
+                str(Path(preview_dir) / "background-zh_CN-dark.png")
+            )
+
+        self.window.close()
+        with patch("main.QSettings", return_value=self.settings):
+            self.window = MainWindow()
+        self.addCleanup(self.window.close)
+        self.assertTrue(self.window.background_canvas.has_image())
+        self.assertEqual(self.window.background_path, str(background.resolve()))
+
+        self.window.remove_background_image()
+        self.assertFalse(self.window.background_canvas.has_image())
+        self.assertFalse(self.settings.contains("appearance/background_image"))
+        self.assertFalse(self.window.remove_background_action.isEnabled())
+        self.assertEqual(self.window.background_button.text(), "默认背景")
+
+    def test_missing_saved_background_safely_uses_default(self):
+        self.window.close()
+        self.settings.setValue(
+            "appearance/background_image", str(self.root / "missing-image.png")
+        )
+        with patch("main.QSettings", return_value=self.settings):
+            self.window = MainWindow()
+        self.addCleanup(self.window.close)
+        self.assertFalse(self.window.background_canvas.has_image())
+        self.assertFalse(self.settings.contains("appearance/background_image"))
+        self.assertEqual(self.window.background_button.text(), "默认背景")
 
     def test_result_path_and_full_error_details_are_accessible(self):
         source = self.root / "clip.mp4"

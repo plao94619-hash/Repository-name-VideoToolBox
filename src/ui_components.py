@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QByteArray, QRectF, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPainterPath, QPen, QPixmap
+from PySide6.QtGui import (
+    QColor, QFont, QIcon, QImageReader, QPainter, QPainterPath, QPen, QPixmap,
+)
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QFrame,
@@ -37,6 +39,9 @@ _ICON_CONTENT = {
     "info": '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.1"/>',
     "language": '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.4 3 14.6 0 18M12 3c-3 3.4-3 14.6 0 18"/>',
     "theme": '<path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"/>',
+    "image": '<rect x="3" y="4" width="18" height="16" rx="3"/>'
+             '<circle cx="9" cy="10" r="2"/>'
+             '<path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4"/>',
 }
 
 
@@ -60,6 +65,68 @@ def make_icon(name: str, color: str, size: int = 18) -> QIcon:
         pixmap.setDevicePixelRatio(ratio)
         icon.addPixmap(pixmap)
     return icon
+
+
+class BackgroundCanvas(QWidget):
+    """Paint an optional local image behind the regular application surfaces."""
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setObjectName("BackgroundCanvas")
+        self._pixmap = QPixmap()
+        self._image_path = ""
+        self._theme = "light"
+
+    @property
+    def image_path(self) -> str:
+        return self._image_path
+
+    def has_image(self) -> bool:
+        return not self._pixmap.isNull()
+
+    def load_image(self, path: str) -> bool:
+        reader = QImageReader(path)
+        reader.setAutoTransform(True)
+        image = reader.read()
+        if image.isNull():
+            return False
+        self._pixmap = QPixmap.fromImage(image)
+        self._image_path = path
+        self.update()
+        return True
+
+    def clear_image(self) -> None:
+        self._pixmap = QPixmap()
+        self._image_path = ""
+        self.update()
+
+    def set_theme(self, theme: str) -> None:
+        self._theme = theme if theme in {"light", "dark"} else "light"
+        self.update()
+
+    def paintEvent(self, _event) -> None:
+        painter = QPainter(self)
+        base = QColor("#11141a" if self._theme == "dark" else "#f3f5f8")
+        painter.fillRect(self.rect(), base)
+        if self._pixmap.isNull() or self.width() <= 0 or self.height() <= 0:
+            return
+
+        source_width = float(self._pixmap.width())
+        source_height = float(self._pixmap.height())
+        target_ratio = self.width() / self.height()
+        source_ratio = source_width / source_height
+        if source_ratio > target_ratio:
+            crop_width = source_height * target_ratio
+            source = QRectF((source_width - crop_width) / 2, 0, crop_width, source_height)
+        else:
+            crop_height = source_width / target_ratio
+            source = QRectF(0, (source_height - crop_height) / 2, source_width, crop_height)
+
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        painter.drawPixmap(QRectF(self.rect()), self._pixmap, source)
+        overlay = QColor(base)
+        overlay.setAlpha(112 if self._theme == "dark" else 72)
+        painter.fillRect(self.rect(), overlay)
 
 
 class BrandMark(QWidget):

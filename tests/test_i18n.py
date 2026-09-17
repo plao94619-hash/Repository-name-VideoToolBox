@@ -87,6 +87,9 @@ class TranslationTests(unittest.TestCase):
         self.assertIn(f'APP_VERSION: "{APP_VERSION}"', workflow)
         self.assertIn(f'#define MyAppVersion "{APP_VERSION}"', installer)
         self.assertIn(f"StringStruct('ProductVersion', '{APP_VERSION}')", metadata)
+        version_tuple = ", ".join((*APP_VERSION.split("."), "0"))
+        self.assertIn(f"filevers=({version_tuple})", metadata)
+        self.assertIn(f"prodvers=({version_tuple})", metadata)
         for name in ("english", "chinese", "traditional"):
             self.assertIn(f'Name: "{name}"', installer)
         for name in ("ChineseSimplified.isl", "ChineseTraditional.isl"):
