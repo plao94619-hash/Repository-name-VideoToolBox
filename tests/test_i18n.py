@@ -34,7 +34,10 @@ class TranslationTests(unittest.TestCase):
     def test_all_literal_translations_have_catalog_entries(self):
         root = Path(__file__).resolve().parents[1] / "src"
         used = set()
-        for path in (root / "main.py", root / "engine.py", root / "music_unlock.py"):
+        for path in (
+            root / "main.py", root / "engine.py", root / "music_unlock.py",
+            root / "direct_download.py",
+        ):
             tree = ast.parse(path.read_text(encoding="utf-8"))
             for node in ast.walk(tree):
                 if not isinstance(node, ast.Call) or not node.args:

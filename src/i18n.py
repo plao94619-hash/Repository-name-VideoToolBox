@@ -219,6 +219,76 @@ EN_US = {
         "The music unlock helper returned invalid version information",
     "音乐解锁组件格式列表异常":
         "The music unlock helper returned an invalid format list",
+    "授权音频下载": "Authorized audio",
+    "保留原始音频格式": "Keep original audio format",
+    "就绪：可粘贴公开的无 DRM 音频直链":
+        "Ready: paste a public DRM-free audio file URL",
+    "{count} 个链接": "{count} link(s)",
+    "格式转换 · 音乐解锁 · 授权下载 · 无损提取":
+        "Convert · Unlock music · Authorized download · Lossless extraction",
+    "添加链接": "Add links",
+    "每行粘贴一个公开音频直链，例如 https://example.com/song.mp3":
+        "Paste one public audio file URL per line, e.g. https://example.com/song.mp3",
+    "尚未添加链接": "No links added",
+    "请粘贴公开、无 DRM 的音频文件直链。":
+        "Paste a public, DRM-free audio file URL.",
+    "下载时获取": "Read while downloading",
+    "已添加 {count} 个链接": "Added {count} link(s)",
+    "另有 {count} 个链接未显示。": "{count} more link(s) are not shown.",
+    "部分链接无法添加": "Some links could not be added",
+    "无法添加链接": "Cannot add link",
+    "有 {count} 个链接不符合直接音频下载规则。":
+        "{count} link(s) do not meet the direct-audio download rules.",
+    "请先添加需要下载的音频直链。":
+        "Add an audio file URL before starting.",
+    "待下载音频": "Audio to download",
+    "粘贴公开音频文件直链；支持一次添加多行":
+        "Paste public audio file URLs; multiple lines are supported.",
+    "下载无 DRM 音频直链，并保留原始格式":
+        "Download DRM-free direct audio while keeping its original format.",
+    "在上方粘贴音频直链": "Paste an audio file URL above",
+    "仅支持公开 HTTP/HTTPS 音频文件，不支持平台页面或流媒体清单":
+        "Public HTTP/HTTPS audio files only; platform pages and streaming manifests are not supported.",
+    "定位到链接输入框": "Focus link input",
+    "开始下载": "Start download",
+    "来源 / 文件名": "Source / file name",
+    "仅下载你有权保存的公开无 DRM 音频直链；不支持 Spotify、Apple Music 页面、Cookie、M3U8/DASH 或加密媒体。":
+        "Only download public DRM-free audio you are authorized to save. Spotify or Apple Music pages, cookies, M3U8/DASH, and encrypted media are not supported.",
+    "正在下载…": "Downloading…",
+    "正在处理第 {current}/{total} 项":
+        "Processing item {current} of {total}",
+    "授权下载仅连接链接所在服务器，不支持订阅平台页面、Cookie、流媒体清单或加密媒体。":
+        "Authorized downloads connect only to the linked server; subscription-platform pages, cookies, streaming manifests, and encrypted media are not supported.",
+    "需要先停止当前任务。是否取消任务？":
+        "The current task must stop before closing. Cancel it?",
+    "请输入有效的音频直链。": "Enter a valid direct audio URL.",
+    "仅支持 HTTP 或 HTTPS 音频直链。":
+        "Only HTTP or HTTPS audio file URLs are supported.",
+    "下载地址不能包含账号或密码。":
+        "The download URL cannot contain a username or password.",
+    "不支持 Spotify 或 Apple Music 链接；请使用官方应用离线播放。":
+        "Spotify and Apple Music links are not supported; use the official app for offline playback.",
+    "不支持 M3U8、DASH 或其他流媒体播放清单。":
+        "M3U8, DASH, and other streaming manifests are not supported.",
+    "该链接不是受支持的音频文件直链。":
+        "This URL is not a supported direct audio file.",
+    "无效链接": "Invalid link",
+    "服务器未提供可识别的音频文件格式。":
+        "The server did not provide a recognizable audio format.",
+    "服务器返回 HTTP {code}。": "The server returned HTTP {code}.",
+    "无法连接到下载地址：{error}":
+        "Could not connect to the download URL: {error}",
+    "服务器返回的内容不是音频文件。":
+        "The server response is not an audio file.",
+    "正在下载 {percent}%": "Downloading {percent}%",
+    "已下载 {size}": "Downloaded {size}",
+    "下载结束，但没有生成有效的音频文件。":
+        "The download finished without a valid audio file.",
+    "检测到流媒体播放清单，已停止下载。":
+        "A streaming manifest was detected; the download was stopped.",
+    "检测到加密或受保护的媒体，已停止下载。":
+        "Encrypted or protected media was detected; the download was stopped.",
+    "下载完成": "Downloaded",
 }
 
 ZH_TW = {
@@ -430,6 +500,76 @@ ZH_TW = {
         "音樂解鎖元件版本資訊異常",
     "音乐解锁组件格式列表异常":
         "音樂解鎖元件格式清單異常",
+    "授权音频下载": "下載授權音訊",
+    "保留原始音频格式": "保留原始音訊格式",
+    "就绪：可粘贴公开的无 DRM 音频直链":
+        "就緒：可貼上公開且無 DRM 的音訊檔案直鏈",
+    "{count} 个链接": "{count} 個連結",
+    "格式转换 · 音乐解锁 · 授权下载 · 无损提取":
+        "格式轉換 · 音樂解鎖 · 授權下載 · 無損擷取",
+    "添加链接": "加入連結",
+    "每行粘贴一个公开音频直链，例如 https://example.com/song.mp3":
+        "每行貼上一個公開音訊直鏈，例如 https://example.com/song.mp3",
+    "尚未添加链接": "尚未加入連結",
+    "请粘贴公开、无 DRM 的音频文件直链。":
+        "請貼上公開且無 DRM 的音訊檔案直鏈。",
+    "下载时获取": "下載時取得",
+    "已添加 {count} 个链接": "已加入 {count} 個連結",
+    "另有 {count} 个链接未显示。": "另有 {count} 個連結未顯示。",
+    "部分链接无法添加": "部分連結無法加入",
+    "无法添加链接": "無法加入連結",
+    "有 {count} 个链接不符合直接音频下载规则。":
+        "有 {count} 個連結不符合音訊直鏈下載規則。",
+    "请先添加需要下载的音频直链。":
+        "請先加入要下載的音訊直鏈。",
+    "待下载音频": "待下載音訊",
+    "粘贴公开音频文件直链；支持一次添加多行":
+        "貼上公開音訊檔案直鏈；可一次加入多行。",
+    "下载无 DRM 音频直链，并保留原始格式":
+        "下載無 DRM 音訊直鏈，並保留原始格式。",
+    "在上方粘贴音频直链": "在上方貼上音訊直鏈",
+    "仅支持公开 HTTP/HTTPS 音频文件，不支持平台页面或流媒体清单":
+        "僅支援公開 HTTP/HTTPS 音訊檔案，不支援平台頁面或串流播放清單。",
+    "定位到链接输入框": "移至連結輸入框",
+    "开始下载": "開始下載",
+    "来源 / 文件名": "來源／檔案名稱",
+    "仅下载你有权保存的公开无 DRM 音频直链；不支持 Spotify、Apple Music 页面、Cookie、M3U8/DASH 或加密媒体。":
+        "僅下載您有權儲存的公開無 DRM 音訊直鏈；不支援 Spotify、Apple Music 頁面、Cookie、M3U8/DASH 或加密媒體。",
+    "正在下载…": "正在下載…",
+    "正在处理第 {current}/{total} 项":
+        "正在處理第 {current}/{total} 項",
+    "授权下载仅连接链接所在服务器，不支持订阅平台页面、Cookie、流媒体清单或加密媒体。":
+        "授權下載僅連線至連結所在伺服器；不支援訂閱平台頁面、Cookie、串流播放清單或加密媒體。",
+    "需要先停止当前任务。是否取消任务？":
+        "關閉前必須停止目前的工作。要取消工作嗎？",
+    "请输入有效的音频直链。": "請輸入有效的音訊直鏈。",
+    "仅支持 HTTP 或 HTTPS 音频直链。":
+        "僅支援 HTTP 或 HTTPS 音訊直鏈。",
+    "下载地址不能包含账号或密码。":
+        "下載網址不能包含帳號或密碼。",
+    "不支持 Spotify 或 Apple Music 链接；请使用官方应用离线播放。":
+        "不支援 Spotify 或 Apple Music 連結；請使用官方應用程式離線播放。",
+    "不支持 M3U8、DASH 或其他流媒体播放清单。":
+        "不支援 M3U8、DASH 或其他串流播放清單。",
+    "该链接不是受支持的音频文件直链。":
+        "此連結不是支援的音訊檔案直鏈。",
+    "无效链接": "無效連結",
+    "服务器未提供可识别的音频文件格式。":
+        "伺服器未提供可辨識的音訊檔案格式。",
+    "服务器返回 HTTP {code}。": "伺服器傳回 HTTP {code}。",
+    "无法连接到下载地址：{error}":
+        "無法連線至下載網址：{error}",
+    "服务器返回的内容不是音频文件。":
+        "伺服器傳回的內容不是音訊檔案。",
+    "正在下载 {percent}%": "正在下載 {percent}%",
+    "已下载 {size}": "已下載 {size}",
+    "下载结束，但没有生成有效的音频文件。":
+        "下載結束，但沒有產生有效的音訊檔案。",
+    "检测到流媒体播放清单，已停止下载。":
+        "偵測到串流播放清單，已停止下載。",
+    "检测到加密或受保护的媒体，已停止下载。":
+        "偵測到加密或受保護的媒體，已停止下載。",
+    "下载完成": "下載完成",
 }
 
 CATALOGS = {"en_US": EN_US, "zh_TW": ZH_TW}

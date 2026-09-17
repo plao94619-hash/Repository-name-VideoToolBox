@@ -100,6 +100,8 @@ QFrame#HeaderPanel { background: %(header_surface)s; border: 1px solid %(stroke)
                      border-radius: 16px; }
 QFrame#ActionPanel { background: %(action_surface)s; border: none;
                      border-top: 1px solid %(stroke)s; }
+QFrame#UrlInputPanel { background: %(accent_soft)s; border: 1px solid %(stroke)s;
+                       border-radius: 11px; }
 QFrame#DropZone { background: %(drop_surface)s; border: 1px dashed %(stroke_strong)s;
                   border-radius: 12px; }
 QFrame#DropZone:hover { border-color: %(accent)s; background: %(accent_soft)s; }
@@ -164,6 +166,14 @@ QComboBox:focus, QLineEdit:focus { background: %(surface)s;
                                    border: 2px solid %(focus)s; padding: 0 10px; }
 QComboBox:disabled, QLineEdit:disabled { background: %(disabled_bg)s;
                                         color: %(disabled)s; }
+QPlainTextEdit#UrlInput { padding: 9px 11px; background: %(surface)s;
+                          color: %(text)s; border: 1px solid %(stroke)s;
+                          border-radius: 9px; selection-background-color: %(selection)s;
+                          selection-color: %(text)s; }
+QPlainTextEdit#UrlInput:hover { border-color: %(stroke_strong)s; }
+QPlainTextEdit#UrlInput:focus { border: 2px solid %(focus)s; padding: 8px 10px; }
+QPlainTextEdit#UrlInput:disabled { background: %(disabled_bg)s;
+                                   color: %(disabled)s; }
 QComboBox::drop-down { border: none; width: 28px; }
 QComboBox QAbstractItemView { background: %(surface)s; color: %(text)s;
                               selection-background-color: %(selection)s;

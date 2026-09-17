@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenu,
     QMessageBox,
+    QPlainTextEdit,
     QProgressBar,
     QPushButton,
     QScrollArea,
@@ -60,6 +61,16 @@ from music_unlock import (
     unlock_file_patterns,
     unlock_music_file,
 )
+from direct_download import (
+    DIRECT_TARGET,
+    MODE_DIRECT_DOWNLOAD,
+    DirectDownloadCancelled,
+    DirectDownloadTask,
+    download_source_label,
+    download_direct_audio,
+    make_download_task,
+    split_url_input,
+)
 from version import APP_NAME, APP_VERSION
 from i18n import (
     LANGUAGE_LABELS, SUPPORTED_LANGUAGES, language_for_system_locale, translate,
@@ -92,7 +103,8 @@ class BatchWorker(QObject):
     item_finished = Signal(int, bool, str, str)
     completed = Signal(bool, int, int)
 
-    def __init__(self, paths: list[Path], options: ConversionOptions):
+    def __init__(self, paths: list[Path | DirectDownloadTask],
+                 options: ConversionOptions):
         super().__init__()
         self.paths = paths
         self.options = options
@@ -116,7 +128,15 @@ class BatchWorker(QObject):
             try:
                 progress = lambda percent, text, row=index: self.item_progress.emit(
                     row, percent, text)
-                if self.options.mode == MODE_MUSIC_UNLOCK:
+                if self.options.mode == MODE_DIRECT_DOWNLOAD:
+                    result = download_direct_audio(
+                        path,
+                        self.options.output_dir,
+                        self.options.locale,
+                        progress,
+                        self.cancel_event,
+                    )
+                elif self.options.mode == MODE_MUSIC_UNLOCK:
                     result = unlock_music_file(
                         path,
                         self.options.output_dir,
@@ -138,7 +158,7 @@ class BatchWorker(QObject):
                     result.size_message,
                     str(result.output_path),
                 )
-            except ConversionCancelled:
+            except (ConversionCancelled, DirectDownloadCancelled):
                 cancelled = True
                 self.item_finished.emit(index, False,
                                         translate("已取消", self.options.locale), "")
@@ -198,9 +218,16 @@ class MainWindow(QMainWindow):
     def _is_unlock_mode(self) -> bool:
         return self.mode_combo.currentData() == MODE_MUSIC_UNLOCK
 
+    def _is_download_mode(self) -> bool:
+        return self.mode_combo.currentData() == MODE_DIRECT_DOWNLOAD
+
     def _ready_message(self) -> str:
-        key = ("就绪：可拖入待解锁的本地音乐文件" if self._is_unlock_mode()
-               else "就绪：可直接拖入音频或视频文件")
+        if self._is_download_mode():
+            key = "就绪：可粘贴公开的无 DRM 音频直链"
+        elif self._is_unlock_mode():
+            key = "就绪：可拖入待解锁的本地音乐文件"
+        else:
+            key = "就绪：可直接拖入音频或视频文件"
         return self._t(key)
 
     def _notify(self, icon: QMessageBox.Icon, title: str, message: str) -> None:
@@ -368,7 +395,7 @@ class MainWindow(QMainWindow):
         self.help_menu.setTitle(self._t("帮助"))
         for widget, key in (
             (self.hero_title, APP_NAME),
-            (self.hero_subtitle, "格式转换 · 音乐解锁 · 无损提取 · 智能压缩"),
+            (self.hero_subtitle, "格式转换 · 音乐解锁 · 授权下载 · 无损提取"),
             (self.privacy_badge, "本地处理 · 文件不会上传"),
             (self.language_label, "语言"),
             (self.theme_label, "外观"),
@@ -379,6 +406,7 @@ class MainWindow(QMainWindow):
             (self.options_hint, "按任务需要选择输出格式与质量"),
             (self.add_files_button, "添加文件"),
             (self.add_folder_button, "添加文件夹"),
+            (self.add_links_button, "添加链接"),
             (self.remove_button, "移除选中"),
             (self.clear_button, "清空列表"),
             (self.mode_label, "任务类型"),
@@ -413,6 +441,8 @@ class MainWindow(QMainWindow):
                 combo.setItemData(index, combo.itemText(index), Qt.ItemDataRole.ToolTipRole)
         self._update_background_ui()
         self.output_edit.setPlaceholderText(self._t("选择输出目录"))
+        self.url_input.setPlaceholderText(self._t(
+            "每行粘贴一个公开音频直链，例如 https://example.com/song.mp3"))
         self.table.setHorizontalHeaderLabels([
             self._t(key) for key in ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
         ])
@@ -515,7 +545,7 @@ class MainWindow(QMainWindow):
         title_row.addStretch()
         brand_copy.addLayout(title_row)
         self.hero_subtitle = QLabel(self._t(
-            "格式转换 · 音乐解锁 · 无损提取 · 智能压缩"))
+            "格式转换 · 音乐解锁 · 授权下载 · 无损提取"))
         self.hero_subtitle.setObjectName("AppSubtitle")
         self.hero_subtitle.setWordWrap(True)
         brand_copy.addWidget(self.hero_subtitle)
@@ -636,6 +666,28 @@ class MainWindow(QMainWindow):
         toolbar.addStretch()
         file_layout.addLayout(toolbar)
 
+        self.url_input_panel = QFrame()
+        self.url_input_panel.setObjectName("UrlInputPanel")
+        url_input_layout = QHBoxLayout(self.url_input_panel)
+        url_input_layout.setContentsMargins(12, 12, 12, 12)
+        url_input_layout.setSpacing(10)
+        self.url_input = QPlainTextEdit()
+        self.url_input.setObjectName("UrlInput")
+        self.url_input.setPlaceholderText(self._t(
+            "每行粘贴一个公开音频直链，例如 https://example.com/song.mp3"))
+        self.url_input.setMinimumHeight(68)
+        self.url_input.setMaximumHeight(88)
+        self.url_input.setTabChangesFocus(True)
+        self.add_links_button = QPushButton(self._t("添加链接"))
+        self.add_links_button.setProperty("role", "accentSoft")
+        self.add_links_button.setMinimumWidth(112)
+        self.add_links_button.clicked.connect(self.add_download_links)
+        url_input_layout.addWidget(self.url_input, 1)
+        url_input_layout.addWidget(
+            self.add_links_button, 0, Qt.AlignmentFlag.AlignBottom)
+        self.url_input_panel.setVisible(False)
+        file_layout.addWidget(self.url_input_panel)
+
         self.file_stack = QStackedWidget()
         self.file_stack.setMinimumHeight(280)
         self.empty_state = EmptyDropZone()
@@ -704,7 +756,7 @@ class MainWindow(QMainWindow):
 
         self.mode_combo = QComboBox()
         for item in (MODE_VIDEO, MODE_AUDIO, MODE_EXTRACT, MODE_COMPRESS,
-                     MODE_MUSIC_UNLOCK):
+                     MODE_MUSIC_UNLOCK, MODE_DIRECT_DOWNLOAD):
             self.mode_combo.addItem(self._t(item), item)
         self.target_combo = QComboBox()
         self.quality_combo = QComboBox()
@@ -812,6 +864,7 @@ class MainWindow(QMainWindow):
         self._icon_bindings = (
             (self.add_files_button, "add", "normal"),
             (self.add_folder_button, "folder", "normal"),
+            (self.add_links_button, "add", "normal"),
             (self.remove_button, "remove", "danger"),
             (self.clear_button, "clear", "normal"),
             (self.browse_output_button, "folder_open", "normal"),
@@ -898,7 +951,7 @@ class MainWindow(QMainWindow):
         self._adapt_layout()
 
     def _restore_settings(self) -> None:
-        default_dir = Path.home() / "Videos" / APP_NAME
+        default_dir = Path.home() / "Videos" / self._t(APP_NAME)
         self.output_edit.setText(self.settings.value("output_dir", str(default_dir)))
         mode = self.settings.value("mode", MODE_VIDEO)
         quality = self.settings.value("quality", "均衡压缩")
@@ -925,7 +978,80 @@ class MainWindow(QMainWindow):
         self.settings.setValue("window/geometry", self.saveGeometry())
 
     @Slot()
+    def add_download_links(self) -> None:
+        if not self._is_download_mode() or self.worker:
+            return
+        raw_urls = split_url_input(self.url_input.toPlainText())
+        if not raw_urls:
+            self._notify(
+                QMessageBox.Icon.Information,
+                self._t("尚未添加链接"),
+                self._t("请粘贴公开、无 DRM 的音频文件直链。"),
+            )
+            return
+
+        existing = {
+            str(self.table.item(row, 0).data(Qt.ItemDataRole.UserRole))
+            for row in range(self.table.rowCount())
+        }
+        failures: list[tuple[str, str]] = []
+        added = 0
+        for raw_url in raw_urls:
+            try:
+                task = make_download_task(raw_url, self.language)
+            except Exception as exc:
+                failures.append((raw_url, str(exc)))
+                continue
+            if task.url in existing:
+                continue
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+            name_item = QTableWidgetItem(task.display_name)
+            name_item.setData(Qt.ItemDataRole.UserRole, task.url)
+            name_item.setData(Qt.ItemDataRole.UserRole.value + 2, "url")
+            name_item.setToolTip(task.source_label)
+            self.table.setItem(row, 0, name_item)
+            type_item = QTableWidgetItem(task.suffix_label)
+            type_item.setToolTip(type_item.text())
+            self.table.setItem(row, 1, type_item)
+            self.table.setItem(row, 2, QTableWidgetItem(self._t("下载时获取")))
+            pending = QTableWidgetItem(self._t("等待处理"))
+            pending.setData(Qt.ItemDataRole.UserRole, "pending")
+            self.table.setItem(row, 3, pending)
+            self.table.setItem(row, 4, QTableWidgetItem(""))
+            existing.add(task.url)
+            added += 1
+
+        self.url_input.clear()
+        self._update_count()
+        if added:
+            self.statusBar().showMessage(self._t(
+                "已添加 {count} 个链接", count=added), 4000)
+        if failures:
+            details = "\n".join(
+                f"{download_source_label(url, self.language)}\n{message}"
+                for url, message in failures[:5]
+            )
+            if len(failures) > 5:
+                details += "\n" + self._t(
+                    "另有 {count} 个链接未显示。", count=len(failures) - 5)
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Icon.Warning)
+            box.setWindowTitle(self._t("部分链接无法添加") if added
+                               else self._t("无法添加链接"))
+            box.setText(self._t(
+                "有 {count} 个链接不符合直接音频下载规则。",
+                count=len(failures),
+            ))
+            box.setDetailedText(details)
+            box.addButton(self._t("关闭"), QMessageBox.ButtonRole.AcceptRole)
+            box.exec()
+
+    @Slot()
     def add_files(self) -> None:
+        if self._is_download_mode():
+            self.url_input.setFocus()
+            return
         if self._is_unlock_mode():
             title = self._t("选择待解锁音乐文件")
             file_filter = (
@@ -950,6 +1076,9 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def add_folder(self) -> None:
+        if self._is_download_mode():
+            self.url_input.setFocus()
+            return
         title = (self._t("选择待解锁音乐文件夹") if self._is_unlock_mode()
                  else self._t("选择媒体文件夹"))
         folder = QFileDialog.getExistingDirectory(self, title)
@@ -962,11 +1091,15 @@ class MainWindow(QMainWindow):
         self._add_paths(paths)
 
     def _path_matches_mode(self, path: Path) -> bool:
+        if self._is_download_mode():
+            return False
         if self._is_unlock_mode():
             return is_unlockable_path(path)
         return path.suffix.lower() in SUPPORTED_EXTENSIONS
 
     def _add_paths(self, paths: list[Path]) -> None:
+        if self._is_download_mode():
+            return
         existing = {
             str(self.table.item(row, 0).data(Qt.ItemDataRole.UserRole))
             for row in range(self.table.rowCount())
@@ -1023,8 +1156,8 @@ class MainWindow(QMainWindow):
         self._update_count()
 
     def _update_count(self) -> None:
-        self.file_count_label.setText(self._t(
-            "{count} 个文件", count=self.table.rowCount()))
+        key = "{count} 个链接" if self._is_download_mode() else "{count} 个文件"
+        self.file_count_label.setText(self._t(key, count=self.table.rowCount()))
         self._update_empty_state()
 
     def _update_empty_state(self) -> None:
@@ -1100,6 +1233,7 @@ class MainWindow(QMainWindow):
             MODE_EXTRACT: EXTRACT_TARGETS,
             MODE_COMPRESS: COMPRESS_TARGETS,
             MODE_MUSIC_UNLOCK: [UNLOCK_TARGET],
+            MODE_DIRECT_DOWNLOAD: [DIRECT_TARGET],
         }.get(mode, VIDEO_TARGETS)
         previous = self.target_combo.currentData()
         self.target_combo.clear()
@@ -1109,22 +1243,44 @@ class MainWindow(QMainWindow):
         if index >= 0:
             self.target_combo.setCurrentIndex(index)
 
-        unlock_mode = mode == MODE_MUSIC_UNLOCK
-        self.target_combo.setEnabled(not unlock_mode)
-        self.quality_label.setVisible(not unlock_mode)
-        self.quality_combo.setVisible(not unlock_mode)
+        simple_mode = mode in {MODE_MUSIC_UNLOCK, MODE_DIRECT_DOWNLOAD}
+        download_mode = mode == MODE_DIRECT_DOWNLOAD
+        self.target_combo.setEnabled(not simple_mode)
+        self.quality_label.setVisible(not simple_mode)
+        self.quality_combo.setVisible(not simple_mode)
         video_controls = mode in {MODE_VIDEO, MODE_COMPRESS}
         self.encoder_label.setVisible(video_controls)
         self.encoder_combo.setVisible(video_controls)
         self.resolution_label.setVisible(video_controls)
         self.resolution_combo.setVisible(video_controls)
+        self.url_input_panel.setVisible(download_mode)
+        self.add_files_button.setVisible(not download_mode)
+        self.add_folder_button.setVisible(not download_mode)
+        self.add_action.setEnabled(not download_mode and not self.worker)
+        self.add_folder_action.setEnabled(not download_mode and not self.worker)
         self._update_quality_hint()
         self._update_mode_copy()
 
     def _update_mode_copy(self) -> None:
         if not hasattr(self, "empty_state"):
             return
-        if self._is_unlock_mode():
+        if self._is_download_mode():
+            self.files_title.setText(self._t("待下载音频"))
+            self.files_hint.setText(self._t("粘贴公开音频文件直链；支持一次添加多行"))
+            self.options_hint.setText(self._t("下载无 DRM 音频直链，并保留原始格式"))
+            self.empty_state.set_texts(
+                self._t("在上方粘贴音频直链"),
+                self._t("仅支持公开 HTTP/HTTPS 音频文件，不支持平台页面或流媒体清单"),
+                self._t("定位到链接输入框"),
+            )
+            self.start_button.setText(self._t("开始下载"))
+            self.table.setHorizontalHeaderLabels([
+                self._t(key) for key in
+                ("来源 / 文件名", "类型", "大小", "状态 / 进度", "输出文件")
+            ])
+        elif self._is_unlock_mode():
+            self.files_title.setText(self._t("待处理文件"))
+            self.files_hint.setText(self._t("将文件或文件夹拖入此处，或使用下方按钮添加"))
             self.options_hint.setText(self._t("离线解锁本地音乐，并保留原始文件"))
             self.empty_state.set_texts(
                 self._t("把待解锁音乐拖到这里"),
@@ -1132,7 +1288,13 @@ class MainWindow(QMainWindow):
                 self._t("选择音乐文件"),
             )
             self.start_button.setText(self._t("开始解锁"))
+            self.table.setHorizontalHeaderLabels([
+                self._t(key) for key in
+                ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
+            ])
         else:
+            self.files_title.setText(self._t("待处理文件"))
+            self.files_hint.setText(self._t("将文件或文件夹拖入此处，或使用下方按钮添加"))
             self.options_hint.setText(self._t("按任务需要选择输出格式与质量"))
             self.empty_state.set_texts(
                 self._t("把媒体文件拖到这里"),
@@ -1140,6 +1302,11 @@ class MainWindow(QMainWindow):
                 self._t("选择文件"),
             )
             self.start_button.setText(self._t("开始处理"))
+            self.table.setHorizontalHeaderLabels([
+                self._t(key) for key in
+                ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
+            ])
+        self._update_count()
         if not self.worker:
             self.statusBar().showMessage(self._ready_message())
 
@@ -1147,6 +1314,12 @@ class MainWindow(QMainWindow):
     def _update_quality_hint(self) -> None:
         target = self.target_combo.currentData()
         mode = self.mode_combo.currentData()
+        if mode == MODE_DIRECT_DOWNLOAD:
+            self.quality_combo.setEnabled(False)
+            self.quality_hint.setMinimumHeight(66)
+            self.quality_hint.setText(self._t(
+                "仅下载你有权保存的公开无 DRM 音频直链；不支持 Spotify、Apple Music 页面、Cookie、M3U8/DASH 或加密媒体。"))
+            return
         if mode == MODE_MUSIC_UNLOCK:
             self.quality_combo.setEnabled(False)
             self.quality_hint.setMinimumHeight(54)
@@ -1195,21 +1368,33 @@ class MainWindow(QMainWindow):
             return
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder.resolve())))
 
-    def _current_paths(self) -> list[Path]:
-        return [
-            Path(str(self.table.item(row, 0).data(Qt.ItemDataRole.UserRole)))
+    def _current_paths(self) -> list[Path | DirectDownloadTask]:
+        values = [
+            str(self.table.item(row, 0).data(Qt.ItemDataRole.UserRole))
             for row in range(self.table.rowCount())
         ]
+        if self._is_download_mode():
+            return [make_download_task(value, self.language) for value in values]
+        return [Path(value) for value in values]
 
     @Slot()
     def start_conversion(self) -> None:
-        paths = self._current_paths()
+        try:
+            paths = self._current_paths()
+        except Exception as exc:
+            self._notify(QMessageBox.Icon.Warning, self._t("无法添加链接"), str(exc))
+            return
         if not paths:
-            self._notify(QMessageBox.Icon.Information, self._t("尚未添加文件"),
-                         self._t("请先添加需要处理的文件。"))
+            if self._is_download_mode():
+                self._notify(QMessageBox.Icon.Information, self._t("尚未添加链接"),
+                             self._t("请先添加需要下载的音频直链。"))
+            else:
+                self._notify(QMessageBox.Icon.Information, self._t("尚未添加文件"),
+                             self._t("请先添加需要处理的文件。"))
             return
 
-        incompatible = [path for path in paths if not self._path_matches_mode(path)]
+        incompatible = ([] if self._is_download_mode() else
+                        [path for path in paths if not self._path_matches_mode(path)])
         if incompatible:
             self._notify(
                 QMessageBox.Icon.Information,
@@ -1272,6 +1457,8 @@ class MainWindow(QMainWindow):
         for widget in (
             self.add_files_button,
             self.add_folder_button,
+            self.url_input,
+            self.add_links_button,
             self.remove_button,
             self.clear_button,
             self.language_combo,
@@ -1284,6 +1471,8 @@ class MainWindow(QMainWindow):
             self.browse_output_button,
         ):
             widget.setEnabled(not running)
+        self.add_action.setEnabled(not running and not self._is_download_mode())
+        self.add_folder_action.setEnabled(not running and not self._is_download_mode())
         self.start_button.setEnabled(not running)
         self.cancel_button.setEnabled(running)
         self.overall_progress.setVisible(running)
@@ -1291,11 +1480,13 @@ class MainWindow(QMainWindow):
             self.overall_progress.setValue(0)
         self._set_task_state("active" if running else "idle")
         if not running:
-            self.target_combo.setEnabled(not self._is_unlock_mode())
+            self.target_combo.setEnabled(
+                not self._is_unlock_mode() and not self._is_download_mode())
             self._update_quality_hint()
             self._update_empty_state()
         self.overall_label.setText(
-            self._t("正在解锁…" if running and self._is_unlock_mode() else
+            self._t("正在下载…" if running and self._is_download_mode() else
+                    "正在解锁…" if running and self._is_unlock_mode() else
                     "正在处理…" if running else "等待任务"))
 
     @Slot(int)
@@ -1309,7 +1500,7 @@ class MainWindow(QMainWindow):
         self.table.scrollToItem(self.table.item(row, 0))
         self.overall_progress.setValue(int(100 * row / max(self.table.rowCount(), 1)))
         self.overall_label.setText(self._t(
-            "正在处理第 {current}/{total} 个文件",
+            "正在处理第 {current}/{total} 项",
             current=row + 1, total=self.table.rowCount()))
 
     @Slot(int, int, str)
@@ -1407,6 +1598,7 @@ class MainWindow(QMainWindow):
             f"<p>{self._t('基于 FFmpeg 与 Qt for Python 构建的本地音视频转换工具。')}</p>"
             f"<p>{self._t('转换全程在本机完成，不上传用户文件。')}</p>"
             f"<p>{self._t('音乐解锁功能由 Unlock Music CLI 提供，仅供处理合法拥有或获授权的本地文件。')}</p>"
+            f"<p>{self._t('授权下载仅连接链接所在服务器，不支持订阅平台页面、Cookie、流媒体清单或加密媒体。')}</p>"
             '<p><a href="https://github.com/plao94619-hash/Repository-name-VideoToolBox">'
             + self._t("项目主页") + "</a></p>"
         )
@@ -1430,6 +1622,18 @@ class MainWindow(QMainWindow):
 
     def dropEvent(self, event: QDropEvent) -> None:
         self._set_drag_active(False)
+        if self._is_download_mode():
+            urls = [url.toString() for url in event.mimeData().urls()
+                    if not url.isLocalFile()]
+            if urls:
+                current = self.url_input.toPlainText().strip()
+                combined = "\n".join(([current] if current else []) + urls)
+                self.url_input.setPlainText(combined)
+                self.add_download_links()
+                event.acceptProposedAction()
+            else:
+                event.ignore()
+            return
         paths: list[Path] = []
         for url in event.mimeData().urls():
             local = url.toLocalFile()
@@ -1452,7 +1656,7 @@ class MainWindow(QMainWindow):
             box = QMessageBox(self)
             box.setIcon(QMessageBox.Icon.Question)
             box.setWindowTitle(self._t("任务仍在运行"))
-            box.setText(self._t("需要先停止当前转换。是否取消任务？"))
+            box.setText(self._t("需要先停止当前任务。是否取消任务？"))
             yes_button = box.addButton(self._t("是"), QMessageBox.ButtonRole.YesRole)
             box.addButton(self._t("否"), QMessageBox.ButtonRole.NoRole)
             box.exec()

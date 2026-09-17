@@ -24,6 +24,7 @@ else:
 
 from engine import MODE_EXTRACT, RAW_AUDIO
 from music_unlock import MODE_MUSIC_UNLOCK, UNLOCK_TARGET
+from direct_download import DIRECT_TARGET, MODE_DIRECT_DOWNLOAD, DirectDownloadTask
 
 
 @unittest.skipIf(QApplication is None, "PySide6 not installed in this environment")
@@ -120,6 +121,67 @@ class LanguageUITests(unittest.TestCase):
             self.window.mode_combo.findData(MODE_EXTRACT))
         self.assertFalse(self.window.quality_combo.isHidden())
         self.assertTrue(self.window.target_combo.isEnabled())
+
+    def test_authorized_download_mode_adds_safe_direct_links(self):
+        self.window.mode_combo.setCurrentIndex(
+            self.window.mode_combo.findData(MODE_DIRECT_DOWNLOAD))
+        self.assertEqual(self.window.target_combo.currentData(), DIRECT_TARGET)
+        self.assertFalse(self.window.target_combo.isEnabled())
+        self.assertTrue(self.window.quality_combo.isHidden())
+        self.assertFalse(self.window.url_input_panel.isHidden())
+        self.assertTrue(self.window.add_files_button.isHidden())
+        self.assertTrue(self.window.add_folder_button.isHidden())
+        self.assertEqual(self.window.start_button.text(), "开始下载")
+        self.assertIn("Spotify", self.window.quality_hint.text())
+        self.assertIn("M3U8", self.window.quality_hint.text())
+
+        self.window.url_input.setPlainText(
+            "https://media.example.com/first.mp3?token=private\n"
+            "https://cdn.example.org/second.flac"
+        )
+        self.window.add_download_links()
+        self.assertEqual(self.window.table.rowCount(), 2)
+        self.assertEqual(self.window.table.item(0, 0).text(), "first.mp3")
+        self.assertNotIn("private", self.window.table.item(0, 0).toolTip())
+        self.assertEqual(self.window.file_count_label.text(), "2 个链接")
+        tasks = self.window._current_paths()
+        self.assertTrue(all(isinstance(item, DirectDownloadTask) for item in tasks))
+
+        self.window.language_combo.setCurrentIndex(
+            self.window.language_combo.findData("en_US"))
+        self.assertEqual(self.window.mode_combo.currentText(),
+                         "Authorized audio")
+        self.assertEqual(self.window.start_button.text(), "Start download")
+        self.assertEqual(self.window.file_count_label.text(), "2 link(s)")
+        self.assertEqual(self.window.target_combo.currentData(), DIRECT_TARGET)
+
+        self.window.resize(850, 640)
+        self.window.show()
+        QApplication.processEvents()
+        self.assertTrue(self.window.url_input.isVisible())
+        self.assertGreaterEqual(self.window.url_input.width(), 420)
+        self.assertGreaterEqual(
+            self.window.mode_combo.width(),
+            self.window.mode_combo.fontMetrics().horizontalAdvance(
+                self.window.mode_combo.currentText()) + 44,
+        )
+
+        preview_dir = os.environ.get("UI_SCREENSHOT_DIR")
+        if preview_dir:
+            Path(preview_dir).mkdir(parents=True, exist_ok=True)
+            self.window.resize(1280, 860)
+            self.window.show()
+            for locale, theme in (
+                ("zh_CN", "light"), ("zh_CN", "dark"), ("en_US", "light"),
+            ):
+                self.window.language_combo.setCurrentIndex(
+                    self.window.language_combo.findData(locale))
+                self.window.theme_combo.setCurrentIndex(
+                    self.window.theme_combo.findData(theme))
+                QApplication.processEvents()
+                self.window.grab().save(str(
+                    Path(preview_dir) / f"authorized-download-{locale}-{theme}.png"
+                ))
 
     def test_previous_language_is_restored_on_restart(self):
         self.window.close()

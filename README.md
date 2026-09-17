@@ -1,12 +1,13 @@
 # 万能音视频工具箱
 
-一款面向 Windows 10/11 的本地音视频转换工具。图形界面使用 Qt for Python，转换核心使用 FFmpeg。
+一款面向 Windows 10/11 的音视频工具。图形界面使用 Qt for Python，转换核心使用 FFmpeg；本地媒体处理不会上传用户文件，并提供边界明确的授权音频直链下载模式。
 
 ## 功能
 
 - 视频格式转换：MP4、MKV、MOV、WebM、AVI
 - 音频格式转换：MP3、M4A、AAC、FLAC、WAV、OGG、OPUS
 - 本地音乐文件解锁：支持 NCM、QMC/MFLAC/MGG、KGM/KGMA/VPR、KWM、TM、XM/X2M/X3M 等格式，自动识别原始音频格式
+- 授权音频下载：支持公开 HTTP/HTTPS 音频文件直链、批量粘贴、实时进度、安全取消、格式识别和同名保护
 - 视频提取音频：支持“原始音轨（无损提取）”，直接复制音频码流，不重新编码
 - 视频压缩：画质优先、均衡压缩、极限压缩
 - 编码器：H.264、H.265/HEVC、AV1
@@ -21,14 +22,14 @@
 - 空列表拖放引导、统一线性图标、语义状态徽章与更清晰的任务层级
 - 在完成行双击或右键复制输出路径；失败行可查看完整错误详情
 - 安装向导支持英语、简体中文和繁体中文，按照 Windows 界面语言自动匹配
-- 全程本地处理，不上传用户媒体文件
+- 本地媒体转换与解锁不会上传用户文件；授权下载只连接用户提供的源服务器
 
 ## 下载 Windows 安装包
 
 打开仓库的 [Releases 页面](https://github.com/plao94619-hash/Repository-name-VideoToolBox/releases/latest)，下载最新正式版：
 
-- Universal-Media-Toolbox-Setup-1.6.0.exe：安装版
-- Universal-Media-Toolbox-Portable-1.6.0.zip：免安装便携版
+- Universal-Media-Toolbox-Setup-1.7.0.exe：安装版
+- Universal-Media-Toolbox-Portable-1.7.0.zip：免安装便携版
 - SHA256SUMS.txt：校验值
 
 每次成功构建后也可在 Actions 下载近期构建产物。新版安装版可直接安装到旧版的位置，原有设置会保留。
@@ -50,7 +51,17 @@
 
 应用会自动识别解锁后的 MP3、FLAC、M4A、OGG、WAV 等原始音频格式。处理会先写入临时目录，成功后才发布结果；源文件不会删除，已有同名输出也不会被覆盖。该模式默认离线运行，不下载音乐、不访问账号，也不启用联网元数据更新。
 
-音乐解锁仅适用于你合法拥有或获授权处理的本地文件。请遵守内容来源平台的服务条款及所在地法律；本项目不提供音乐下载、流媒体抓取或账号绕过功能。
+音乐解锁仅适用于你合法拥有或获授权处理的本地文件。请遵守内容来源平台的服务条款及所在地法律；该模式不提供平台音乐下载、流媒体抓取或账号绕过功能。
+
+### 授权音频下载
+
+1. 将“任务类型”切换为“授权音频下载”。
+2. 在链接框中每行粘贴一个公开的 HTTP/HTTPS 音频文件直链，点击“添加链接”。
+3. 选择输出目录，点击“开始下载”。
+
+该模式支持 MP3、M4A、AAC、FLAC、WAV、OGG、OPUS、WMA、AIFF、APE 等普通音频文件。程序会根据响应文件名和 Content-Type 确定格式，先写入临时文件，完整下载并检查后才生成最终文件；已有同名文件不会被覆盖。带查询参数的签名链接可以使用，但界面不会显示查询参数，也不会把链接写入设置或历史记录。
+
+该模式不会读取浏览器 Cookie、不会要求 Spotify 或 Apple Music 账号，也不接受 Spotify/Apple Music 页面、M3U8/DASH 播放清单、带账号密码的 URL 或检测到加密标记的媒体。它不是订阅音乐提取器；Spotify 和 Apple Music 的离线内容请继续使用官方客户端。请只下载你拥有版权、处于公共领域或已明确获权保存的内容。下载时软件会直接连接链接所在服务器，因此该服务器可以看到正常网络请求所包含的 IP 地址等信息。
 
 首次启动会按 Windows 界面语言选择最接近的界面语言。窗口右上角的语言下拉菜单可在简体中文、繁体中文和英语之间切换。切换不会改变正在选择的任务类型、格式或输出目录；之前版本保存的设置仍然可用。转换期间语言菜单暂时锁定，任务完成后即可切换。
 
@@ -94,7 +105,7 @@ pyinstaller build.spec --noconfirm --clean
 & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\videotoolbox.iss
 ~~~
 
-GitHub Actions 会自动下载 FFmpeg Windows GPL 静态构建、使用 Go 1.23.3 构建固定版本的 Unlock Music CLI v0.2.12、运行单元测试与真实音频转换测试、打包程序、自检两个内置处理组件，并生成安装包和便携包。CLI v0.2.12 依赖的旧 vanity 地址现已停止提供模块元数据，因此构建脚本从 Unlock Music 官方 GitHub 组织读取完全相同的 `go-mmkv` v0.1.0 源码作为本地依赖，不修改其实现。
+GitHub Actions 会自动下载 FFmpeg Windows GPL 静态构建、使用 Go 1.23.3 构建固定版本的 Unlock Music CLI v0.2.12、运行单元测试、真实音频转换测试与本地 HTTP 下载测试、打包程序、自检两个内置处理组件，并生成安装包和便携包。CLI v0.2.12 依赖的旧 vanity 地址现已停止提供模块元数据，因此构建脚本从 Unlock Music 官方 GitHub 组织读取完全相同的 `go-mmkv` v0.1.0 源码作为本地依赖，不修改其实现。
 
 ## 技术与许可
 
@@ -102,6 +113,8 @@ GitHub Actions 会自动下载 FFmpeg Windows GPL 静态构建、使用 Go 1.23.
 - FFmpeg：安装包内附 GNU GPL v3 文本；来源及源代码地址见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - Unlock Music CLI v0.2.12：MIT License；安装包内附许可文本，来源及源代码地址见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - Qt for Python / PySide6：LGPLv3/GPLv3 或商业许可
+
+授权音频下载器仅使用 Python 标准库，不引入新的第三方下载组件。
 
 界面翻译集中存放于 [src/i18n.py](src/i18n.py)，新增或更新界面提示时请同时更新英文和繁体中文翻译；自动测试会检查翻译表的键及模板占位符是否一致。安装向导的简繁体译文来自 Inno Setup 官方源码。
 
