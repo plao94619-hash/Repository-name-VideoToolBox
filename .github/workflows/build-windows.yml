@@ -117,7 +117,7 @@ jobs:
           }
           $cliSource = Join-Path $env:RUNNER_TEMP "unlock-music-cli-v0.2.12"
           Copy-Item -Path $moduleInfo.Dir -Destination $cliSource -Recurse -Force
-          Get-ChildItem $cliSource -Recurse -Force | ForEach-Object { $_.IsReadOnly = $false }
+          Get-ChildItem $cliSource -Recurse -Force -File | ForEach-Object { $_.IsReadOnly = $false }
 
           # The v0.2.12 go.mod points to a retired vanity URL for go-mmkv.
           # Fetch the exact v0.1.0 tag from Unlock Music's official GitHub org
