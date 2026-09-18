@@ -29,6 +29,8 @@ from clarity_enhance import (
     MODE_IMAGE_ENHANCE,
     MODE_VIDEO_ENHANCE,
 )
+from watermark_repair import MODE_IMAGE_WATERMARK_REPAIR, WatermarkRegion
+from watermark_editor import WatermarkRegionDialog
 
 
 @unittest.skipIf(QApplication is None, "PySide6 not installed in this environment")
@@ -268,6 +270,93 @@ class LanguageUITests(unittest.TestCase):
                 self.window.grab().save(str(
                     Path(preview_dir) / f"clarity-enhance-{locale}-{theme}.png"
                 ))
+
+    def test_visible_watermark_repair_mode_and_editor_are_localized(self):
+        image_path = self.root / "authorized-photo.png"
+        image = QImage(800, 450, QImage.Format.Format_RGB32)
+        painter = QPainter(image)
+        painter.fillRect(image.rect(), QColor("#587da3"))
+        painter.fillRect(580, 350, 170, 52, QColor("#f7f9fc"))
+        painter.end()
+        self.assertTrue(image.save(str(image_path)))
+
+        self.window.mode_combo.setCurrentIndex(
+            self.window.mode_combo.findData(MODE_IMAGE_WATERMARK_REPAIR))
+        self.assertEqual(self.window.target_combo.currentData(), "PNG（无损）")
+        self.assertEqual(self.window.quality_combo.currentData(), "标准修复")
+        self.assertFalse(self.window.quality_combo.isHidden())
+        self.assertTrue(self.window.encoder_combo.isHidden())
+        self.assertTrue(self.window.resolution_combo.isHidden())
+        self.assertFalse(self.window.watermark_region_panel.isHidden())
+        self.assertEqual(self.window.quality_label.text(), "修复边缘")
+        self.assertEqual(self.window.start_button.text(), "开始修复")
+        self.assertIn("C2PA", self.window.quality_hint.text())
+        self.assertTrue(self.window._path_matches_mode(image_path))
+
+        self.window._add_paths([image_path])
+        self.assertTrue(self.window.watermark_edit_button.isEnabled())
+        self.window.watermark_regions = (
+            WatermarkRegion(0.70, 0.72, 0.25, 0.18),
+        )
+        self.window._update_watermark_region_ui()
+        self.assertEqual(self.window.watermark_region_label.text(), "已选择 1 个区域")
+
+        for locale, mode_text, start_text in (
+            ("en_US", "Repair visible image watermark areas", "Start repair"),
+            ("zh_TW", "圖片可見浮水印區域修復", "開始修復"),
+            ("zh_CN", MODE_IMAGE_WATERMARK_REPAIR, "开始修复"),
+        ):
+            self.window.language_combo.setCurrentIndex(
+                self.window.language_combo.findData(locale))
+            self.assertEqual(self.window.mode_combo.currentText(), mode_text)
+            self.assertEqual(self.window.start_button.text(), start_text)
+            self.assertEqual(
+                self.window.mode_combo.currentData(), MODE_IMAGE_WATERMARK_REPAIR)
+            self.assertEqual(self.window.quality_combo.currentData(), "标准修复")
+
+        dialog = WatermarkRegionDialog(
+            image_path,
+            self.window.watermark_regions,
+            self.window.language,
+            self.window,
+        )
+        self.addCleanup(dialog.close)
+        self.assertEqual(len(dialog.regions()), 1)
+        self.assertTrue(dialog.save_button.isEnabled())
+        self.assertIn("1", dialog.region_label.text())
+
+        preview_dir = os.environ.get("UI_SCREENSHOT_DIR")
+        if preview_dir:
+            Path(preview_dir).mkdir(parents=True, exist_ok=True)
+            self.window.resize(1280, 860)
+            self.window.show()
+            for locale, theme in (
+                ("zh_CN", "light"), ("zh_CN", "dark"), ("en_US", "light"),
+            ):
+                self.window.language_combo.setCurrentIndex(
+                    self.window.language_combo.findData(locale))
+                self.window.theme_combo.setCurrentIndex(
+                    self.window.theme_combo.findData(theme))
+                QApplication.processEvents()
+                self.window.grab().save(str(
+                    Path(preview_dir) / f"watermark-repair-{locale}-{theme}.png"
+                ))
+            self.window.language_combo.setCurrentIndex(
+                self.window.language_combo.findData("zh_CN"))
+            dialog.close()
+            dialog = WatermarkRegionDialog(
+                image_path,
+                self.window.watermark_regions,
+                self.window.language,
+                self.window,
+            )
+            self.addCleanup(dialog.close)
+            dialog.resize(940, 700)
+            dialog.show()
+            QApplication.processEvents()
+            dialog.grab().save(str(
+                Path(preview_dir) / "watermark-region-editor-zh_CN.png"
+            ))
 
     def test_previous_language_is_restored_on_restart(self):
         self.window.close()

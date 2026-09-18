@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QComboBox,
+    QDialog,
     QFileDialog,
     QFrame,
     QGridLayout,
@@ -82,6 +83,14 @@ from clarity_enhance import (
     VIDEO_ENHANCE_TARGETS,
     enhance_media_file,
 )
+from watermark_repair import (
+    MODE_IMAGE_WATERMARK_REPAIR,
+    WATERMARK_REPAIR_STRENGTHS,
+    WATERMARK_REPAIR_TARGETS,
+    WatermarkRegion,
+    repair_visible_watermark,
+)
+from watermark_editor import WatermarkRegionDialog
 from version import APP_NAME, APP_VERSION
 from i18n import (
     LANGUAGE_LABELS, SUPPORTED_LANGUAGES, language_for_system_locale, translate,
@@ -114,11 +123,16 @@ class BatchWorker(QObject):
     item_finished = Signal(int, bool, str, str)
     completed = Signal(bool, int, int)
 
-    def __init__(self, paths: list[Path | DirectDownloadTask],
-                 options: ConversionOptions):
+    def __init__(
+        self,
+        paths: list[Path | DirectDownloadTask],
+        options: ConversionOptions,
+        watermark_regions: tuple[WatermarkRegion, ...] = (),
+    ):
         super().__init__()
         self.paths = paths
         self.options = options
+        self.watermark_regions = watermark_regions
         self.cancel_event = Event()
 
     def request_cancel(self) -> None:
@@ -159,6 +173,14 @@ class BatchWorker(QObject):
                     result = enhance_media_file(
                         path,
                         self.options,
+                        progress,
+                        self.cancel_event,
+                    )
+                elif self.options.mode == MODE_IMAGE_WATERMARK_REPAIR:
+                    result = repair_visible_watermark(
+                        path,
+                        self.options,
+                        self.watermark_regions,
                         progress,
                         self.cancel_event,
                     )
@@ -208,6 +230,7 @@ class MainWindow(QMainWindow):
         saved_theme = str(self.settings.value("appearance/theme", "system"))
         self.theme = saved_theme if saved_theme in {"system", "light", "dark"} else "system"
         self.background_path = ""
+        self.watermark_regions: tuple[WatermarkRegion, ...] = ()
         self.worker: BatchWorker | None = None
         self.worker_thread: QThread | None = None
         self.progress_bars: dict[int, QProgressBar] = {}
@@ -245,6 +268,9 @@ class MainWindow(QMainWindow):
     def _is_image_enhance_mode(self) -> bool:
         return self.mode_combo.currentData() == MODE_IMAGE_ENHANCE
 
+    def _is_watermark_repair_mode(self) -> bool:
+        return self.mode_combo.currentData() == MODE_IMAGE_WATERMARK_REPAIR
+
     def _is_enhance_mode(self) -> bool:
         return self.mode_combo.currentData() in {
             MODE_VIDEO_ENHANCE, MODE_IMAGE_ENHANCE,
@@ -259,6 +285,8 @@ class MainWindow(QMainWindow):
             key = "就绪：可拖入要增强的视频文件"
         elif self._is_image_enhance_mode():
             key = "就绪：可拖入要增强的图片文件"
+        elif self._is_watermark_repair_mode():
+            key = "就绪：添加图片并框选可见水印区域"
         else:
             key = "就绪：可直接拖入音频或视频文件"
         return self._t(key)
@@ -447,6 +475,7 @@ class MainWindow(QMainWindow):
             (self.quality_label, "质量方案"),
             (self.encoder_label, "视频编码"),
             (self.resolution_label, "分辨率限制"),
+            (self.watermark_edit_button, "框选修复区域"),
             (self.output_label, "输出文件夹"),
             (self.browse_output_button, "浏览…"),
             (self.open_output_button, "打开目录"),
@@ -484,6 +513,7 @@ class MainWindow(QMainWindow):
             if item and item.data(Qt.ItemDataRole.UserRole) == "pending":
                 item.setText(self._t("等待处理"))
         self._update_count()
+        self._update_watermark_region_ui()
         self._update_quality_hint()
         self._update_mode_copy()
         if not self.worker:
@@ -790,6 +820,7 @@ class MainWindow(QMainWindow):
         self.mode_combo = QComboBox()
         for item in (
             MODE_VIDEO, MODE_VIDEO_ENHANCE, MODE_IMAGE_ENHANCE,
+            MODE_IMAGE_WATERMARK_REPAIR,
             MODE_AUDIO, MODE_EXTRACT, MODE_COMPRESS,
             MODE_MUSIC_UNLOCK, MODE_DIRECT_DOWNLOAD,
         ):
@@ -831,6 +862,22 @@ class MainWindow(QMainWindow):
         self.quality_hint.setObjectName("QualityHint")
         options_root.addWidget(self.quality_hint)
         options_root.addSpacing(1)
+
+        self.watermark_region_panel = QFrame()
+        self.watermark_region_panel.setObjectName("WatermarkControlPanel")
+        watermark_layout = QHBoxLayout(self.watermark_region_panel)
+        watermark_layout.setContentsMargins(11, 10, 11, 10)
+        watermark_layout.setSpacing(10)
+        self.watermark_region_label = QLabel()
+        self.watermark_region_label.setObjectName("SecondaryText")
+        self.watermark_region_label.setWordWrap(True)
+        self.watermark_edit_button = QPushButton(self._t("框选修复区域"))
+        self.watermark_edit_button.setProperty("role", "accentSoft")
+        self.watermark_edit_button.clicked.connect(self.edit_watermark_regions)
+        watermark_layout.addWidget(self.watermark_region_label, 1)
+        watermark_layout.addWidget(self.watermark_edit_button)
+        options_root.addWidget(self.watermark_region_panel)
+        self.watermark_region_panel.setVisible(False)
 
         self.output_label = QLabel(self._t("输出文件夹"))
         self.output_edit = QLineEdit()
@@ -906,6 +953,7 @@ class MainWindow(QMainWindow):
             (self.browse_output_button, "folder_open", "normal"),
             (self.open_output_button, "external", "normal"),
             (self.background_button, "image", "normal"),
+            (self.watermark_edit_button, "select", "normal"),
             (self.cancel_button, "stop", "danger"),
             (self.start_button, "play", "primary"),
         )
@@ -1101,8 +1149,10 @@ class MainWindow(QMainWindow):
                 self._t("视频文件") + f" ({patterns});;"
                 + self._t("所有文件") + " (*.*)"
             )
-        elif self._is_image_enhance_mode():
-            title = self._t("选择要增强的图片文件")
+        elif self._is_image_enhance_mode() or self._is_watermark_repair_mode():
+            title = self._t(
+                "选择要修复的图片文件" if self._is_watermark_repair_mode()
+                else "选择要增强的图片文件")
             patterns = " ".join(f"*{suffix}" for suffix in sorted(IMAGE_EXTENSIONS))
             file_filter = (
                 self._t("图片文件") + f" ({patterns});;"
@@ -1133,7 +1183,7 @@ class MainWindow(QMainWindow):
             title = self._t("选择待解锁音乐文件夹")
         elif self._is_video_enhance_mode():
             title = self._t("选择视频文件夹")
-        elif self._is_image_enhance_mode():
+        elif self._is_image_enhance_mode() or self._is_watermark_repair_mode():
             title = self._t("选择图片文件夹")
         else:
             title = self._t("选择媒体文件夹")
@@ -1153,7 +1203,7 @@ class MainWindow(QMainWindow):
             return is_unlockable_path(path)
         if self._is_video_enhance_mode():
             return path.suffix.lower() in VIDEO_EXTENSIONS
-        if self._is_image_enhance_mode():
+        if self._is_image_enhance_mode() or self._is_watermark_repair_mode():
             return path.suffix.lower() in IMAGE_EXTENSIONS
         return path.suffix.lower() in SUPPORTED_EXTENSIONS
 
@@ -1207,13 +1257,18 @@ class MainWindow(QMainWindow):
         rows = sorted({index.row() for index in self.table.selectedIndexes()}, reverse=True)
         for row in rows:
             self.table.removeRow(row)
+        if self.table.rowCount() == 0:
+            self.watermark_regions = ()
         self._update_count()
+        self._update_watermark_region_ui()
 
     @Slot()
     def clear_files(self) -> None:
         self.table.setRowCount(0)
         self.progress_bars.clear()
+        self.watermark_regions = ()
         self._update_count()
+        self._update_watermark_region_ui()
 
     def _update_count(self) -> None:
         key = "{count} 个链接" if self._is_download_mode() else "{count} 个文件"
@@ -1234,6 +1289,79 @@ class MainWindow(QMainWindow):
             return
         has_selection = bool(self.table.selectionModel().selectedRows())
         self.remove_button.setEnabled(has_selection and not self.worker)
+        if hasattr(self, "watermark_edit_button"):
+            has_image = any(
+                Path(str(self.table.item(row, 0).data(
+                    Qt.ItemDataRole.UserRole))).suffix.lower() in IMAGE_EXTENSIONS
+                for row in range(self.table.rowCount())
+            )
+            self.watermark_edit_button.setEnabled(
+                self._is_watermark_repair_mode()
+                and has_image
+                and not self.worker
+            )
+
+    def _update_watermark_region_ui(self) -> None:
+        if not hasattr(self, "watermark_region_label"):
+            return
+        count = len(self.watermark_regions)
+        self.watermark_region_label.setText(
+            self._t("已选择 {count} 个区域", count=count)
+            if count else self._t("尚未选择修复区域")
+        )
+        self._update_selection_actions()
+
+    @Slot()
+    def edit_watermark_regions(self) -> None:
+        if not self._is_watermark_repair_mode() or self.worker:
+            return
+        if self.table.rowCount() == 0:
+            self._notify(
+                QMessageBox.Icon.Information,
+                self._t("尚未添加图片"),
+                self._t("请先添加需要修复的图片。"),
+            )
+            return
+        selected_rows = [index.row() for index in self.table.selectionModel().selectedRows()]
+        candidate_rows = selected_rows + [
+            row for row in range(self.table.rowCount()) if row not in selected_rows
+        ]
+        row = next(
+            (candidate for candidate in candidate_rows
+             if Path(str(self.table.item(candidate, 0).data(
+                 Qt.ItemDataRole.UserRole))).suffix.lower() in IMAGE_EXTENSIONS),
+            -1,
+        )
+        if row < 0:
+            self._notify(
+                QMessageBox.Icon.Information,
+                self._t("尚未添加图片"),
+                self._t("请先添加需要修复的图片。"),
+            )
+            return
+        item = self.table.item(row, 0)
+        source = Path(str(item.data(Qt.ItemDataRole.UserRole)))
+        try:
+            dialog = WatermarkRegionDialog(
+                source,
+                self.watermark_regions,
+                self.language,
+                self,
+            )
+        except (OSError, ValueError) as exc:
+            self._notify(
+                QMessageBox.Icon.Warning,
+                self._t("无法读取图片"),
+                str(exc),
+            )
+            return
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.watermark_regions = dialog.regions()
+            self._update_watermark_region_ui()
+            self.statusBar().showMessage(self._t(
+                "已保存 {count} 个修复区域",
+                count=len(self.watermark_regions),
+            ), 4000)
 
     @Slot(object)
     def _table_context_menu(self, point: object) -> None:
@@ -1309,10 +1437,13 @@ class MainWindow(QMainWindow):
     def _update_mode(self) -> None:
         mode = self.mode_combo.currentData()
         enhance_mode = mode in {MODE_VIDEO_ENHANCE, MODE_IMAGE_ENHANCE}
+        watermark_mode = mode == MODE_IMAGE_WATERMARK_REPAIR
         self._replace_combo_choices(
             self.quality_combo,
-            ENHANCE_STRENGTHS if enhance_mode else QUALITY_PRESETS,
-            "标准增强" if enhance_mode else "均衡压缩",
+            (WATERMARK_REPAIR_STRENGTHS if watermark_mode
+             else ENHANCE_STRENGTHS if enhance_mode else QUALITY_PRESETS),
+            ("标准修复" if watermark_mode
+             else "标准增强" if enhance_mode else "均衡压缩"),
         )
         self._replace_combo_choices(
             self.resolution_combo,
@@ -1323,6 +1454,7 @@ class MainWindow(QMainWindow):
             MODE_VIDEO: VIDEO_TARGETS,
             MODE_VIDEO_ENHANCE: VIDEO_ENHANCE_TARGETS,
             MODE_IMAGE_ENHANCE: IMAGE_ENHANCE_TARGETS,
+            MODE_IMAGE_WATERMARK_REPAIR: WATERMARK_REPAIR_TARGETS,
             MODE_AUDIO: AUDIO_TARGETS,
             MODE_EXTRACT: EXTRACT_TARGETS,
             MODE_COMPRESS: COMPRESS_TARGETS,
@@ -1348,11 +1480,13 @@ class MainWindow(QMainWindow):
         resolution_controls = video_controls or mode == MODE_IMAGE_ENHANCE
         self.resolution_label.setVisible(resolution_controls)
         self.resolution_combo.setVisible(resolution_controls)
+        self.watermark_region_panel.setVisible(watermark_mode)
         self.url_input_panel.setVisible(download_mode)
         self.add_files_button.setVisible(not download_mode)
         self.add_folder_button.setVisible(not download_mode)
         self.add_action.setEnabled(not download_mode and not self.worker)
         self.add_folder_action.setEnabled(not download_mode and not self.worker)
+        self._update_watermark_region_ui()
         self._update_quality_hint()
         self._update_mode_copy()
 
@@ -1360,7 +1494,9 @@ class MainWindow(QMainWindow):
         if not hasattr(self, "empty_state"):
             return
         enhance_mode = self._is_enhance_mode()
+        watermark_mode = self._is_watermark_repair_mode()
         self.quality_label.setText(self._t(
+            "修复边缘" if watermark_mode else
             "增强强度" if enhance_mode else "质量方案"))
         self.resolution_label.setText(self._t(
             "输出分辨率" if enhance_mode else "分辨率限制"))
@@ -1422,6 +1558,21 @@ class MainWindow(QMainWindow):
                 self._t(key) for key in
                 ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
             ])
+        elif self._is_watermark_repair_mode():
+            self.files_title.setText(self._t("待修复图片"))
+            self.files_hint.setText(self._t("拖入图片或文件夹，可批量套用所选区域"))
+            self.options_hint.setText(self._t(
+                "框选一处或多处可见水印，由本地 FFmpeg 修复周围纹理"))
+            self.empty_state.set_texts(
+                self._t("把要修复的图片拖到这里"),
+                self._t("支持 JPG、PNG、WebP、BMP 与 TIFF；原图不会改动"),
+                self._t("选择图片文件"),
+            )
+            self.start_button.setText(self._t("开始修复"))
+            self.table.setHorizontalHeaderLabels([
+                self._t(key) for key in
+                ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
+            ])
         else:
             self.files_title.setText(self._t("待处理文件"))
             self.files_hint.setText(self._t("将文件或文件夹拖入此处，或使用下方按钮添加"))
@@ -1468,6 +1619,19 @@ class MainWindow(QMainWindow):
             self.quality_hint.setText(
                 self._t(hint) + "\n" + self._t(
                     "增强可改善观感并放大至 4K，但无法凭空恢复源文件中不存在的真实细节。"))
+            return
+        if mode == MODE_IMAGE_WATERMARK_REPAIR:
+            self.quality_combo.setEnabled(True)
+            self.quality_hint.setMinimumHeight(84)
+            hints = {
+                "精细修复": "严格使用框选范围，适合边界清楚且选择准确的水印。",
+                "标准修复": "轻微扩展选区边缘，兼顾抗锯齿与自然过渡，推荐使用。",
+                "扩展修复": "进一步覆盖水印阴影和描边，可能影响更多周围纹理。",
+            }
+            hint = hints.get(self.quality_combo.currentData(), hints["标准修复"])
+            self.quality_hint.setText(
+                self._t(hint) + "\n" + self._t(
+                    "仅修复你手动框选的可见区域；不检测或移除 C2PA、版权归属、平台溯源或其他不可见指纹。"))
             return
         self.quality_hint.setMinimumHeight(0)
         raw_copy = mode == MODE_EXTRACT and target == EXTRACT_TARGETS[0]
@@ -1549,6 +1713,15 @@ class MainWindow(QMainWindow):
             )
             return
 
+        if self._is_watermark_repair_mode() and not self.watermark_regions:
+            self._notify(
+                QMessageBox.Icon.Information,
+                self._t("尚未选择修复区域"),
+                self._t("请先在图片预览中框选至少一个可见水印区域。"),
+            )
+            self.edit_watermark_regions()
+            return
+
         output_text = self.output_edit.text().strip()
         if not output_text:
             self._notify(QMessageBox.Icon.Information, self._t("请选择输出目录"),
@@ -1584,7 +1757,7 @@ class MainWindow(QMainWindow):
         self.progress_bars.clear()
 
         self.worker_thread = QThread(self)
-        self.worker = BatchWorker(paths, options)
+        self.worker = BatchWorker(paths, options, self.watermark_regions)
         self.worker.moveToThread(self.worker_thread)
         self.worker_thread.started.connect(self.worker.run)
         self.worker.item_started.connect(self._item_started)
@@ -1610,6 +1783,7 @@ class MainWindow(QMainWindow):
             self.quality_combo,
             self.encoder_combo,
             self.resolution_combo,
+            self.watermark_edit_button,
             self.output_edit,
             self.browse_output_button,
         ):
@@ -1627,10 +1801,12 @@ class MainWindow(QMainWindow):
                 not self._is_unlock_mode() and not self._is_download_mode())
             self._update_quality_hint()
             self._update_empty_state()
+            self._update_watermark_region_ui()
         self.overall_label.setText(
             self._t("正在下载…" if running and self._is_download_mode() else
                     "正在解锁…" if running and self._is_unlock_mode() else
                     "正在增强…" if running and self._is_enhance_mode() else
+                    "正在修复…" if running and self._is_watermark_repair_mode() else
                     "正在处理…" if running else "等待任务"))
 
     @Slot(int)
@@ -1742,6 +1918,7 @@ class MainWindow(QMainWindow):
             f"<p>{self._t('基于 FFmpeg 与 Qt for Python 构建的本地音视频转换工具。')}</p>"
             f"<p>{self._t('转换全程在本机完成，不上传用户文件。')}</p>"
             f"<p>{self._t('图片与视频清晰度增强支持按原比例输出，最高可达 4K。')}</p>"
+            f"<p>{self._t('可见水印区域修复仅处理用户手动框选且有权编辑的图片区域，不提供不可见版权指纹规避。')}</p>"
             f"<p>{self._t('音乐解锁功能由 Unlock Music CLI 提供，仅供处理合法拥有或获授权的本地文件。')}</p>"
             f"<p>{self._t('授权下载仅连接链接所在服务器，不支持订阅平台页面、Cookie、流媒体清单或加密媒体。')}</p>"
             '<p><a href="https://github.com/plao94619-hash/Repository-name-VideoToolBox">'

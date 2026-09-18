@@ -42,6 +42,9 @@ _ICON_CONTENT = {
     "image": '<rect x="3" y="4" width="18" height="16" rx="3"/>'
              '<circle cx="9" cy="10" r="2"/>'
              '<path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4"/>',
+    "select": '<rect x="4" y="4" width="16" height="16" rx="3"/>'
+              '<path d="M8 3v3M3 8h3M18 8h3M8 18v3M16 3v3M3 16h3M18 16h3M16 18v3"/>'
+              '<path d="m10 15 2-6 2 6-2-1-2 1Z"/>',
 }
 
 

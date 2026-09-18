@@ -355,6 +355,60 @@ EN_US = {
     "增强结束，但没有生成有效的输出文件。":
         "Enhancement finished without a valid output file.",
     "增强完成": "Enhancement complete",
+    "图片水印区域修复": "Repair visible image watermark areas",
+    "精细修复": "Precise edges",
+    "标准修复": "Balanced edges",
+    "扩展修复": "Expanded edges",
+    "就绪：添加图片并框选可见水印区域":
+        "Ready: add an image and select visible watermark areas",
+    "框选修复区域": "Select repair areas",
+    "修复边缘": "Repair coverage",
+    "待修复图片": "Images to repair",
+    "拖入图片或文件夹，可批量套用所选区域":
+        "Drop images or folders to apply the selected areas in a batch",
+    "框选一处或多处可见水印，由本地 FFmpeg 修复周围纹理":
+        "Select one or more visible watermark areas for local FFmpeg texture repair",
+    "把要修复的图片拖到这里": "Drop images to repair here",
+    "支持 JPG、PNG、WebP、BMP 与 TIFF；原图不会改动":
+        "Supports JPG, PNG, WebP, BMP, and TIFF; source images are never changed",
+    "开始修复": "Start repair",
+    "严格使用框选范围，适合边界清楚且选择准确的水印。":
+        "Uses the exact selection for sharply bounded, accurately selected watermarks.",
+    "轻微扩展选区边缘，兼顾抗锯齿与自然过渡，推荐使用。":
+        "Slightly expands the selection to cover antialiasing and blend naturally. Recommended.",
+    "进一步覆盖水印阴影和描边，可能影响更多周围纹理。":
+        "Covers more watermark shadow and outline, but may affect more nearby texture.",
+    "仅修复你手动框选的可见区域；不检测或移除 C2PA、版权归属、平台溯源或其他不可见指纹。":
+        "Only manually selected visible areas are repaired. C2PA, attribution, platform provenance, and other invisible fingerprints are not detected or removed.",
+    "尚未选择修复区域": "No repair areas selected",
+    "已选择 {count} 个区域": "{count} area(s) selected",
+    "尚未添加图片": "No images added",
+    "请先添加需要修复的图片。": "Add an image to repair first.",
+    "选择要修复的图片文件": "Choose images to repair",
+    "框选可见水印区域": "Select visible watermark areas",
+    "框选需要修复的可见水印": "Select visible watermarks to repair",
+    "在预览图上拖动鼠标框选水印，可添加多个区域；框选时尽量贴合水印边缘。":
+        "Drag over watermarks in the preview. You can add multiple areas; keep each selection close to its edges.",
+    "撤销上一步": "Undo",
+    "清空区域": "Clear areas",
+    "取消": "Cancel",
+    "保存区域": "Save areas",
+    "仅用于你拥有或获授权编辑的图片。此功能只修复手动框选的可见区域，不检测或移除 C2PA、版权归属、平台溯源或其他不可见指纹。队列中的图片将使用相同的相对位置。":
+        "Use only on images you own or are authorized to edit. This feature repairs manually selected visible areas only; it does not detect or remove C2PA, attribution, platform provenance, or other invisible fingerprints. Images in the queue use the same relative positions.",
+    "无法读取图片": "Cannot read image",
+    "已保存 {count} 个修复区域": "Saved {count} repair area(s)",
+    "请先在图片预览中框选至少一个可见水印区域。":
+        "Select at least one visible watermark area in the image preview first.",
+    "正在修复…": "Repairing…",
+    "正在修复选中区域…": "Repairing selected areas…",
+    "该文件没有可修复的画面。": "This file has no image to repair.",
+    "修复结束，但没有生成有效的输出文件。":
+        "Repair finished without a valid output file.",
+    "水印区域修复完成": "Watermark-area repair complete",
+    "修复完成 · {count} 个区域 · {width}×{height}":
+        "Repaired · {count} area(s) · {width}×{height}",
+    "可见水印区域修复仅处理用户手动框选且有权编辑的图片区域，不提供不可见版权指纹规避。":
+        "Visible watermark-area repair only processes manually selected image areas the user is authorized to edit; it does not provide invisible copyright-fingerprint evasion.",
 }
 
 ZH_TW = {
@@ -702,6 +756,60 @@ ZH_TW = {
     "增强结束，但没有生成有效的输出文件。":
         "增強結束，但沒有產生有效的輸出檔案。",
     "增强完成": "增強完成",
+    "图片水印区域修复": "圖片可見浮水印區域修復",
+    "精细修复": "精細修復",
+    "标准修复": "標準修復",
+    "扩展修复": "擴展修復",
+    "就绪：添加图片并框选可见水印区域":
+        "就緒：加入圖片並框選可見浮水印區域",
+    "框选修复区域": "框選修復區域",
+    "修复边缘": "修復邊緣",
+    "待修复图片": "待修復圖片",
+    "拖入图片或文件夹，可批量套用所选区域":
+        "拖入圖片或資料夾，可批次套用所選區域",
+    "框选一处或多处可见水印，由本地 FFmpeg 修复周围纹理":
+        "框選一處或多處可見浮水印，由本機 FFmpeg 修復周圍紋理",
+    "把要修复的图片拖到这里": "將要修復的圖片拖到這裡",
+    "支持 JPG、PNG、WebP、BMP 与 TIFF；原图不会改动":
+        "支援 JPG、PNG、WebP、BMP 與 TIFF；不會改動原圖",
+    "开始修复": "開始修復",
+    "严格使用框选范围，适合边界清楚且选择准确的水印。":
+        "嚴格使用框選範圍，適合邊界清楚且選取準確的浮水印。",
+    "轻微扩展选区边缘，兼顾抗锯齿与自然过渡，推荐使用。":
+        "輕微擴展選取區域邊緣，兼顧反鋸齒與自然過渡，建議使用。",
+    "进一步覆盖水印阴影和描边，可能影响更多周围纹理。":
+        "進一步覆蓋浮水印陰影與描邊，可能影響更多周圍紋理。",
+    "仅修复你手动框选的可见区域；不检测或移除 C2PA、版权归属、平台溯源或其他不可见指纹。":
+        "僅修復您手動框選的可見區域；不偵測或移除 C2PA、版權歸屬、平台溯源或其他不可見指紋。",
+    "尚未选择修复区域": "尚未選擇修復區域",
+    "已选择 {count} 个区域": "已選擇 {count} 個區域",
+    "尚未添加图片": "尚未加入圖片",
+    "请先添加需要修复的图片。": "請先加入需要修復的圖片。",
+    "选择要修复的图片文件": "選擇要修復的圖片檔案",
+    "框选可见水印区域": "框選可見浮水印區域",
+    "框选需要修复的可见水印": "框選需要修復的可見浮水印",
+    "在预览图上拖动鼠标框选水印，可添加多个区域；框选时尽量贴合水印边缘。":
+        "在預覽圖上拖動滑鼠框選浮水印，可加入多個區域；框選時請盡量貼合浮水印邊緣。",
+    "撤销上一步": "復原上一步",
+    "清空区域": "清空區域",
+    "取消": "取消",
+    "保存区域": "儲存區域",
+    "仅用于你拥有或获授权编辑的图片。此功能只修复手动框选的可见区域，不检测或移除 C2PA、版权归属、平台溯源或其他不可见指纹。队列中的图片将使用相同的相对位置。":
+        "僅用於您擁有或獲授權編輯的圖片。此功能只修復手動框選的可見區域，不偵測或移除 C2PA、版權歸屬、平台溯源或其他不可見指紋。佇列中的圖片將使用相同的相對位置。",
+    "无法读取图片": "無法讀取圖片",
+    "已保存 {count} 个修复区域": "已儲存 {count} 個修復區域",
+    "请先在图片预览中框选至少一个可见水印区域。":
+        "請先在圖片預覽中框選至少一個可見浮水印區域。",
+    "正在修复…": "正在修復…",
+    "正在修复选中区域…": "正在修復所選區域…",
+    "该文件没有可修复的画面。": "此檔案沒有可修復的畫面。",
+    "修复结束，但没有生成有效的输出文件。":
+        "修復結束，但沒有產生有效的輸出檔案。",
+    "水印区域修复完成": "浮水印區域修復完成",
+    "修复完成 · {count} 个区域 · {width}×{height}":
+        "修復完成 · {count} 個區域 · {width}×{height}",
+    "可见水印区域修复仅处理用户手动框选且有权编辑的图片区域，不提供不可见版权指纹规避。":
+        "可見浮水印區域修復僅處理使用者手動框選且有權編輯的圖片區域，不提供不可見版權指紋規避。",
 }
 
 CATALOGS = {"en_US": EN_US, "zh_TW": ZH_TW}

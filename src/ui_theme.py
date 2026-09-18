@@ -102,6 +102,9 @@ QFrame#ActionPanel { background: %(action_surface)s; border: none;
                      border-top: 1px solid %(stroke)s; }
 QFrame#UrlInputPanel { background: %(accent_soft)s; border: 1px solid %(stroke)s;
                        border-radius: 11px; }
+QFrame#WatermarkControlPanel { background: %(surface_alt)s;
+                               border: 1px solid %(stroke)s;
+                               border-radius: 10px; }
 QFrame#DropZone { background: %(drop_surface)s; border: 1px dashed %(stroke_strong)s;
                   border-radius: 12px; }
 QFrame#DropZone:hover { border-color: %(accent)s; background: %(accent_soft)s; }
@@ -208,6 +211,10 @@ QStatusBar { border-top: 1px solid %(stroke)s; }
 QToolTip { background: %(surface)s; color: %(text)s; border: 1px solid %(stroke_strong)s;
            border-radius: 6px; padding: 6px; }
 QMessageBox { background: %(surface)s; }
+QDialog { background: %(surface)s; }
+QWidget#WatermarkCanvas { background: %(surface_alt)s;
+                          border: 1px solid %(stroke_strong)s;
+                          border-radius: 11px; }
 QScrollBar:vertical { background: transparent; width: 10px; margin: 2px; }
 QScrollBar::handle:vertical { background: %(stroke_strong)s; min-height: 28px;
                               border-radius: 4px; }
