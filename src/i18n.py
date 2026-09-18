@@ -289,6 +289,72 @@ EN_US = {
     "检测到加密或受保护的媒体，已停止下载。":
         "Encrypted or protected media was detected; the download was stopped.",
     "下载完成": "Downloaded",
+    "视频清晰度增强": "Enhance video clarity",
+    "图片清晰度增强": "Enhance image clarity",
+    "自然增强": "Natural enhancement",
+    "标准增强": "Balanced enhancement",
+    "强力增强": "Strong enhancement",
+    "保持原尺寸（最高 4K）": "Keep original size (max 4K)",
+    "提升至 1080p": "Upscale to 1080p",
+    "提升至 2K": "Upscale to 2K",
+    "提升至 4K": "Upscale to 4K",
+    "PNG（无损）": "PNG (lossless)",
+    "JPG（高质量）": "JPG (high quality)",
+    "WebP（高质量）": "WebP (high quality)",
+    "就绪：可拖入要增强的视频文件":
+        "Ready: drop video files to enhance",
+    "就绪：可拖入要增强的图片文件":
+        "Ready: drop image files to enhance",
+    "格式转换 · 4K 清晰度增强 · 音乐解锁 · 授权下载":
+        "Convert · 4K clarity enhancement · Unlock music · Authorized download",
+    "增强强度": "Enhancement strength",
+    "输出分辨率": "Output resolution",
+    "选择要增强的视频文件": "Choose videos to enhance",
+    "选择要增强的图片文件": "Choose images to enhance",
+    "视频文件": "Video files",
+    "选择视频文件夹": "Choose a video folder",
+    "选择图片文件夹": "Choose an image folder",
+    "待增强视频": "Videos to enhance",
+    "待增强图片": "Images to enhance",
+    "拖入视频或文件夹，可批量增强":
+        "Drop videos or folders for batch enhancement",
+    "拖入图片或文件夹，可批量增强":
+        "Drop images or folders for batch enhancement",
+    "降噪、锐化并按原比例输出，最高支持 4K":
+        "Denoise and sharpen at the original aspect ratio, up to 4K",
+    "把要增强的视频拖到这里": "Drop videos to enhance here",
+    "支持常见视频格式；输出为兼容性良好的 MP4":
+        "Supports common video formats and outputs compatible MP4 files",
+    "选择视频文件": "Choose video files",
+    "把要增强的图片拖到这里": "Drop images to enhance here",
+    "支持 JPG、PNG、WebP、BMP 与 TIFF":
+        "Supports JPG, PNG, WebP, BMP, and TIFF",
+    "选择图片文件": "Choose image files",
+    "开始增强": "Start enhancement",
+    "轻度降噪与锐化，适合本身质量较好的素材。":
+        "Light denoising and sharpening for already clean sources.",
+    "平衡降噪与细节增强，推荐用于大多数素材。":
+        "Balanced denoising and detail enhancement for most sources.",
+    "更强的降噪与边缘增强，适合模糊或噪点明显的素材。":
+        "Stronger denoising and edge enhancement for blurry or noisy sources.",
+    "增强可改善观感并放大至 4K，但无法凭空恢复源文件中不存在的真实细节。":
+        "Enhancement can improve perceived clarity and upscale to 4K, but cannot recreate real detail absent from the source.",
+    "正在增强…": "Enhancing…",
+    "图片与视频清晰度增强支持按原比例输出，最高可达 4K。":
+        "Image and video clarity enhancement preserves aspect ratio and supports output up to 4K.",
+    "增强完成 · {width}×{height}":
+        "Enhanced · {width}×{height}",
+    "不支持的图片输出格式：{target}":
+        "Unsupported image output format: {target}",
+    "请选择受支持的视频文件。": "Choose a supported video file.",
+    "请选择受支持的图片文件。": "Choose a supported image file.",
+    "正在分析画面…": "Analyzing image…",
+    "该文件没有可增强的画面。": "This file has no image to enhance.",
+    "正在增强 {percent}%": "Enhancing {percent}%",
+    "正在增强清晰度…": "Enhancing clarity…",
+    "增强结束，但没有生成有效的输出文件。":
+        "Enhancement finished without a valid output file.",
+    "增强完成": "Enhancement complete",
 }
 
 ZH_TW = {
@@ -570,6 +636,72 @@ ZH_TW = {
     "检测到加密或受保护的媒体，已停止下载。":
         "偵測到加密或受保護的媒體，已停止下載。",
     "下载完成": "下載完成",
+    "视频清晰度增强": "影片清晰度增強",
+    "图片清晰度增强": "圖片清晰度增強",
+    "自然增强": "自然增強",
+    "标准增强": "標準增強",
+    "强力增强": "強力增強",
+    "保持原尺寸（最高 4K）": "維持原尺寸（最高 4K）",
+    "提升至 1080p": "提升至 1080p",
+    "提升至 2K": "提升至 2K",
+    "提升至 4K": "提升至 4K",
+    "PNG（无损）": "PNG（無損）",
+    "JPG（高质量）": "JPG（高畫質）",
+    "WebP（高质量）": "WebP（高畫質）",
+    "就绪：可拖入要增强的视频文件":
+        "就緒：可拖入要增強的影片檔案",
+    "就绪：可拖入要增强的图片文件":
+        "就緒：可拖入要增強的圖片檔案",
+    "格式转换 · 4K 清晰度增强 · 音乐解锁 · 授权下载":
+        "格式轉換 · 4K 清晰度增強 · 音樂解鎖 · 授權下載",
+    "增强强度": "增強強度",
+    "输出分辨率": "輸出解析度",
+    "选择要增强的视频文件": "選擇要增強的影片檔案",
+    "选择要增强的图片文件": "選擇要增強的圖片檔案",
+    "视频文件": "影片檔案",
+    "选择视频文件夹": "選擇影片資料夾",
+    "选择图片文件夹": "選擇圖片資料夾",
+    "待增强视频": "待增強影片",
+    "待增强图片": "待增強圖片",
+    "拖入视频或文件夹，可批量增强":
+        "拖入影片或資料夾，可批次增強",
+    "拖入图片或文件夹，可批量增强":
+        "拖入圖片或資料夾，可批次增強",
+    "降噪、锐化并按原比例输出，最高支持 4K":
+        "降噪、銳化並依原比例輸出，最高支援 4K",
+    "把要增强的视频拖到这里": "將要增強的影片拖到這裡",
+    "支持常见视频格式；输出为兼容性良好的 MP4":
+        "支援常見影片格式；輸出為相容性良好的 MP4",
+    "选择视频文件": "選擇影片檔案",
+    "把要增强的图片拖到这里": "將要增強的圖片拖到這裡",
+    "支持 JPG、PNG、WebP、BMP 与 TIFF":
+        "支援 JPG、PNG、WebP、BMP 與 TIFF",
+    "选择图片文件": "選擇圖片檔案",
+    "开始增强": "開始增強",
+    "轻度降噪与锐化，适合本身质量较好的素材。":
+        "輕度降噪與銳化，適合原本畫質較好的素材。",
+    "平衡降噪与细节增强，推荐用于大多数素材。":
+        "平衡降噪與細節增強，建議用於大多數素材。",
+    "更强的降噪与边缘增强，适合模糊或噪点明显的素材。":
+        "更強的降噪與邊緣增強，適合模糊或雜訊明顯的素材。",
+    "增强可改善观感并放大至 4K，但无法凭空恢复源文件中不存在的真实细节。":
+        "增強可改善觀感並放大至 4K，但無法憑空恢復來源檔案中不存在的真實細節。",
+    "正在增强…": "正在增強…",
+    "图片与视频清晰度增强支持按原比例输出，最高可达 4K。":
+        "圖片與影片清晰度增強支援依原比例輸出，最高可達 4K。",
+    "增强完成 · {width}×{height}":
+        "增強完成 · {width}×{height}",
+    "不支持的图片输出格式：{target}":
+        "不支援的圖片輸出格式：{target}",
+    "请选择受支持的视频文件。": "請選擇支援的影片檔案。",
+    "请选择受支持的图片文件。": "請選擇支援的圖片檔案。",
+    "正在分析画面…": "正在分析畫面…",
+    "该文件没有可增强的画面。": "此檔案沒有可增強的畫面。",
+    "正在增强 {percent}%": "正在增強 {percent}%",
+    "正在增强清晰度…": "正在增強清晰度…",
+    "增强结束，但没有生成有效的输出文件。":
+        "增強結束，但沒有產生有效的輸出檔案。",
+    "增强完成": "增強完成",
 }
 
 CATALOGS = {"en_US": EN_US, "zh_TW": ZH_TW}

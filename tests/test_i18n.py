@@ -36,7 +36,7 @@ class TranslationTests(unittest.TestCase):
         used = set()
         for path in (
             root / "main.py", root / "engine.py", root / "music_unlock.py",
-            root / "direct_download.py",
+            root / "direct_download.py", root / "clarity_enhance.py",
         ):
             tree = ast.parse(path.read_text(encoding="utf-8"))
             for node in ast.walk(tree):

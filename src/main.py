@@ -46,6 +46,7 @@ from engine import (
     QUALITY_PRESETS,
     RESOLUTION_PRESETS,
     SUPPORTED_EXTENSIONS,
+    VIDEO_EXTENSIONS,
     VIDEO_TARGETS,
     ConversionCancelled,
     ConversionOptions,
@@ -70,6 +71,16 @@ from direct_download import (
     download_direct_audio,
     make_download_task,
     split_url_input,
+)
+from clarity_enhance import (
+    ENHANCE_RESOLUTIONS,
+    ENHANCE_STRENGTHS,
+    IMAGE_ENHANCE_TARGETS,
+    IMAGE_EXTENSIONS,
+    MODE_IMAGE_ENHANCE,
+    MODE_VIDEO_ENHANCE,
+    VIDEO_ENHANCE_TARGETS,
+    enhance_media_file,
 )
 from version import APP_NAME, APP_VERSION
 from i18n import (
@@ -141,6 +152,13 @@ class BatchWorker(QObject):
                         path,
                         self.options.output_dir,
                         self.options.locale,
+                        progress,
+                        self.cancel_event,
+                    )
+                elif self.options.mode in {MODE_VIDEO_ENHANCE, MODE_IMAGE_ENHANCE}:
+                    result = enhance_media_file(
+                        path,
+                        self.options,
                         progress,
                         self.cancel_event,
                     )
@@ -221,11 +239,26 @@ class MainWindow(QMainWindow):
     def _is_download_mode(self) -> bool:
         return self.mode_combo.currentData() == MODE_DIRECT_DOWNLOAD
 
+    def _is_video_enhance_mode(self) -> bool:
+        return self.mode_combo.currentData() == MODE_VIDEO_ENHANCE
+
+    def _is_image_enhance_mode(self) -> bool:
+        return self.mode_combo.currentData() == MODE_IMAGE_ENHANCE
+
+    def _is_enhance_mode(self) -> bool:
+        return self.mode_combo.currentData() in {
+            MODE_VIDEO_ENHANCE, MODE_IMAGE_ENHANCE,
+        }
+
     def _ready_message(self) -> str:
         if self._is_download_mode():
             key = "就绪：可粘贴公开的无 DRM 音频直链"
         elif self._is_unlock_mode():
             key = "就绪：可拖入待解锁的本地音乐文件"
+        elif self._is_video_enhance_mode():
+            key = "就绪：可拖入要增强的视频文件"
+        elif self._is_image_enhance_mode():
+            key = "就绪：可拖入要增强的图片文件"
         else:
             key = "就绪：可直接拖入音频或视频文件"
         return self._t(key)
@@ -395,7 +428,7 @@ class MainWindow(QMainWindow):
         self.help_menu.setTitle(self._t("帮助"))
         for widget, key in (
             (self.hero_title, APP_NAME),
-            (self.hero_subtitle, "格式转换 · 音乐解锁 · 授权下载 · 无损提取"),
+            (self.hero_subtitle, "格式转换 · 4K 清晰度增强 · 音乐解锁 · 授权下载"),
             (self.privacy_badge, "本地处理 · 文件不会上传"),
             (self.language_label, "语言"),
             (self.theme_label, "外观"),
@@ -545,7 +578,7 @@ class MainWindow(QMainWindow):
         title_row.addStretch()
         brand_copy.addLayout(title_row)
         self.hero_subtitle = QLabel(self._t(
-            "格式转换 · 音乐解锁 · 授权下载 · 无损提取"))
+            "格式转换 · 4K 清晰度增强 · 音乐解锁 · 授权下载"))
         self.hero_subtitle.setObjectName("AppSubtitle")
         self.hero_subtitle.setWordWrap(True)
         brand_copy.addWidget(self.hero_subtitle)
@@ -755,8 +788,11 @@ class MainWindow(QMainWindow):
         options_root.addLayout(self.fields_layout)
 
         self.mode_combo = QComboBox()
-        for item in (MODE_VIDEO, MODE_AUDIO, MODE_EXTRACT, MODE_COMPRESS,
-                     MODE_MUSIC_UNLOCK, MODE_DIRECT_DOWNLOAD):
+        for item in (
+            MODE_VIDEO, MODE_VIDEO_ENHANCE, MODE_IMAGE_ENHANCE,
+            MODE_AUDIO, MODE_EXTRACT, MODE_COMPRESS,
+            MODE_MUSIC_UNLOCK, MODE_DIRECT_DOWNLOAD,
+        ):
             self.mode_combo.addItem(self._t(item), item)
         self.target_combo = QComboBox()
         self.quality_combo = QComboBox()
@@ -1058,6 +1094,20 @@ class MainWindow(QMainWindow):
                 self._t("受支持的音乐文件") + f" ({unlock_file_patterns()});;"
                 + self._t("所有文件") + " (*.*)"
             )
+        elif self._is_video_enhance_mode():
+            title = self._t("选择要增强的视频文件")
+            patterns = " ".join(f"*{suffix}" for suffix in sorted(VIDEO_EXTENSIONS))
+            file_filter = (
+                self._t("视频文件") + f" ({patterns});;"
+                + self._t("所有文件") + " (*.*)"
+            )
+        elif self._is_image_enhance_mode():
+            title = self._t("选择要增强的图片文件")
+            patterns = " ".join(f"*{suffix}" for suffix in sorted(IMAGE_EXTENSIONS))
+            file_filter = (
+                self._t("图片文件") + f" ({patterns});;"
+                + self._t("所有文件") + " (*.*)"
+            )
         else:
             title = self._t("选择音频或视频文件")
             file_filter = (
@@ -1079,8 +1129,14 @@ class MainWindow(QMainWindow):
         if self._is_download_mode():
             self.url_input.setFocus()
             return
-        title = (self._t("选择待解锁音乐文件夹") if self._is_unlock_mode()
-                 else self._t("选择媒体文件夹"))
+        if self._is_unlock_mode():
+            title = self._t("选择待解锁音乐文件夹")
+        elif self._is_video_enhance_mode():
+            title = self._t("选择视频文件夹")
+        elif self._is_image_enhance_mode():
+            title = self._t("选择图片文件夹")
+        else:
+            title = self._t("选择媒体文件夹")
         folder = QFileDialog.getExistingDirectory(self, title)
         if not folder:
             return
@@ -1095,6 +1151,10 @@ class MainWindow(QMainWindow):
             return False
         if self._is_unlock_mode():
             return is_unlockable_path(path)
+        if self._is_video_enhance_mode():
+            return path.suffix.lower() in VIDEO_EXTENSIONS
+        if self._is_image_enhance_mode():
+            return path.suffix.lower() in IMAGE_EXTENSIONS
         return path.suffix.lower() in SUPPORTED_EXTENSIONS
 
     def _add_paths(self, paths: list[Path]) -> None:
@@ -1224,11 +1284,45 @@ class MainWindow(QMainWindow):
         box.addButton(self._t("关闭"), QMessageBox.ButtonRole.AcceptRole)
         return box
 
+    def _replace_combo_choices(
+        self,
+        combo: QComboBox,
+        choices: list[str],
+        fallback: str,
+    ) -> None:
+        if [combo.itemData(index) for index in range(combo.count())] == choices:
+            return
+        previous = combo.currentData()
+        combo.blockSignals(True)
+        try:
+            combo.clear()
+            for item in choices:
+                combo.addItem(self._t(item), item)
+            index = combo.findData(previous)
+            if index < 0:
+                index = combo.findData(fallback)
+            combo.setCurrentIndex(max(index, 0))
+        finally:
+            combo.blockSignals(False)
+
     @Slot()
     def _update_mode(self) -> None:
         mode = self.mode_combo.currentData()
+        enhance_mode = mode in {MODE_VIDEO_ENHANCE, MODE_IMAGE_ENHANCE}
+        self._replace_combo_choices(
+            self.quality_combo,
+            ENHANCE_STRENGTHS if enhance_mode else QUALITY_PRESETS,
+            "标准增强" if enhance_mode else "均衡压缩",
+        )
+        self._replace_combo_choices(
+            self.resolution_combo,
+            ENHANCE_RESOLUTIONS if enhance_mode else RESOLUTION_PRESETS,
+            "提升至 4K" if enhance_mode else "保持原分辨率",
+        )
         choices = {
             MODE_VIDEO: VIDEO_TARGETS,
+            MODE_VIDEO_ENHANCE: VIDEO_ENHANCE_TARGETS,
+            MODE_IMAGE_ENHANCE: IMAGE_ENHANCE_TARGETS,
             MODE_AUDIO: AUDIO_TARGETS,
             MODE_EXTRACT: EXTRACT_TARGETS,
             MODE_COMPRESS: COMPRESS_TARGETS,
@@ -1248,11 +1342,12 @@ class MainWindow(QMainWindow):
         self.target_combo.setEnabled(not simple_mode)
         self.quality_label.setVisible(not simple_mode)
         self.quality_combo.setVisible(not simple_mode)
-        video_controls = mode in {MODE_VIDEO, MODE_COMPRESS}
+        video_controls = mode in {MODE_VIDEO, MODE_COMPRESS, MODE_VIDEO_ENHANCE}
         self.encoder_label.setVisible(video_controls)
         self.encoder_combo.setVisible(video_controls)
-        self.resolution_label.setVisible(video_controls)
-        self.resolution_combo.setVisible(video_controls)
+        resolution_controls = video_controls or mode == MODE_IMAGE_ENHANCE
+        self.resolution_label.setVisible(resolution_controls)
+        self.resolution_combo.setVisible(resolution_controls)
         self.url_input_panel.setVisible(download_mode)
         self.add_files_button.setVisible(not download_mode)
         self.add_folder_button.setVisible(not download_mode)
@@ -1264,6 +1359,11 @@ class MainWindow(QMainWindow):
     def _update_mode_copy(self) -> None:
         if not hasattr(self, "empty_state"):
             return
+        enhance_mode = self._is_enhance_mode()
+        self.quality_label.setText(self._t(
+            "增强强度" if enhance_mode else "质量方案"))
+        self.resolution_label.setText(self._t(
+            "输出分辨率" if enhance_mode else "分辨率限制"))
         if self._is_download_mode():
             self.files_title.setText(self._t("待下载音频"))
             self.files_hint.setText(self._t("粘贴公开音频文件直链；支持一次添加多行"))
@@ -1288,6 +1388,36 @@ class MainWindow(QMainWindow):
                 self._t("选择音乐文件"),
             )
             self.start_button.setText(self._t("开始解锁"))
+            self.table.setHorizontalHeaderLabels([
+                self._t(key) for key in
+                ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
+            ])
+        elif self._is_video_enhance_mode():
+            self.files_title.setText(self._t("待增强视频"))
+            self.files_hint.setText(self._t("拖入视频或文件夹，可批量增强"))
+            self.options_hint.setText(self._t(
+                "降噪、锐化并按原比例输出，最高支持 4K"))
+            self.empty_state.set_texts(
+                self._t("把要增强的视频拖到这里"),
+                self._t("支持常见视频格式；输出为兼容性良好的 MP4"),
+                self._t("选择视频文件"),
+            )
+            self.start_button.setText(self._t("开始增强"))
+            self.table.setHorizontalHeaderLabels([
+                self._t(key) for key in
+                ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
+            ])
+        elif self._is_image_enhance_mode():
+            self.files_title.setText(self._t("待增强图片"))
+            self.files_hint.setText(self._t("拖入图片或文件夹，可批量增强"))
+            self.options_hint.setText(self._t(
+                "降噪、锐化并按原比例输出，最高支持 4K"))
+            self.empty_state.set_texts(
+                self._t("把要增强的图片拖到这里"),
+                self._t("支持 JPG、PNG、WebP、BMP 与 TIFF"),
+                self._t("选择图片文件"),
+            )
+            self.start_button.setText(self._t("开始增强"))
             self.table.setHorizontalHeaderLabels([
                 self._t(key) for key in
                 ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
@@ -1325,6 +1455,19 @@ class MainWindow(QMainWindow):
             self.quality_hint.setMinimumHeight(54)
             self.quality_hint.setText(self._t(
                 "仅处理你合法拥有或获授权的本地文件；源文件不会删除。\n应用不会联网下载音乐或访问账号。"))
+            return
+        if mode in {MODE_VIDEO_ENHANCE, MODE_IMAGE_ENHANCE}:
+            self.quality_combo.setEnabled(True)
+            self.quality_hint.setMinimumHeight(68)
+            hints = {
+                "自然增强": "轻度降噪与锐化，适合本身质量较好的素材。",
+                "标准增强": "平衡降噪与细节增强，推荐用于大多数素材。",
+                "强力增强": "更强的降噪与边缘增强，适合模糊或噪点明显的素材。",
+            }
+            hint = hints.get(self.quality_combo.currentData(), hints["标准增强"])
+            self.quality_hint.setText(
+                self._t(hint) + "\n" + self._t(
+                    "增强可改善观感并放大至 4K，但无法凭空恢复源文件中不存在的真实细节。"))
             return
         self.quality_hint.setMinimumHeight(0)
         raw_copy = mode == MODE_EXTRACT and target == EXTRACT_TARGETS[0]
@@ -1487,6 +1630,7 @@ class MainWindow(QMainWindow):
         self.overall_label.setText(
             self._t("正在下载…" if running and self._is_download_mode() else
                     "正在解锁…" if running and self._is_unlock_mode() else
+                    "正在增强…" if running and self._is_enhance_mode() else
                     "正在处理…" if running else "等待任务"))
 
     @Slot(int)
@@ -1597,6 +1741,7 @@ class MainWindow(QMainWindow):
             f"<p>{self._t('版本 {version}', version=APP_VERSION)}</p>"
             f"<p>{self._t('基于 FFmpeg 与 Qt for Python 构建的本地音视频转换工具。')}</p>"
             f"<p>{self._t('转换全程在本机完成，不上传用户文件。')}</p>"
+            f"<p>{self._t('图片与视频清晰度增强支持按原比例输出，最高可达 4K。')}</p>"
             f"<p>{self._t('音乐解锁功能由 Unlock Music CLI 提供，仅供处理合法拥有或获授权的本地文件。')}</p>"
             f"<p>{self._t('授权下载仅连接链接所在服务器，不支持订阅平台页面、Cookie、流媒体清单或加密媒体。')}</p>"
             '<p><a href="https://github.com/plao94619-hash/Repository-name-VideoToolBox">'

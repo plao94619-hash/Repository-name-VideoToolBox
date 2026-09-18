@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 env:
-  APP_VERSION: "1.7.0"
+  APP_VERSION: "1.8.0"
 
 jobs:
   build-windows:

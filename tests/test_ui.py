@@ -25,6 +25,10 @@ else:
 from engine import MODE_EXTRACT, RAW_AUDIO
 from music_unlock import MODE_MUSIC_UNLOCK, UNLOCK_TARGET
 from direct_download import DIRECT_TARGET, MODE_DIRECT_DOWNLOAD, DirectDownloadTask
+from clarity_enhance import (
+    MODE_IMAGE_ENHANCE,
+    MODE_VIDEO_ENHANCE,
+)
 
 
 @unittest.skipIf(QApplication is None, "PySide6 not installed in this environment")
@@ -181,6 +185,88 @@ class LanguageUITests(unittest.TestCase):
                 QApplication.processEvents()
                 self.window.grab().save(str(
                     Path(preview_dir) / f"authorized-download-{locale}-{theme}.png"
+                ))
+
+    def test_clarity_enhancement_modes_are_localized_and_filter_inputs(self):
+        video = self.root / "soft-video.mp4"
+        image = self.root / "soft-image.jpg"
+        audio = self.root / "audio.mp3"
+        for path in (video, image, audio):
+            path.write_bytes(b"test")
+
+        self.window.mode_combo.setCurrentIndex(
+            self.window.mode_combo.findData(MODE_VIDEO_ENHANCE))
+        self.assertEqual(self.window.target_combo.currentData(), "MP4")
+        self.assertEqual(self.window.quality_combo.currentData(), "标准增强")
+        self.assertEqual(self.window.resolution_combo.currentData(), "提升至 4K")
+        self.assertFalse(self.window.quality_combo.isHidden())
+        self.assertFalse(self.window.encoder_combo.isHidden())
+        self.assertFalse(self.window.resolution_combo.isHidden())
+        self.assertEqual(self.window.quality_label.text(), "增强强度")
+        self.assertEqual(self.window.resolution_label.text(), "输出分辨率")
+        self.assertTrue(self.window._path_matches_mode(video))
+        self.assertFalse(self.window._path_matches_mode(image))
+        self.assertFalse(self.window._path_matches_mode(audio))
+        self.assertIn("真实细节", self.window.quality_hint.text())
+        self.assertEqual(self.window.start_button.text(), "开始增强")
+
+        self.window.mode_combo.setCurrentIndex(
+            self.window.mode_combo.findData(MODE_IMAGE_ENHANCE))
+        self.assertEqual(self.window.target_combo.currentData(), "PNG（无损）")
+        self.assertTrue(self.window.encoder_combo.isHidden())
+        self.assertFalse(self.window.resolution_combo.isHidden())
+        self.assertTrue(self.window._path_matches_mode(image))
+        self.assertFalse(self.window._path_matches_mode(video))
+        self.window._add_paths([video, image, audio])
+        self.assertEqual(self.window._current_paths(), [image.resolve()])
+
+        for locale, mode_text, start_text in (
+            ("en_US", "Enhance image clarity", "Start enhancement"),
+            ("zh_TW", "圖片清晰度增強", "開始增強"),
+            ("zh_CN", MODE_IMAGE_ENHANCE, "开始增强"),
+        ):
+            self.window.language_combo.setCurrentIndex(
+                self.window.language_combo.findData(locale))
+            self.assertEqual(self.window.mode_combo.currentText(), mode_text)
+            self.assertEqual(self.window.start_button.text(), start_text)
+            self.assertEqual(self.window.mode_combo.currentData(), MODE_IMAGE_ENHANCE)
+            self.assertEqual(self.window.quality_combo.currentData(), "标准增强")
+            self.assertEqual(self.window.resolution_combo.currentData(), "提升至 4K")
+
+        self.window.language_combo.setCurrentIndex(
+            self.window.language_combo.findData("en_US"))
+        self.window.resize(850, 640)
+        self.window.show()
+        QApplication.processEvents()
+        self.assertEqual(self.window.field_columns, 2)
+        self.assertFalse(self.window.workspace_wide)
+        self.assertTrue(self.window.start_button.isVisible())
+        for combo in (
+            self.window.mode_combo,
+            self.window.target_combo,
+            self.window.quality_combo,
+            self.window.resolution_combo,
+        ):
+            self.assertGreaterEqual(
+                combo.width(),
+                combo.fontMetrics().horizontalAdvance(combo.currentText()) + 32,
+            )
+
+        preview_dir = os.environ.get("UI_SCREENSHOT_DIR")
+        if preview_dir:
+            Path(preview_dir).mkdir(parents=True, exist_ok=True)
+            self.window.resize(1280, 820)
+            self.window.show()
+            for locale, theme in (
+                ("zh_CN", "light"), ("zh_CN", "dark"), ("en_US", "light"),
+            ):
+                self.window.language_combo.setCurrentIndex(
+                    self.window.language_combo.findData(locale))
+                self.window.theme_combo.setCurrentIndex(
+                    self.window.theme_combo.findData(theme))
+                QApplication.processEvents()
+                self.window.grab().save(str(
+                    Path(preview_dir) / f"clarity-enhance-{locale}-{theme}.png"
                 ))
 
     def test_previous_language_is_restored_on_restart(self):
