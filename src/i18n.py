@@ -378,8 +378,8 @@ EN_US = {
         "Slightly expands the selection to cover antialiasing and blend naturally. Recommended.",
     "进一步覆盖水印阴影和描边，可能影响更多周围纹理。":
         "Covers more watermark shadow and outline, but may affect more nearby texture.",
-    "仅修复你手动框选的可见区域；不检测或移除 C2PA、版权归属、平台溯源或其他不可见指纹。":
-        "Only manually selected visible areas are repaired. C2PA, attribution, platform provenance, and other invisible fingerprints are not detected or removed.",
+    "仅针对手动框选的可见区域修复画面；不提供隐藏标记的检测或定向清除。导出重新编码可能使 C2PA 等内容凭证失效，请保留原图。":
+        "Image repair targets manually selected visible areas. Hidden marks are not detected or selectively removed. Re-encoding may invalidate C2PA credentials; keep the original.",
     "尚未选择修复区域": "No repair areas selected",
     "已选择 {count} 个区域": "{count} area(s) selected",
     "尚未添加图片": "No images added",
@@ -393,8 +393,8 @@ EN_US = {
     "清空区域": "Clear areas",
     "取消": "Cancel",
     "保存区域": "Save areas",
-    "仅用于你拥有或获授权编辑的图片。此功能只修复手动框选的可见区域，不检测或移除 C2PA、版权归属、平台溯源或其他不可见指纹。队列中的图片将使用相同的相对位置。":
-        "Use only on images you own or are authorized to edit. This feature repairs manually selected visible areas only; it does not detect or remove C2PA, attribution, platform provenance, or other invisible fingerprints. Images in the queue use the same relative positions.",
+    "仅用于你拥有或获授权编辑的图片。队列中的图片将使用相同的相对位置。此功能不检测或定向清除隐藏标记；导出重新编码可能改变元数据或使 C2PA 等内容凭证失效，请保留原图。":
+        "Use only on images you own or are authorized to edit. Queued images use the same relative areas. Hidden marks are not detected or selectively removed. Re-encoding may change metadata or invalidate C2PA credentials; keep the original.",
     "无法读取图片": "Cannot read image",
     "已保存 {count} 个修复区域": "Saved {count} repair area(s)",
     "请先在图片预览中框选至少一个可见水印区域。":
@@ -407,8 +407,8 @@ EN_US = {
     "水印区域修复完成": "Watermark-area repair complete",
     "修复完成 · {count} 个区域 · {width}×{height}":
         "Repaired · {count} area(s) · {width}×{height}",
-    "可见水印区域修复仅处理用户手动框选且有权编辑的图片区域，不提供不可见版权指纹规避。":
-        "Visible watermark-area repair only processes manually selected image areas the user is authorized to edit; it does not provide invisible copyright-fingerprint evasion.",
+    "可见水印区域修复适用于有权编辑的图片；重新编码可能改变元数据或使内容凭证失效。":
+        "Visible watermark-area repair is for images you are authorized to edit. Re-encoding may change metadata or invalidate Content Credentials.",
 }
 
 ZH_TW = {
@@ -779,8 +779,8 @@ ZH_TW = {
         "輕微擴展選取區域邊緣，兼顧反鋸齒與自然過渡，建議使用。",
     "进一步覆盖水印阴影和描边，可能影响更多周围纹理。":
         "進一步覆蓋浮水印陰影與描邊，可能影響更多周圍紋理。",
-    "仅修复你手动框选的可见区域；不检测或移除 C2PA、版权归属、平台溯源或其他不可见指纹。":
-        "僅修復您手動框選的可見區域；不偵測或移除 C2PA、版權歸屬、平台溯源或其他不可見指紋。",
+    "仅针对手动框选的可见区域修复画面；不提供隐藏标记的检测或定向清除。导出重新编码可能使 C2PA 等内容凭证失效，请保留原图。":
+        "畫面修復僅針對手動框選的可見區域；不偵測或定向清除隱藏標記。匯出重新編碼可能使 C2PA 等內容憑證失效，請保留原圖。",
     "尚未选择修复区域": "尚未選擇修復區域",
     "已选择 {count} 个区域": "已選擇 {count} 個區域",
     "尚未添加图片": "尚未加入圖片",
@@ -794,8 +794,8 @@ ZH_TW = {
     "清空区域": "清空區域",
     "取消": "取消",
     "保存区域": "儲存區域",
-    "仅用于你拥有或获授权编辑的图片。此功能只修复手动框选的可见区域，不检测或移除 C2PA、版权归属、平台溯源或其他不可见指纹。队列中的图片将使用相同的相对位置。":
-        "僅用於您擁有或獲授權編輯的圖片。此功能只修復手動框選的可見區域，不偵測或移除 C2PA、版權歸屬、平台溯源或其他不可見指紋。佇列中的圖片將使用相同的相對位置。",
+    "仅用于你拥有或获授权编辑的图片。队列中的图片将使用相同的相对位置。此功能不检测或定向清除隐藏标记；导出重新编码可能改变元数据或使 C2PA 等内容凭证失效，请保留原图。":
+        "僅用於您擁有或獲授權編輯的圖片。佇列中的圖片會使用相同的相對位置。此功能不偵測或定向清除隱藏標記；匯出重新編碼可能改變中繼資料或使 C2PA 等內容憑證失效，請保留原圖。",
     "无法读取图片": "無法讀取圖片",
     "已保存 {count} 个修复区域": "已儲存 {count} 個修復區域",
     "请先在图片预览中框选至少一个可见水印区域。":
@@ -808,8 +808,8 @@ ZH_TW = {
     "水印区域修复完成": "浮水印區域修復完成",
     "修复完成 · {count} 个区域 · {width}×{height}":
         "修復完成 · {count} 個區域 · {width}×{height}",
-    "可见水印区域修复仅处理用户手动框选且有权编辑的图片区域，不提供不可见版权指纹规避。":
-        "可見浮水印區域修復僅處理使用者手動框選且有權編輯的圖片區域，不提供不可見版權指紋規避。",
+    "可见水印区域修复适用于有权编辑的图片；重新编码可能改变元数据或使内容凭证失效。":
+        "可見浮水印區域修復適用於有權編輯的圖片；重新編碼可能改變中繼資料或使內容憑證失效。",
 }
 
 CATALOGS = {"en_US": EN_US, "zh_TW": ZH_TW}

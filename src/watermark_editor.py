@@ -246,7 +246,7 @@ class WatermarkRegionDialog(QDialog):
         root.addLayout(controls)
 
         notice = QLabel(self._t(
-            "仅用于你拥有或获授权编辑的图片。此功能只修复手动框选的可见区域，不检测或移除 C2PA、版权归属、平台溯源或其他不可见指纹。队列中的图片将使用相同的相对位置。"))
+            "仅用于你拥有或获授权编辑的图片。队列中的图片将使用相同的相对位置。此功能不检测或定向清除隐藏标记；导出重新编码可能改变元数据或使 C2PA 等内容凭证失效，请保留原图。"))
         notice.setObjectName("QualityHint")
         notice.setWordWrap(True)
         root.addWidget(notice)

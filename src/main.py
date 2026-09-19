@@ -1631,7 +1631,7 @@ class MainWindow(QMainWindow):
             hint = hints.get(self.quality_combo.currentData(), hints["标准修复"])
             self.quality_hint.setText(
                 self._t(hint) + "\n" + self._t(
-                    "仅修复你手动框选的可见区域；不检测或移除 C2PA、版权归属、平台溯源或其他不可见指纹。"))
+                    "仅针对手动框选的可见区域修复画面；不提供隐藏标记的检测或定向清除。导出重新编码可能使 C2PA 等内容凭证失效，请保留原图。"))
             return
         self.quality_hint.setMinimumHeight(0)
         raw_copy = mode == MODE_EXTRACT and target == EXTRACT_TARGETS[0]
@@ -1918,7 +1918,7 @@ class MainWindow(QMainWindow):
             f"<p>{self._t('基于 FFmpeg 与 Qt for Python 构建的本地音视频转换工具。')}</p>"
             f"<p>{self._t('转换全程在本机完成，不上传用户文件。')}</p>"
             f"<p>{self._t('图片与视频清晰度增强支持按原比例输出，最高可达 4K。')}</p>"
-            f"<p>{self._t('可见水印区域修复仅处理用户手动框选且有权编辑的图片区域，不提供不可见版权指纹规避。')}</p>"
+            f"<p>{self._t('可见水印区域修复适用于有权编辑的图片；重新编码可能改变元数据或使内容凭证失效。')}</p>"
             f"<p>{self._t('音乐解锁功能由 Unlock Music CLI 提供，仅供处理合法拥有或获授权的本地文件。')}</p>"
             f"<p>{self._t('授权下载仅连接链接所在服务器，不支持订阅平台页面、Cookie、流媒体清单或加密媒体。')}</p>"
             '<p><a href="https://github.com/plao94619-hash/Repository-name-VideoToolBox">'
