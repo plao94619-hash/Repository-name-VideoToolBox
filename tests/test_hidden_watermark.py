@@ -50,6 +50,13 @@ def _rgba_pixels(path: Path) -> bytes:
     ])
 
 
+def _ffmpeg_available() -> bool:
+    try:
+        return ffmpeg_path().is_file() and ffprobe_path().is_file()
+    except ConversionError:
+        return False
+
+
 class HiddenWatermarkTests(unittest.TestCase):
     def options(self, root: Path, strength: str = "标准处理") -> ConversionOptions:
         return ConversionOptions(
@@ -58,6 +65,11 @@ class HiddenWatermarkTests(unittest.TestCase):
             encoder="自动选择", resolution="保持原分辨率",
             output_dir=root,
         )
+
+    def test_missing_ffmpeg_skips_instead_of_failing_test_collection(self):
+        with patch(f"{__name__}.ffmpeg_path",
+                   side_effect=ConversionError("missing")):
+            self.assertFalse(_ffmpeg_available())
 
     def test_command_keeps_alpha_and_metadata_cleaning_is_explicit(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -88,7 +100,7 @@ class HiddenWatermarkTests(unittest.TestCase):
             self.assertEqual(make_hidden_output_path(source, self.options(root)).name,
                              "sample_hidden_processed_2.png")
 
-    @unittest.skipUnless(ffmpeg_path().is_file() and ffprobe_path().is_file(),
+    @unittest.skipUnless(_ffmpeg_available(),
                          "requires FFmpeg and FFprobe")
     def test_real_png_processing_clears_low_bits_preserves_alpha_and_original(self):
         with tempfile.TemporaryDirectory() as folder:
