@@ -127,6 +127,11 @@ QLabel#FileCount { background: %(surface_alt)s; border: 1px solid %(stroke)s;
                    border-radius: 9px; padding: 5px 10px; font-weight: 600; }
 QLabel#QualityHint { background: %(accent_soft)s; color: %(muted)s;
                      border-radius: 9px; padding: 9px 11px; }
+QCheckBox#HiddenMetadataOption { color: %(text)s; spacing: 8px;
+                                 padding: 7px 2px; }
+QCheckBox#HiddenMetadataOption:disabled { color: %(disabled)s; }
+QCheckBox#HiddenMetadataOption:focus { border: 1px solid %(focus)s;
+                                      border-radius: 5px; }
 QLabel#TaskState { color: %(muted)s; font-weight: 600; }
 QLabel#TaskState[state="active"] { color: %(accent)s; }
 QLabel#TaskState[state="success"] { color: %(success)s; }

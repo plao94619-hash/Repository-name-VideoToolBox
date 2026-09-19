@@ -356,6 +356,39 @@ EN_US = {
         "Enhancement finished without a valid output file.",
     "增强完成": "Enhancement complete",
     "图片水印区域修复": "Repair visible image watermark areas",
+    "图片隐藏水印处理": "Process hidden image watermarks",
+    "轻度处理": "Gentle processing",
+    "标准处理": "Balanced processing",
+    "强力处理": "Strong processing",
+    "处理强度": "Processing strength",
+    "就绪：添加图片并选择隐藏水印处理强度":
+        "Ready: add images and choose a hidden watermark strength",
+    "同时清理 EXIF/XMP 元数据": "Also clean EXIF/XMP metadata",
+    "可选：不复制常见嵌入元数据。可能影响色彩信息和内容凭证；不保证清除全部隐藏标记。":
+        "Optional: omit common embedded metadata. This may affect color information and Content Credentials; some hidden marks may remain.",
+    "待处理图片": "Images to process",
+    "拖入图片或文件夹，可批量处理隐藏水印":
+        "Drop images or folders to process hidden watermarks in a batch",
+    "处理像素低位，按强度轻度平滑；支持可选元数据清理":
+        "Normalize low pixel bits, optionally smooth, and optionally clean metadata",
+    "把要处理的图片拖到这里": "Drop images to process here",
+    "固定 RGB 最低 1 位，主要针对简单的像素低位标记。":
+        "Fix the lowest RGB bit; mainly for simple low-bit pixel marks.",
+    "轻度平滑并固定 RGB 最低 2 位，推荐先试用。":
+        "Gently smooth and fix the lowest 2 RGB bits. Try this first.",
+    "更强平滑并固定 RGB 最低 3 位，可能损失细节。":
+        "Smooth more and fix the lowest 3 RGB bits; may reduce detail.",
+    "仅尽力削弱部分像素隐藏标记；无法保证去除未知指纹或 C2PA 溯源。PNG 最适合低位处理；请保留原图并自行核验。":
+        "Best effort for some pixel marks; unknown fingerprints and C2PA provenance may remain. Use PNG for predictable low-bit results. Keep the original and verify the output.",
+    "不支持的隐藏水印处理强度：{strength}":
+        "Unsupported hidden watermark strength: {strength}",
+    "该文件没有可处理的画面。": "This file has no image to process.",
+    "正在处理隐藏水印…": "Processing hidden watermark…",
+    "处理结束，但没有生成有效的输出文件。":
+        "Processing finished without a valid output file.",
+    "隐藏水印处理完成": "Hidden watermark processing complete",
+    "隐藏水印处理完成 · {width}×{height} · 请自行核验":
+        "Processed · {width}×{height} · verify the output",
     "精细修复": "Precise edges",
     "标准修复": "Balanced edges",
     "扩展修复": "Expanded edges",
@@ -757,6 +790,39 @@ ZH_TW = {
         "增強結束，但沒有產生有效的輸出檔案。",
     "增强完成": "增強完成",
     "图片水印区域修复": "圖片可見浮水印區域修復",
+    "图片隐藏水印处理": "圖片隱藏浮水印處理",
+    "轻度处理": "輕度處理",
+    "标准处理": "標準處理",
+    "强力处理": "強力處理",
+    "处理强度": "處理強度",
+    "就绪：添加图片并选择隐藏水印处理强度":
+        "就緒：加入圖片並選擇隱藏浮水印處理強度",
+    "同时清理 EXIF/XMP 元数据": "同時清理 EXIF/XMP 中繼資料",
+    "可选：不复制常见嵌入元数据。可能影响色彩信息和内容凭证；不保证清除全部隐藏标记。":
+        "選用：不複製常見內嵌中繼資料。可能影響色彩資訊和內容憑證；不保證清除所有隱藏標記。",
+    "待处理图片": "待處理圖片",
+    "拖入图片或文件夹，可批量处理隐藏水印":
+        "拖入圖片或資料夾，可批次處理隱藏浮水印",
+    "处理像素低位，按强度轻度平滑；支持可选元数据清理":
+        "處理像素低位，依強度輕度平滑；可選擇清理中繼資料",
+    "把要处理的图片拖到这里": "將要處理的圖片拖到這裡",
+    "固定 RGB 最低 1 位，主要针对简单的像素低位标记。":
+        "固定 RGB 最低 1 位，主要針對簡單的像素低位標記。",
+    "轻度平滑并固定 RGB 最低 2 位，推荐先试用。":
+        "輕度平滑並固定 RGB 最低 2 位，建議先試用。",
+    "更强平滑并固定 RGB 最低 3 位，可能损失细节。":
+        "更強的平滑並固定 RGB 最低 3 位，可能損失細節。",
+    "仅尽力削弱部分像素隐藏标记；无法保证去除未知指纹或 C2PA 溯源。PNG 最适合低位处理；请保留原图并自行核验。":
+        "僅盡力減弱部分像素隱藏標記；無法保證去除未知指紋或 C2PA 溯源。PNG 最適合低位處理；請保留原圖並自行查驗。",
+    "不支持的隐藏水印处理强度：{strength}":
+        "不支援的隱藏浮水印處理強度：{strength}",
+    "该文件没有可处理的画面。": "此檔案沒有可處理的畫面。",
+    "正在处理隐藏水印…": "正在處理隱藏浮水印…",
+    "处理结束，但没有生成有效的输出文件。":
+        "處理完成，但沒有產生有效的輸出檔案。",
+    "隐藏水印处理完成": "隱藏浮水印處理完成",
+    "隐藏水印处理完成 · {width}×{height} · 请自行核验":
+        "已處理 · {width}×{height} · 請自行查驗",
     "精细修复": "精細修復",
     "标准修复": "標準修復",
     "扩展修复": "擴展修復",

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QComboBox,
+    QCheckBox,
     QDialog,
     QFileDialog,
     QFrame,
@@ -91,6 +92,10 @@ from watermark_repair import (
     repair_visible_watermark,
 )
 from watermark_editor import WatermarkRegionDialog
+from hidden_watermark import (
+    MODE_IMAGE_HIDDEN_WATERMARK, HIDDEN_WATERMARK_STRENGTHS,
+    HIDDEN_WATERMARK_TARGETS, process_hidden_watermark,
+)
 from version import APP_NAME, APP_VERSION
 from i18n import (
     LANGUAGE_LABELS, SUPPORTED_LANGUAGES, language_for_system_locale, translate,
@@ -128,11 +133,13 @@ class BatchWorker(QObject):
         paths: list[Path | DirectDownloadTask],
         options: ConversionOptions,
         watermark_regions: tuple[WatermarkRegion, ...] = (),
+        strip_hidden_metadata: bool = False,
     ):
         super().__init__()
         self.paths = paths
         self.options = options
         self.watermark_regions = watermark_regions
+        self.strip_hidden_metadata = strip_hidden_metadata
         self.cancel_event = Event()
 
     def request_cancel(self) -> None:
@@ -183,6 +190,14 @@ class BatchWorker(QObject):
                         self.watermark_regions,
                         progress,
                         self.cancel_event,
+                    )
+                elif self.options.mode == MODE_IMAGE_HIDDEN_WATERMARK:
+                    result = process_hidden_watermark(
+                        path,
+                        self.options,
+                        progress,
+                        self.cancel_event,
+                        self.strip_hidden_metadata,
                     )
                 else:
                     result = convert_file(
@@ -271,6 +286,9 @@ class MainWindow(QMainWindow):
     def _is_watermark_repair_mode(self) -> bool:
         return self.mode_combo.currentData() == MODE_IMAGE_WATERMARK_REPAIR
 
+    def _is_hidden_watermark_mode(self) -> bool:
+        return self.mode_combo.currentData() == MODE_IMAGE_HIDDEN_WATERMARK
+
     def _is_enhance_mode(self) -> bool:
         return self.mode_combo.currentData() in {
             MODE_VIDEO_ENHANCE, MODE_IMAGE_ENHANCE,
@@ -287,6 +305,8 @@ class MainWindow(QMainWindow):
             key = "就绪：可拖入要增强的图片文件"
         elif self._is_watermark_repair_mode():
             key = "就绪：添加图片并框选可见水印区域"
+        elif self._is_hidden_watermark_mode():
+            key = "就绪：添加图片并选择隐藏水印处理强度"
         else:
             key = "就绪：可直接拖入音频或视频文件"
         return self._t(key)
@@ -483,6 +503,9 @@ class MainWindow(QMainWindow):
             (self.start_button, "开始处理"),
         ):
             widget.setText(self._t(key))
+        self.hidden_metadata_checkbox.setText(self._t("同时清理 EXIF/XMP 元数据"))
+        self.hidden_metadata_checkbox.setToolTip(self._t(
+            "可选：不复制常见嵌入元数据。可能影响色彩信息和内容凭证；不保证清除全部隐藏标记。"))
         self.empty_state.set_texts(
             self._t("把媒体文件拖到这里"),
             self._t("支持常见音频和视频格式，也可以直接拖入整个文件夹"),
@@ -821,6 +844,7 @@ class MainWindow(QMainWindow):
         for item in (
             MODE_VIDEO, MODE_VIDEO_ENHANCE, MODE_IMAGE_ENHANCE,
             MODE_IMAGE_WATERMARK_REPAIR,
+            MODE_IMAGE_HIDDEN_WATERMARK,
             MODE_AUDIO, MODE_EXTRACT, MODE_COMPRESS,
             MODE_MUSIC_UNLOCK, MODE_DIRECT_DOWNLOAD,
         ):
@@ -878,6 +902,13 @@ class MainWindow(QMainWindow):
         watermark_layout.addWidget(self.watermark_edit_button)
         options_root.addWidget(self.watermark_region_panel)
         self.watermark_region_panel.setVisible(False)
+
+        self.hidden_metadata_checkbox = QCheckBox(self._t("同时清理 EXIF/XMP 元数据"))
+        self.hidden_metadata_checkbox.setObjectName("HiddenMetadataOption")
+        self.hidden_metadata_checkbox.setToolTip(self._t(
+            "可选：不复制常见嵌入元数据。可能影响色彩信息和内容凭证；不保证清除全部隐藏标记。"))
+        options_root.addWidget(self.hidden_metadata_checkbox)
+        self.hidden_metadata_checkbox.setVisible(False)
 
         self.output_label = QLabel(self._t("输出文件夹"))
         self.output_edit = QLineEdit()
@@ -1050,6 +1081,8 @@ class MainWindow(QMainWindow):
             index = combo.findData(str(value))
             if index >= 0:
                 combo.setCurrentIndex(index)
+        self.hidden_metadata_checkbox.setChecked(
+            self.settings.value("hidden_watermark/strip_metadata", False, type=bool))
 
     def _save_settings(self) -> None:
         self.settings.setValue("output_dir", self.output_edit.text().strip())
@@ -1058,6 +1091,8 @@ class MainWindow(QMainWindow):
         self.settings.setValue("quality", self.quality_combo.currentData())
         self.settings.setValue("encoder", self.encoder_combo.currentData())
         self.settings.setValue("resolution", self.resolution_combo.currentData())
+        self.settings.setValue("hidden_watermark/strip_metadata",
+                               self.hidden_metadata_checkbox.isChecked())
         self.settings.setValue("locale", self.language)
         self.settings.setValue("window/geometry", self.saveGeometry())
 
@@ -1149,9 +1184,9 @@ class MainWindow(QMainWindow):
                 self._t("视频文件") + f" ({patterns});;"
                 + self._t("所有文件") + " (*.*)"
             )
-        elif self._is_image_enhance_mode() or self._is_watermark_repair_mode():
+        elif self._is_image_enhance_mode() or self._is_watermark_repair_mode() or self._is_hidden_watermark_mode():
             title = self._t(
-                "选择要修复的图片文件" if self._is_watermark_repair_mode()
+                "选择要修复的图片文件" if self._is_watermark_repair_mode() or self._is_hidden_watermark_mode()
                 else "选择要增强的图片文件")
             patterns = " ".join(f"*{suffix}" for suffix in sorted(IMAGE_EXTENSIONS))
             file_filter = (
@@ -1183,7 +1218,7 @@ class MainWindow(QMainWindow):
             title = self._t("选择待解锁音乐文件夹")
         elif self._is_video_enhance_mode():
             title = self._t("选择视频文件夹")
-        elif self._is_image_enhance_mode() or self._is_watermark_repair_mode():
+        elif self._is_image_enhance_mode() or self._is_watermark_repair_mode() or self._is_hidden_watermark_mode():
             title = self._t("选择图片文件夹")
         else:
             title = self._t("选择媒体文件夹")
@@ -1203,7 +1238,7 @@ class MainWindow(QMainWindow):
             return is_unlockable_path(path)
         if self._is_video_enhance_mode():
             return path.suffix.lower() in VIDEO_EXTENSIONS
-        if self._is_image_enhance_mode() or self._is_watermark_repair_mode():
+        if self._is_image_enhance_mode() or self._is_watermark_repair_mode() or self._is_hidden_watermark_mode():
             return path.suffix.lower() in IMAGE_EXTENSIONS
         return path.suffix.lower() in SUPPORTED_EXTENSIONS
 
@@ -1438,11 +1473,13 @@ class MainWindow(QMainWindow):
         mode = self.mode_combo.currentData()
         enhance_mode = mode in {MODE_VIDEO_ENHANCE, MODE_IMAGE_ENHANCE}
         watermark_mode = mode == MODE_IMAGE_WATERMARK_REPAIR
+        hidden_mode = mode == MODE_IMAGE_HIDDEN_WATERMARK
         self._replace_combo_choices(
             self.quality_combo,
-            (WATERMARK_REPAIR_STRENGTHS if watermark_mode
+            (HIDDEN_WATERMARK_STRENGTHS if hidden_mode
+             else WATERMARK_REPAIR_STRENGTHS if watermark_mode
              else ENHANCE_STRENGTHS if enhance_mode else QUALITY_PRESETS),
-            ("标准修复" if watermark_mode
+            ("标准处理" if hidden_mode else "标准修复" if watermark_mode
              else "标准增强" if enhance_mode else "均衡压缩"),
         )
         self._replace_combo_choices(
@@ -1455,6 +1492,7 @@ class MainWindow(QMainWindow):
             MODE_VIDEO_ENHANCE: VIDEO_ENHANCE_TARGETS,
             MODE_IMAGE_ENHANCE: IMAGE_ENHANCE_TARGETS,
             MODE_IMAGE_WATERMARK_REPAIR: WATERMARK_REPAIR_TARGETS,
+            MODE_IMAGE_HIDDEN_WATERMARK: HIDDEN_WATERMARK_TARGETS,
             MODE_AUDIO: AUDIO_TARGETS,
             MODE_EXTRACT: EXTRACT_TARGETS,
             MODE_COMPRESS: COMPRESS_TARGETS,
@@ -1481,6 +1519,7 @@ class MainWindow(QMainWindow):
         self.resolution_label.setVisible(resolution_controls)
         self.resolution_combo.setVisible(resolution_controls)
         self.watermark_region_panel.setVisible(watermark_mode)
+        self.hidden_metadata_checkbox.setVisible(hidden_mode)
         self.url_input_panel.setVisible(download_mode)
         self.add_files_button.setVisible(not download_mode)
         self.add_folder_button.setVisible(not download_mode)
@@ -1497,6 +1536,7 @@ class MainWindow(QMainWindow):
         watermark_mode = self._is_watermark_repair_mode()
         self.quality_label.setText(self._t(
             "修复边缘" if watermark_mode else
+            "处理强度" if self._is_hidden_watermark_mode() else
             "增强强度" if enhance_mode else "质量方案"))
         self.resolution_label.setText(self._t(
             "输出分辨率" if enhance_mode else "分辨率限制"))
@@ -1573,6 +1613,21 @@ class MainWindow(QMainWindow):
                 self._t(key) for key in
                 ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
             ])
+        elif self._is_hidden_watermark_mode():
+            self.files_title.setText(self._t("待处理图片"))
+            self.files_hint.setText(self._t("拖入图片或文件夹，可批量处理隐藏水印"))
+            self.options_hint.setText(self._t(
+                "处理像素低位，按强度轻度平滑；支持可选元数据清理"))
+            self.empty_state.set_texts(
+                self._t("把要处理的图片拖到这里"),
+                self._t("支持 JPG、PNG、WebP、BMP 与 TIFF；原图不会改动"),
+                self._t("选择图片文件"),
+            )
+            self.start_button.setText(self._t("开始处理"))
+            self.table.setHorizontalHeaderLabels([
+                self._t(key) for key in
+                ("文件名", "类型", "大小", "状态 / 进度", "输出文件")
+            ])
         else:
             self.files_title.setText(self._t("待处理文件"))
             self.files_hint.setText(self._t("将文件或文件夹拖入此处，或使用下方按钮添加"))
@@ -1632,6 +1687,19 @@ class MainWindow(QMainWindow):
             self.quality_hint.setText(
                 self._t(hint) + "\n" + self._t(
                     "仅针对手动框选的可见区域修复画面；不提供隐藏标记的检测或定向清除。导出重新编码可能使 C2PA 等内容凭证失效，请保留原图。"))
+            return
+        if mode == MODE_IMAGE_HIDDEN_WATERMARK:
+            self.quality_combo.setEnabled(True)
+            self.quality_hint.setMinimumHeight(84)
+            hints = {
+                "轻度处理": "固定 RGB 最低 1 位，主要针对简单的像素低位标记。",
+                "标准处理": "轻度平滑并固定 RGB 最低 2 位，推荐先试用。",
+                "强力处理": "更强平滑并固定 RGB 最低 3 位，可能损失细节。",
+            }
+            self.quality_hint.setText(
+                self._t(hints.get(self.quality_combo.currentData(), hints["标准处理"]))
+                + "\n" + self._t(
+                    "仅尽力削弱部分像素隐藏标记；无法保证去除未知指纹或 C2PA 溯源。PNG 最适合低位处理；请保留原图并自行核验。"))
             return
         self.quality_hint.setMinimumHeight(0)
         raw_copy = mode == MODE_EXTRACT and target == EXTRACT_TARGETS[0]
@@ -1757,7 +1825,8 @@ class MainWindow(QMainWindow):
         self.progress_bars.clear()
 
         self.worker_thread = QThread(self)
-        self.worker = BatchWorker(paths, options, self.watermark_regions)
+        self.worker = BatchWorker(paths, options, self.watermark_regions,
+                                  self.hidden_metadata_checkbox.isChecked())
         self.worker.moveToThread(self.worker_thread)
         self.worker_thread.started.connect(self.worker.run)
         self.worker.item_started.connect(self._item_started)
@@ -1784,6 +1853,7 @@ class MainWindow(QMainWindow):
             self.encoder_combo,
             self.resolution_combo,
             self.watermark_edit_button,
+            self.hidden_metadata_checkbox,
             self.output_edit,
             self.browse_output_button,
         ):
@@ -1807,6 +1877,7 @@ class MainWindow(QMainWindow):
                     "正在解锁…" if running and self._is_unlock_mode() else
                     "正在增强…" if running and self._is_enhance_mode() else
                     "正在修复…" if running and self._is_watermark_repair_mode() else
+                    "正在处理隐藏水印…" if running and self._is_hidden_watermark_mode() else
                     "正在处理…" if running else "等待任务"))
 
     @Slot(int)

@@ -21,6 +21,7 @@ except ModuleNotFoundError:
     MainWindow = None
 else:
     from main import MainWindow
+    from watermark_editor import WatermarkRegionDialog
 
 from engine import MODE_EXTRACT, RAW_AUDIO
 from music_unlock import MODE_MUSIC_UNLOCK, UNLOCK_TARGET
@@ -30,7 +31,7 @@ from clarity_enhance import (
     MODE_VIDEO_ENHANCE,
 )
 from watermark_repair import MODE_IMAGE_WATERMARK_REPAIR, WatermarkRegion
-from watermark_editor import WatermarkRegionDialog
+from hidden_watermark import MODE_IMAGE_HIDDEN_WATERMARK
 
 
 @unittest.skipIf(QApplication is None, "PySide6 not installed in this environment")
@@ -357,6 +358,48 @@ class LanguageUITests(unittest.TestCase):
             dialog.grab().save(str(
                 Path(preview_dir) / "watermark-region-editor-zh_CN.png"
             ))
+
+    def test_hidden_watermark_mode_is_localized_and_metadata_choice_is_saved(self):
+        source = self.root / "owned-photo.png"
+        image = QImage(96, 64, QImage.Format.Format_ARGB32)
+        image.fill(QColor("#4477aa"))
+        self.assertTrue(image.save(str(source)))
+        self.window.mode_combo.setCurrentIndex(
+            self.window.mode_combo.findData(MODE_IMAGE_HIDDEN_WATERMARK))
+        self.window._add_paths([source])
+        self.assertEqual(self.window.quality_combo.currentData(), "标准处理")
+        self.assertEqual(self.window.target_combo.currentData(), "PNG（无损）")
+        self.assertFalse(self.window.hidden_metadata_checkbox.isHidden())
+        self.assertTrue(self.window.watermark_region_panel.isHidden())
+        self.assertTrue(self.window._path_matches_mode(source))
+        self.assertIn("C2PA", self.window.quality_hint.text())
+        self.assertFalse(self.window.hidden_metadata_checkbox.isChecked())
+        self.window.hidden_metadata_checkbox.setChecked(True)
+        self.window._save_settings()
+        self.assertEqual(self.settings.value("hidden_watermark/strip_metadata",
+                                             type=bool), True)
+
+        for locale, text in (("en_US", "Process hidden image watermarks"),
+                             ("zh_TW", "圖片隱藏浮水印處理"),
+                             ("zh_CN", MODE_IMAGE_HIDDEN_WATERMARK)):
+            self.window.language_combo.setCurrentIndex(
+                self.window.language_combo.findData(locale))
+            self.assertEqual(self.window.mode_combo.currentText(), text)
+            self.assertEqual(self.window.mode_combo.currentData(), MODE_IMAGE_HIDDEN_WATERMARK)
+            self.assertTrue(self.window.hidden_metadata_checkbox.isChecked())
+
+        preview_dir = os.environ.get("UI_SCREENSHOT_DIR")
+        if preview_dir:
+            Path(preview_dir).mkdir(parents=True, exist_ok=True)
+            self.window.resize(1280, 820)
+            self.window.show()
+            for theme in ("light", "dark"):
+                self.window.theme_combo.setCurrentIndex(
+                    self.window.theme_combo.findData(theme))
+                QApplication.processEvents()
+                self.window.grab().save(str(
+                    Path(preview_dir) / f"hidden-watermark-zh_CN-{theme}.png"
+                ))
 
     def test_previous_language_is_restored_on_restart(self):
         self.window.close()
