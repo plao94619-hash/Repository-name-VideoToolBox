@@ -10,7 +10,7 @@ from threading import Event
 from unittest.mock import patch
 
 from engine import (
-    ConversionCancelled, ConversionError, ConversionOptions,
+    ConversionCancelled, ConversionError, ConversionOptions, MediaInfo,
     ffmpeg_path, ffprobe_path,
 )
 from hidden_watermark import (
@@ -71,7 +71,8 @@ class HiddenWatermarkTests(unittest.TestCase):
                    side_effect=ConversionError("missing")):
             self.assertFalse(_ffmpeg_available())
 
-    def test_command_keeps_alpha_and_metadata_cleaning_is_explicit(self):
+    @patch("hidden_watermark.ffmpeg_path", return_value=Path("ffmpeg.exe"))
+    def test_command_keeps_alpha_and_metadata_cleaning_is_explicit(self, _ffmpeg):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             options = self.options(root)
@@ -142,7 +143,11 @@ class HiddenWatermarkTests(unittest.TestCase):
                 Path(command[-1]).write_bytes(b"incomplete")
                 raise ConversionError("simulated failure")
 
-            with patch("hidden_watermark._run_ffmpeg", side_effect=fail):
+            with patch("hidden_watermark.probe_media", return_value=MediaInfo(
+                duration=0.04, video_codec="png", width=12, height=10,
+            )), patch("hidden_watermark.display_dimensions", return_value=(12, 10)), \
+                 patch("hidden_watermark.ffmpeg_path", return_value=Path("ffmpeg.exe")), \
+                 patch("hidden_watermark._run_ffmpeg", side_effect=fail):
                 with self.assertRaises(ConversionError):
                     process_hidden_watermark(source, self.options(root))
             self.assertEqual(list(root.glob("*hidden_processed*")), [])
