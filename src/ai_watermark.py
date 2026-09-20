@@ -19,7 +19,7 @@ from hidden_watermark import build_hidden_pixel_filter
 from i18n import translate
 from watermark_repair import (
     WATERMARK_REPAIR_STRENGTHS, WATERMARK_REPAIR_TARGETS,
-    WatermarkRegion, _filter_path, display_dimensions, normalize_regions,
+    WatermarkRegion, display_dimensions, normalize_regions,
     padding_pixels, write_region_mask,
 )
 
@@ -70,6 +70,19 @@ def make_ai_output_path(source: Path, options: ConversionOptions) -> Path:
         index += 1
 
 
+def _graph_filter_path(path: Path) -> str:
+    """Escape the option value, then the enclosing FFmpeg filtergraph.
+
+    FFmpeg consumes two parsing layers for -filter_complex. Quoting a path at
+    only one layer breaks on apostrophes, semicolons and graph label brackets.
+    Arguments are passed directly to the process, without a shell layer.
+    """
+    value = str(path.resolve()).replace("\\", "/")
+    option = "".join(("\\" if char in "\\':" else "") + char for char in value)
+    return "".join(("\\" if char in "\\'[],;" else "") + char
+                   for char in option)
+
+
 def build_ai_watermark_command(
     source: Path,
     output: Path,
@@ -95,7 +108,7 @@ def build_ai_watermark_command(
 
     filters = []
     if mask is not None:
-        filters.append(f"removelogo=filename='{_filter_path(mask)}'")
+        filters.append(f"removelogo=filename={_graph_filter_path(mask)}")
     if process_hidden:
         filters.append(build_hidden_pixel_filter("标准处理", options.locale))
     # removelogo discards alpha on its own. Restore the original alpha plane
@@ -139,7 +152,8 @@ def repair_ai_watermark(
         raise ConversionError(translate("输入文件不存在。", options.locale))
     if source.suffix.lower() not in IMAGE_EXTENSIONS:
         raise ConversionError(translate("请选择受支持的图片文件。", options.locale))
-    checked = normalize_regions(regions) if regions else ()
+    selected = tuple(regions)
+    checked = normalize_regions(selected) if selected else ()
     if not checked and not process_hidden:
         raise ConversionError(translate(
             "请先框选可见角标或勾选隐藏像素处理。", options.locale))

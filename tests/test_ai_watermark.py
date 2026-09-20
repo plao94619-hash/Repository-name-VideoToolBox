@@ -135,6 +135,23 @@ class AIWatermarkTests(unittest.TestCase):
                 self.assertEqual(result.getpixel((5, 5))[3], 157)
                 self.assertGreater(result.getpixel((98, 79))[0], 240)
 
+    @unittest.skipUnless(_ffmpeg_available(), "requires FFmpeg and FFprobe")
+    def test_special_characters_in_input_output_and_mask_paths(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder) / "a [one];quote's test"
+            root.mkdir()
+            source = root / "漢字 sample'1.png"
+            original = _write_sample(source)
+            region = (WatermarkRegion(.69, .75, .24, .18),)
+            result = repair_ai_watermark(
+                source, self.options(root), region, True)
+            with Image.open(result.output_path) as output:
+                self.assertEqual(output.getpixel((5, 5))[3], 157)
+                self.assertLess(output.getpixel((98, 79))[0], 170)
+            self.assertEqual(source.read_bytes(), original)
+            self.assertEqual(list(root.glob(".*.ai-mask.pgm")), [])
+            self.assertEqual(list(root.glob(".*.partial.png")), [])
+
 
 if __name__ == "__main__":
     unittest.main()
