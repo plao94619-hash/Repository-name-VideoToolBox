@@ -191,11 +191,13 @@ class WatermarkRegionDialog(QDialog):
         regions: tuple[WatermarkRegion, ...],
         language: str,
         parent: QWidget | None = None,
+        ai_mode: bool = False,
     ):
         super().__init__(parent)
         self.language = language
         self.source = source
-        self.setWindowTitle(self._t("框选可见水印区域"))
+        self.setWindowTitle(self._t(
+            "框选 AI 图片可见角标" if ai_mode else "框选可见水印区域"))
         self.setModal(True)
         self.resize(940, 700)
         self.setMinimumSize(680, 540)
@@ -210,10 +212,13 @@ class WatermarkRegionDialog(QDialog):
         root.setContentsMargins(20, 18, 20, 18)
         root.setSpacing(12)
 
-        title = QLabel(self._t("框选需要修复的可见水印"))
+        title = QLabel(self._t(
+            "框选 AI 图片上的可见标记" if ai_mode else "框选需要修复的可见水印"))
         title.setObjectName("SectionTitle")
         root.addWidget(title)
         subtitle = QLabel(self._t(
+            "在预览图上框选可见角标或文字，可添加多个区域；尽量贴合边缘。"
+            if ai_mode else
             "在预览图上拖动鼠标框选水印，可添加多个区域；框选时尽量贴合水印边缘。"))
         subtitle.setObjectName("SectionHint")
         subtitle.setWordWrap(True)
@@ -246,6 +251,8 @@ class WatermarkRegionDialog(QDialog):
         root.addLayout(controls)
 
         notice = QLabel(self._t(
+            "仅用于有权编辑的图片。批量图片共用相对位置；可在主界面选用像素低位处理，但不保证清除 SynthID 等鲁棒标记。保留原图并核验。"
+            if ai_mode else
             "仅用于你拥有或获授权编辑的图片。队列中的图片将使用相同的相对位置。此功能不检测或定向清除隐藏标记；导出重新编码可能改变元数据或使 C2PA 等内容凭证失效，请保留原图。"))
         notice.setObjectName("QualityHint")
         notice.setWordWrap(True)

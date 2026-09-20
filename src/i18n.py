@@ -357,6 +357,34 @@ EN_US = {
     "增强完成": "Enhancement complete",
     "图片水印区域修复": "Repair visible image watermark areas",
     "图片隐藏水印处理": "Process hidden image watermarks",
+    "AI 图片水印修复": "Repair AI image watermarks",
+    "就绪：添加 AI 图片并框选可见角标":
+        "Ready: add AI images and select visible overlays",
+    "同时处理像素隐藏标记（可选）":
+        "Also process hidden pixel marks (optional)",
+    "对图片像素进行标准强度低位处理；可能损失细节，也不保证去除 SynthID 或其他鲁棒指纹。":
+        "Apply balanced low-bit pixel processing. Detail may be lost; SynthID and other robust marks may remain.",
+    "拖入 AI 图片或文件夹，可批量套用框选区域":
+        "Drop AI images or folders to apply selected areas in a batch",
+    "框选可见角标；可选在一次导出中同时处理像素隐藏标记":
+        "Select visible overlays; optionally process low-bit pixel marks in the same export",
+    "把 AI 图片拖到这里": "Drop AI images here",
+    "在预览图框选可见角标，由周围纹理修复；可选同时处理像素低位。无自动识别，也不保证清除 SynthID、C2PA 或其他鲁棒溯源标记。请保留原图并核验。":
+        "Select visible overlays to repair them using nearby texture. Optional low-bit treatment is available. No automatic detection or guaranteed removal of SynthID, C2PA, or robust provenance. Keep the original and verify the output.",
+    "框选 AI 图片可见角标": "Select visible AI image overlays",
+    "框选 AI 图片上的可见标记": "Select visible marks on the AI image",
+    "在预览图上框选可见角标或文字，可添加多个区域；尽量贴合边缘。":
+        "Drag over visible badges or text in the preview. Add multiple areas and select close to their edges.",
+    "仅用于有权编辑的图片。批量图片共用相对位置；可在主界面选用像素低位处理，但不保证清除 SynthID 等鲁棒标记。保留原图并核验。":
+        "Only edit images you are authorized to change. Batch images share relative positions. Optional low-bit treatment cannot guarantee removal of SynthID or other robust marks. Keep the original and verify.",
+    "请先框选可见角标或勾选隐藏像素处理。":
+        "Select visible overlays or enable hidden pixel processing first.",
+    "不支持的修复边缘强度：{strength}":
+        "Unsupported repair coverage: {strength}",
+    "正在处理 AI 图片水印…": "Processing AI image watermarks…",
+    "AI 图片水印处理完成": "AI image watermark processing complete",
+    "AI 图片处理完成 · {width}×{height} · 请核验结果":
+        "AI image processed · {width}×{height} · verify the output",
     "轻度处理": "Gentle processing",
     "标准处理": "Balanced processing",
     "强力处理": "Strong processing",
@@ -791,6 +819,33 @@ ZH_TW = {
     "增强完成": "增強完成",
     "图片水印区域修复": "圖片可見浮水印區域修復",
     "图片隐藏水印处理": "圖片隱藏浮水印處理",
+    "AI 图片水印修复": "AI 圖片浮水印修復",
+    "就绪：添加 AI 图片并框选可见角标":
+        "就緒：加入 AI 圖片並框選可見角標",
+    "同时处理像素隐藏标记（可选）": "同時處理像素隱藏標記（選用）",
+    "对图片像素进行标准强度低位处理；可能损失细节，也不保证去除 SynthID 或其他鲁棒指纹。":
+        "對圖片像素進行標準強度低位處理；可能損失細節，亦不保證去除 SynthID 或其他穩健指紋。",
+    "拖入 AI 图片或文件夹，可批量套用框选区域":
+        "拖入 AI 圖片或資料夾，可批次套用框選區域",
+    "框选可见角标；可选在一次导出中同时处理像素隐藏标记":
+        "框選可見角標；可選擇在一次匯出中同時處理像素隱藏標記",
+    "把 AI 图片拖到这里": "將 AI 圖片拖到這裡",
+    "在预览图框选可见角标，由周围纹理修复；可选同时处理像素低位。无自动识别，也不保证清除 SynthID、C2PA 或其他鲁棒溯源标记。请保留原图并核验。":
+        "在預覽圖框選可見角標，以周圍紋理修復；可選擇同時處理像素低位。無自動辨識，亦不保證清除 SynthID、C2PA 或其他穩健溯源標記。請保留原圖並查驗。",
+    "框选 AI 图片可见角标": "框選 AI 圖片可見角標",
+    "框选 AI 图片上的可见标记": "框選 AI 圖片上的可見標記",
+    "在预览图上框选可见角标或文字，可添加多个区域；尽量贴合边缘。":
+        "在預覽圖框選可見角標或文字，可加入多個區域；盡量貼合邊緣。",
+    "仅用于有权编辑的图片。批量图片共用相对位置；可在主界面选用像素低位处理，但不保证清除 SynthID 等鲁棒标记。保留原图并核验。":
+        "僅用於有權編輯的圖片。批次圖片共用相對位置；可在主介面選用像素低位處理，但不保證清除 SynthID 等穩健標記。請保留原圖並查驗。",
+    "请先框选可见角标或勾选隐藏像素处理。":
+        "請先框選可見角標或勾選隱藏像素處理。",
+    "不支持的修复边缘强度：{strength}":
+        "不支援的修復邊緣強度：{strength}",
+    "正在处理 AI 图片水印…": "正在處理 AI 圖片浮水印…",
+    "AI 图片水印处理完成": "AI 圖片浮水印處理完成",
+    "AI 图片处理完成 · {width}×{height} · 请核验结果":
+        "AI 圖片處理完成 · {width}×{height} · 請查驗結果",
     "轻度处理": "輕度處理",
     "标准处理": "標準處理",
     "强力处理": "強力處理",

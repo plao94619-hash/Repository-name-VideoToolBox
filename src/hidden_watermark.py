@@ -71,25 +71,14 @@ def make_hidden_output_path(source: Path, options: ConversionOptions) -> Path:
         index += 1
 
 
-def build_hidden_watermark_command(
-    source: Path,
-    output: Path,
-    options: ConversionOptions,
-    strip_metadata: bool = False,
-) -> list[str]:
+def build_hidden_pixel_filter(strength: str, locale: str = "zh_CN") -> str:
+    """Build the existing RGB low-bit filter for a single image frame."""
     try:
-        _extension, encoder = _TARGETS[options.target]
-    except KeyError as exc:
-        raise ConversionError(translate(
-            "不支持的图片输出格式：{target}",
-            options.locale, target=options.target,
-        )) from exc
-    try:
-        bits, sigma = _STRENGTHS[options.quality]
+        bits, sigma = _STRENGTHS[strength]
     except KeyError as exc:
         raise ConversionError(translate(
             "不支持的隐藏水印处理强度：{strength}",
-            options.locale, strength=options.quality,
+            locale, strength=strength,
         )) from exc
 
     # The RGB LUT makes the selected low-order bit planes constant, independent
@@ -104,13 +93,28 @@ def build_hidden_watermark_command(
     if sigma is not None:
         filters.append(f"format=gbrap,gblur=sigma={sigma}:planes=7")
     filters += ["format=rgba", f"lutrgb={lut}"]
+    return ",".join(filters)
 
+
+def build_hidden_watermark_command(
+    source: Path,
+    output: Path,
+    options: ConversionOptions,
+    strip_metadata: bool = False,
+) -> list[str]:
+    try:
+        _extension, encoder = _TARGETS[options.target]
+    except KeyError as exc:
+        raise ConversionError(translate(
+            "不支持的图片输出格式：{target}",
+            options.locale, target=options.target,
+        )) from exc
     command = [
         str(ffmpeg_path(options.locale)),
         "-hide_banner", "-y", "-nostdin", "-stats_period", "0.5",
         "-i", str(source),
         "-map", "0:v:0", "-map_metadata", "-1" if strip_metadata else "0",
-        "-vf", ",".join(filters),
+        "-vf", build_hidden_pixel_filter(options.quality, options.locale),
         "-frames:v", "1", "-c:v", encoder,
     ]
     if options.target == "PNG（无损）":

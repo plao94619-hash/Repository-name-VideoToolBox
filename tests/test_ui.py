@@ -32,6 +32,7 @@ from clarity_enhance import (
 )
 from watermark_repair import MODE_IMAGE_WATERMARK_REPAIR, WatermarkRegion
 from hidden_watermark import MODE_IMAGE_HIDDEN_WATERMARK
+from ai_watermark import MODE_AI_IMAGE_WATERMARK
 
 
 @unittest.skipIf(QApplication is None, "PySide6 not installed in this environment")
@@ -399,6 +400,59 @@ class LanguageUITests(unittest.TestCase):
                 QApplication.processEvents()
                 self.window.grab().save(str(
                     Path(preview_dir) / f"hidden-watermark-zh_CN-{theme}.png"
+                ))
+
+    def test_ai_watermark_mode_reuses_selection_and_is_localized(self):
+        source = self.root / "ai-owned.png"
+        image = QImage(320, 192, QImage.Format.Format_ARGB32)
+        image.fill(QColor("#50729e"))
+        self.assertTrue(image.save(str(source)))
+        self.window.mode_combo.setCurrentIndex(
+            self.window.mode_combo.findData(MODE_AI_IMAGE_WATERMARK))
+        self.window._add_paths([source])
+        self.assertEqual(self.window.target_combo.currentData(), "PNG（无损）")
+        self.assertEqual(self.window.quality_combo.currentData(), "标准修复")
+        self.assertFalse(self.window.watermark_region_panel.isHidden())
+        self.assertFalse(self.window.ai_hidden_checkbox.isHidden())
+        self.assertTrue(self.window.hidden_metadata_checkbox.isHidden())
+        self.assertTrue(self.window.watermark_edit_button.isEnabled())
+        self.assertIn("SynthID", self.window.quality_hint.text())
+        self.assertFalse(self.window.ai_hidden_checkbox.isChecked())
+        self.window.ai_hidden_checkbox.setChecked(True)
+        self.window._save_settings()
+        self.assertTrue(self.settings.value("ai_watermark/process_hidden", type=bool))
+
+        dialog = WatermarkRegionDialog(
+            source, (), self.window.language, self.window, ai_mode=True)
+        self.addCleanup(dialog.close)
+        self.assertIn("AI", dialog.windowTitle())
+        dialog.canvas.set_regions((WatermarkRegion(.72, .75, .20, .15),))
+        self.assertTrue(dialog.save_button.isEnabled())
+
+        for locale, mode_text in (
+            ("en_US", "Repair AI image watermarks"),
+            ("zh_TW", "AI 圖片浮水印修復"),
+            ("zh_CN", MODE_AI_IMAGE_WATERMARK),
+        ):
+            self.window.language_combo.setCurrentIndex(
+                self.window.language_combo.findData(locale))
+            self.assertEqual(self.window.mode_combo.currentText(), mode_text)
+            self.assertEqual(self.window.mode_combo.currentData(), MODE_AI_IMAGE_WATERMARK)
+            self.assertTrue(self.window.ai_hidden_checkbox.isChecked())
+
+        preview_dir = os.environ.get("UI_SCREENSHOT_DIR")
+        if preview_dir:
+            Path(preview_dir).mkdir(parents=True, exist_ok=True)
+            self.window.resize(1280, 860)
+            self.window.show()
+            for locale, theme in (("zh_CN", "light"), ("en_US", "dark")):
+                self.window.language_combo.setCurrentIndex(
+                    self.window.language_combo.findData(locale))
+                self.window.theme_combo.setCurrentIndex(
+                    self.window.theme_combo.findData(theme))
+                QApplication.processEvents()
+                self.window.grab().save(str(
+                    Path(preview_dir) / f"ai-watermark-{locale}-{theme}.png"
                 ))
 
     def test_previous_language_is_restored_on_restart(self):

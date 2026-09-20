@@ -39,6 +39,7 @@ class TranslationTests(unittest.TestCase):
             root / "direct_download.py", root / "clarity_enhance.py",
             root / "watermark_repair.py", root / "watermark_editor.py",
             root / "hidden_watermark.py",
+            root / "ai_watermark.py",
         ):
             tree = ast.parse(path.read_text(encoding="utf-8"))
             for node in ast.walk(tree):
