@@ -470,6 +470,44 @@ EN_US = {
         "Repaired · {count} area(s) · {width}×{height}",
     "可见水印区域修复适用于有权编辑的图片；重新编码可能改变元数据或使内容凭证失效。":
         "Visible watermark-area repair is for images you are authorized to edit. Re-encoding may change metadata or invalidate Content Credentials.",
+    "功能导航": "Workspaces",
+    "功能": "Tools",
+    "视频工具": "Video",
+    "音频工具": "Audio",
+    "图片工具": "Images",
+    "视频转换": "Convert video",
+    "视频增强": "Enhance video",
+    "提取音频": "Extract audio",
+    "音频转换": "Convert audio",
+    "本地音乐解锁": "Unlock music",
+    "图片增强": "Enhance images",
+    "可见水印修复": "Visible marks",
+    "隐藏水印处理": "Hidden marks",
+    "AI 水印修复": "AI watermark",
+    "切换功能会保留文件队列；开始前请确认文件类型适用于当前任务。":
+        "Files stay in the queue when you switch tools. Check file types before starting.",
+    "转换视频格式，按需要选择编码、画质与分辨率。":
+        "Convert video formats with your choice of codec, quality and resolution.",
+    "为视频降噪与锐化，按原比例提升至最高 4K。":
+        "Reduce noise and sharpen video, scaling proportionally up to 4K.",
+    "按画质目标压缩视频，兼顾体积与兼容性。":
+        "Compress video for your quality target, size and compatibility.",
+    "从视频导出音频，也可直接复制原始音轨。":
+        "Export audio from video or copy the original track without re-encoding.",
+    "转换常用音频格式，选择适合的质量方案。":
+        "Convert common audio formats with a suitable quality preset.",
+    "批量处理你有权使用的本地音乐文件。":
+        "Batch process local music files you are authorized to use.",
+    "粘贴公开音频文件直链，批量保存至本机。":
+        "Paste direct links to public audio files and save them locally.",
+    "改善图片观感，按比例放大至最高 4K。":
+        "Improve image appearance and scale proportionally up to 4K.",
+    "框选可见标记，由周围画面修复所选区域。":
+        "Select visible marks and repair the area using nearby pixels.",
+    "处理简单像素隐藏标记，可选清理常见元数据。":
+        "Process simple hidden pixel marks and optionally clear common metadata.",
+    "框选可见角标，可选处理简单像素低位标记。":
+        "Select visible corner marks and optionally process simple low-bit pixel marks.",
 }
 
 ZH_TW = {
@@ -931,6 +969,44 @@ ZH_TW = {
         "修復完成 · {count} 個區域 · {width}×{height}",
     "可见水印区域修复适用于有权编辑的图片；重新编码可能改变元数据或使内容凭证失效。":
         "可見浮水印區域修復適用於有權編輯的圖片；重新編碼可能改變中繼資料或使內容憑證失效。",
+    "功能导航": "功能導覽",
+    "功能": "功能",
+    "视频工具": "影片工具",
+    "音频工具": "音訊工具",
+    "图片工具": "圖片工具",
+    "视频转换": "影片轉換",
+    "视频增强": "影片增強",
+    "提取音频": "擷取音訊",
+    "音频转换": "音訊轉換",
+    "本地音乐解锁": "本機音樂解鎖",
+    "图片增强": "圖片增強",
+    "可见水印修复": "可見浮水印修復",
+    "隐藏水印处理": "隱藏浮水印處理",
+    "AI 水印修复": "AI 浮水印修復",
+    "切换功能会保留文件队列；开始前请确认文件类型适用于当前任务。":
+        "切換功能仍會保留檔案佇列；開始前請確認檔案類型適用於目前工作。",
+    "转换视频格式，按需要选择编码、画质与分辨率。":
+        "轉換影片格式，按需要選擇編碼、畫質與解析度。",
+    "为视频降噪与锐化，按原比例提升至最高 4K。":
+        "為影片降噪與銳化，按原比例提升至最高 4K。",
+    "按画质目标压缩视频，兼顾体积与兼容性。":
+        "按照畫質目標壓縮影片，兼顧大小與相容性。",
+    "从视频导出音频，也可直接复制原始音轨。":
+        "從影片匯出音訊，也可直接複製原始音軌。",
+    "转换常用音频格式，选择适合的质量方案。":
+        "轉換常用音訊格式，選擇適合的品質方案。",
+    "批量处理你有权使用的本地音乐文件。":
+        "批次處理你有權使用的本機音樂檔案。",
+    "粘贴公开音频文件直链，批量保存至本机。":
+        "貼上公開音訊檔案的直接連結，批次儲存到本機。",
+    "改善图片观感，按比例放大至最高 4K。":
+        "改善圖片觀感，按比例放大至最高 4K。",
+    "框选可见标记，由周围画面修复所选区域。":
+        "框選可見標記，由周圍畫面修復選取區域。",
+    "处理简单像素隐藏标记，可选清理常见元数据。":
+        "處理簡單像素隱藏標記，可選擇清理常見中繼資料。",
+    "框选可见角标，可选处理简单像素低位标记。":
+        "框選可見角標，可選擇處理簡單像素低位標記。",
 }
 
 CATALOGS = {"en_US": EN_US, "zh_TW": ZH_TW}

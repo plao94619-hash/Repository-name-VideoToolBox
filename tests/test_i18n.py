@@ -13,6 +13,7 @@ from i18n import (
     language_for_system_locale, translate,
 )
 from version import APP_VERSION
+from feature_navigation import FEATURE_MODES, FEATURE_SECTIONS, FEATURE_SUMMARIES
 
 
 class TranslationTests(unittest.TestCase):
@@ -65,6 +66,18 @@ class TranslationTests(unittest.TestCase):
         self.assertEqual(language_for_system_locale("zh-Hans-CN"), "zh_CN")
         self.assertEqual(language_for_system_locale("en_SG"), "en_US")
         self.assertEqual(language_for_system_locale("zh_CN"), "zh_CN")
+
+    def test_every_workspace_heading_and_summary_is_localized(self):
+        self.assertEqual(set(FEATURE_MODES), set(FEATURE_SUMMARIES))
+        self.assertEqual(len(FEATURE_MODES), len(set(FEATURE_MODES)))
+        for group, entries in FEATURE_SECTIONS:
+            for key in (group, *(name for _mode, name, _icon in entries)):
+                self.assertIn(key, EN_US)
+                self.assertIn(key, ZH_TW)
+            for mode, _short_label, _icon in entries:
+                for key in (mode, FEATURE_SUMMARIES[mode]):
+                    self.assertIn(key, EN_US)
+                    self.assertIn(key, ZH_TW)
 
     def test_locale_does_not_change_engine_option_identifiers(self):
         with tempfile.TemporaryDirectory() as folder:

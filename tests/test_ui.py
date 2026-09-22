@@ -23,7 +23,7 @@ else:
     from main import MainWindow
     from watermark_editor import WatermarkRegionDialog
 
-from engine import MODE_EXTRACT, RAW_AUDIO
+from engine import MODE_AUDIO, MODE_EXTRACT, MODE_VIDEO, RAW_AUDIO
 from music_unlock import MODE_MUSIC_UNLOCK, UNLOCK_TARGET
 from direct_download import DIRECT_TARGET, MODE_DIRECT_DOWNLOAD, DirectDownloadTask
 from clarity_enhance import (
@@ -33,6 +33,7 @@ from clarity_enhance import (
 from watermark_repair import MODE_IMAGE_WATERMARK_REPAIR, WatermarkRegion
 from hidden_watermark import MODE_IMAGE_HIDDEN_WATERMARK
 from ai_watermark import MODE_AI_IMAGE_WATERMARK
+from feature_navigation import FEATURE_MODES
 
 
 @unittest.skipIf(QApplication is None, "PySide6 not installed in this environment")
@@ -81,6 +82,132 @@ class LanguageUITests(unittest.TestCase):
             self.assertEqual(self.settings.value("mode"), MODE_EXTRACT)
             self.assertEqual(self.settings.value("target"), RAW_AUDIO)
             self.assertEqual(self.settings.value("locale"), locale)
+
+    def test_all_features_have_independent_pages_and_shared_task_controls(self):
+        self.assertEqual(self.window.feature_stack.count(), len(FEATURE_MODES))
+        self.assertEqual(len(self.window.feature_pages), len(FEATURE_MODES))
+        page_ids = {id(page) for page in self.window.feature_pages.values()}
+        self.assertEqual(len(page_ids), len(FEATURE_MODES))
+        video = self.root / "source.mp4"
+        video.write_bytes(b"test")
+        self.window.mode_combo.setCurrentIndex(
+            self.window.mode_combo.findData(FEATURE_MODES[0]))
+        self.window._add_paths([video])
+
+        for index, mode in enumerate(FEATURE_MODES):
+            self.window.feature_buttons[mode].click()
+            self.assertEqual(self.window.mode_combo.currentData(), mode)
+            self.assertIs(self.window.feature_stack.currentWidget(),
+                          self.window.feature_pages[mode])
+            self.assertIs(self.window.workspace_container.parentWidget(),
+                          self.window.feature_pages[mode])
+            self.assertEqual(self.window.feature_headers[mode][1].text(), mode)
+            self.assertEqual(self.window.compact_group_combo.currentData(),
+                             self.window.feature_details[mode][0])
+            self.assertEqual(self.window.compact_modes[
+                self.window.compact_nav.currentIndex()], mode)
+            self.assertEqual(self.window.table.rowCount(), 1)
+            self.assertTrue(self.window.feature_buttons[mode].isChecked())
+            self.assertEqual(sum(button.isChecked() for button in
+                                 self.window.feature_buttons.values()), 1)
+
+        self.window.compact_group_combo.setCurrentIndex(
+            self.window.compact_group_combo.findData("音频工具"))
+        self.window.compact_nav.setCurrentIndex(
+            self.window.compact_modes.index(MODE_DIRECT_DOWNLOAD))
+        self.assertEqual(self.window.mode_combo.currentData(), MODE_DIRECT_DOWNLOAD)
+        self.assertIs(self.window.url_input_panel.parentWidget(),
+                      self.window.feature_pages[MODE_DIRECT_DOWNLOAD])
+        self.window.language_combo.setCurrentIndex(
+            self.window.language_combo.findData("en_US"))
+        self.assertEqual(self.window.feature_headers[MODE_DIRECT_DOWNLOAD][1].text(),
+                         "Authorized audio")
+        self.assertEqual(self.window.feature_buttons[MODE_DIRECT_DOWNLOAD].text(),
+                         "Authorized audio")
+        self.assertEqual(self.window.table.item(0, 0).data(Qt.ItemDataRole.UserRole),
+                         str(video.resolve()))
+        self.window.mode_combo.setCurrentIndex(
+            self.window.mode_combo.findData(FEATURE_MODES[0]))
+        self.assertEqual(self.window._current_paths(), [video.resolve()])
+
+    def test_feature_navigation_resizes_and_is_disabled_during_a_task(self):
+        self.window.resize(850, 640)
+        self.window.show()
+        QApplication.processEvents()
+        self.assertTrue(self.window.compact_nav.isVisible())
+        self.assertFalse(self.window.sidebar.isVisible())
+        self.window.compact_group_combo.setCurrentIndex(
+            self.window.compact_group_combo.findData("音频工具"))
+        self.window.compact_nav.setCurrentIndex(
+            self.window.compact_modes.index(MODE_DIRECT_DOWNLOAD))
+        QApplication.processEvents()
+        self.assertTrue(self.window.url_input.isVisible())
+        self.assertLess(self.window.url_input.mapTo(self.window,
+                         self.window.url_input.rect().topLeft()).y(),
+                        self.window.start_button.mapTo(self.window,
+                         self.window.start_button.rect().topLeft()).y())
+        preview_dir = os.environ.get("UI_SCREENSHOT_DIR")
+        if preview_dir:
+            Path(preview_dir).mkdir(parents=True, exist_ok=True)
+            self.window.language_combo.setCurrentIndex(
+                self.window.language_combo.findData("en_US"))
+            self.window.theme_combo.setCurrentIndex(
+                self.window.theme_combo.findData("dark"))
+            QApplication.processEvents()
+            self.window.grab().save(str(
+                Path(preview_dir) / "navigation-compact-download-en_US-dark.png"))
+        self.window._set_running(True)
+        self.assertFalse(self.window.compact_nav.isEnabled())
+        self.assertFalse(self.window.compact_group_combo.isEnabled())
+        self.assertFalse(any(button.isEnabled() for button in
+                             self.window.feature_buttons.values()))
+        self.window._set_running(False)
+        self.assertTrue(self.window.compact_nav.isEnabled())
+
+        self.window.hide()
+        self.window.resize(1440, 850)
+        self.window._adapt_layout()
+        self.window.show()
+        QApplication.processEvents()
+        self.assertFalse(self.window.sidebar.isHidden())
+        self.assertTrue(self.window.compact_navigation.isHidden())
+        self.assertTrue(self.window.workspace_wide)
+        for button in self.window.feature_buttons.values():
+            self.assertGreaterEqual(
+                button.width(),
+                button.fontMetrics().horizontalAdvance(button.text()) + 38,
+                button.text(),
+            )
+        if preview_dir:
+            for mode, theme in (
+                (FEATURE_MODES[0], "light"),
+                (MODE_EXTRACT, "dark"),
+                (MODE_AI_IMAGE_WATERMARK, "dark"),
+            ):
+                self.window.mode_combo.setCurrentIndex(
+                    self.window.mode_combo.findData(mode))
+                self.window.theme_combo.setCurrentIndex(
+                    self.window.theme_combo.findData(theme))
+                QApplication.processEvents()
+                self.window.grab().save(str(Path(preview_dir) /
+                    f"navigation-wide-{FEATURE_MODES.index(mode)}-en_US-{theme}.png"))
+
+    def test_feature_pages_do_not_overflow_at_layout_breakpoints(self):
+        self.window.language_combo.setCurrentIndex(
+            self.window.language_combo.findData("en_US"))
+        self.window.show()
+        for width in (850, 1160, 1280, 1360, 1490, 1530, 1280, 850):
+            self.window.resize(width, 850)
+            QApplication.processEvents()
+            for mode in (MODE_VIDEO, MODE_AUDIO, MODE_AI_IMAGE_WATERMARK):
+                self.window.mode_combo.setCurrentIndex(
+                    self.window.mode_combo.findData(mode))
+                QApplication.processEvents()
+                self.assertLessEqual(
+                    self.window.content_scroll.widget().width(),
+                    self.window.content_scroll.viewport().width(),
+                    f"{width}px, {mode}",
+                )
 
     def test_music_unlock_mode_is_localized_and_accepts_protected_files(self):
         self.window.mode_combo.setCurrentIndex(

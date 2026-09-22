@@ -5,11 +5,12 @@ import sys
 from pathlib import Path
 from threading import Event
 
-from PySide6.QtCore import QObject, QLocale, QSettings, QSize, QThread, QUrl, Qt, Signal, Slot
+from PySide6.QtCore import QObject, QLocale, QSettings, QSignalBlocker, QSize, QThread, QUrl, Qt, Signal, Slot
 from PySide6.QtGui import QAction, QBrush, QColor, QCloseEvent, QDesktopServices, QDragEnterEvent, QDragLeaveEvent, QDropEvent, QGuiApplication, QResizeEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QButtonGroup,
     QComboBox,
     QCheckBox,
     QDialog,
@@ -30,6 +31,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QStatusBar,
     QStackedWidget,
+    QTabBar,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -108,6 +110,7 @@ from ui_theme import COLORS, make_palette, make_stylesheet
 from ui_components import (
     BackgroundCanvas, BrandMark, EmptyDropZone, MediaTableDelegate, make_icon,
 )
+from feature_navigation import FEATURE_MODES, FEATURE_SECTIONS, FEATURE_SUMMARIES
 
 
 def readable_size(size: int) -> str:
@@ -246,7 +249,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(f"{APP_NAME} {APP_VERSION}")
         self.setMinimumSize(850, 600)
-        self.resize(1200, 800)
+        self.resize(1420, 840)
         self.setAcceptDrops(True)
 
         self.settings = QSettings("UniversalMediaToolbox", "UniversalMediaToolbox")
@@ -464,6 +467,19 @@ class MainWindow(QMainWindow):
         self.remove_background_action.setIcon(make_icon("clear", colors["muted"], 16))
         self.notices_action.setIcon(make_icon("shield", colors["muted"], 16))
         self.about_action.setIcon(make_icon("info", colors["muted"], 16))
+        for mode, button in self.feature_buttons.items():
+            name = self.feature_icons[mode]
+            button.setIcon(make_icon(
+                name, colors["accent"] if button.isChecked() else colors["muted"], 18))
+            button.setIconSize(QSize(18, 18))
+        for index, mode in enumerate(self.compact_modes):
+            self.compact_nav.setTabIcon(index, make_icon(
+                self.feature_icons[mode],
+                colors["accent"] if index == self.compact_nav.currentIndex()
+                else colors["muted"], 17))
+        for mode, label in self.feature_glyphs.items():
+            label.setPixmap(make_icon(
+                self.feature_icons[mode], colors["accent"], 25).pixmap(25, 25))
 
     def _refresh_status_colors(self) -> None:
         color = COLORS.get(getattr(self, "effective_theme", "light"), COLORS["light"])
@@ -562,8 +578,231 @@ class MainWindow(QMainWindow):
         self._update_watermark_region_ui()
         self._update_quality_hint()
         self._update_mode_copy()
+        self._retranslate_feature_navigation()
         if not self.worker:
             self.overall_label.setText(self._t("等待任务"))
+
+    def _retranslate_feature_navigation(self) -> None:
+        self.navigation_title.setText(self._t("功能导航"))
+        for section, label in self.feature_sections:
+            label.setText(self._t(section))
+        for index, group in enumerate(self.compact_groups):
+            self.compact_group_combo.setItemText(index, self._t(group))
+        for index, mode in enumerate(FEATURE_MODES):
+            group, short_label, _icon = self.feature_details[mode]
+            self.feature_buttons[mode].setText(self._t(short_label))
+            self.feature_buttons[mode].setToolTip(
+                self._t(mode) + "\n" + self._t(FEATURE_SUMMARIES[mode]))
+            eyebrow, title, description = self.feature_headers[mode]
+            eyebrow.setText(f"{self._t(group)}  /  {index + 1:02d}")
+            title.setText(self._t(mode))
+            description.setText(self._t(FEATURE_SUMMARIES[mode]))
+            self.feature_queue_notes[mode].setText(self._t(
+                "切换功能会保留文件队列；开始前请确认文件类型适用于当前任务。"))
+        for index, mode in enumerate(self.compact_modes):
+            self.compact_nav.setTabText(
+                index, self._t(self.feature_details[mode][1]))
+            self.compact_nav.setTabToolTip(index, self._t(mode))
+
+    def _build_navigation(self, root: QVBoxLayout) -> None:
+        self.navigation_shell = QWidget()
+        self.navigation_shell.setObjectName("NavigationShell")
+        navigation_layout = QHBoxLayout(self.navigation_shell)
+        navigation_layout.setContentsMargins(0, 0, 0, 0)
+        navigation_layout.setSpacing(0)
+
+        self.sidebar = QFrame()
+        self.sidebar.setObjectName("FeatureSidebar")
+        self.sidebar.setFixedWidth(220)
+        sidebar_layout = QVBoxLayout(self.sidebar)
+        sidebar_layout.setContentsMargins(13, 21, 13, 18)
+        sidebar_layout.setSpacing(15)
+        self.navigation_title = QLabel(self._t("功能导航"))
+        self.navigation_title.setObjectName("NavigationTitle")
+        sidebar_layout.addWidget(self.navigation_title)
+
+        sidebar_scroll = QScrollArea()
+        sidebar_scroll.setObjectName("SidebarScroll")
+        sidebar_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        sidebar_scroll.setWidgetResizable(True)
+        sidebar_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        sidebar_contents = QWidget()
+        sidebar_contents.setObjectName("SidebarContents")
+        sidebar_items = QVBoxLayout(sidebar_contents)
+        sidebar_items.setContentsMargins(0, 0, 0, 0)
+        sidebar_items.setSpacing(3)
+        self.feature_buttons: dict[str, QPushButton] = {}
+        self.feature_icons: dict[str, str] = {}
+        self.feature_details: dict[str, tuple[str, str, str]] = {}
+        self.feature_sections: list[tuple[str, QLabel]] = []
+        self.feature_button_group = QButtonGroup(self)
+        self.feature_button_group.setExclusive(True)
+        self.compact_groups = tuple(group for group, _entries in FEATURE_SECTIONS)
+        self.compact_group_modes = {
+            group: tuple(mode for mode, _name, _icon in entries)
+            for group, entries in FEATURE_SECTIONS
+        }
+        for group, entries in FEATURE_SECTIONS:
+            heading = QLabel(self._t(group))
+            heading.setObjectName("NavigationGroup")
+            sidebar_items.addWidget(heading)
+            self.feature_sections.append((group, heading))
+            for mode, short_label, icon in entries:
+                button = QPushButton(self._t(short_label))
+                button.setObjectName("FeatureNavButton")
+                button.setCheckable(True)
+                button.setToolTip(self._t(mode))
+                button.clicked.connect(
+                    lambda _checked=False, selected=mode: self._choose_feature(selected))
+                sidebar_items.addWidget(button)
+                self.feature_button_group.addButton(button)
+                self.feature_buttons[mode] = button
+                self.feature_icons[mode] = icon
+                self.feature_details[mode] = (group, short_label, icon)
+            sidebar_items.addSpacing(12)
+        sidebar_items.addStretch(1)
+        sidebar_scroll.setWidget(sidebar_contents)
+        sidebar_layout.addWidget(sidebar_scroll, 1)
+        navigation_layout.addWidget(self.sidebar)
+
+        self.main_column = QWidget()
+        self.main_column.setObjectName("MainColumn")
+        self.main_column_layout = QVBoxLayout(self.main_column)
+        self.main_column_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_column_layout.setSpacing(0)
+        self.compact_navigation = QFrame()
+        self.compact_navigation.setObjectName("CompactNavigationFrame")
+        compact_layout = QHBoxLayout(self.compact_navigation)
+        compact_layout.setContentsMargins(14, 7, 14, 7)
+        compact_layout.setSpacing(12)
+        self.compact_group_combo = QComboBox()
+        self.compact_group_combo.setObjectName("CompactGroupCombo")
+        self.compact_group_combo.setMinimumWidth(130)
+        self.compact_group_combo.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        for group in self.compact_groups:
+            self.compact_group_combo.addItem(self._t(group), group)
+        self.compact_group_combo.currentIndexChanged.connect(
+            self._choose_feature_group)
+        compact_layout.addWidget(self.compact_group_combo)
+        self.compact_nav = QTabBar()
+        self.compact_nav.setObjectName("CompactNavigation")
+        self.compact_nav.setDocumentMode(True)
+        self.compact_nav.setExpanding(False)
+        self.compact_nav.setUsesScrollButtons(True)
+        self.compact_nav.setElideMode(Qt.TextElideMode.ElideNone)
+        self.compact_nav.setDrawBase(False)
+        self.compact_modes = self.compact_group_modes[self.compact_groups[0]]
+        for mode in self.compact_modes:
+            self.compact_nav.addTab(self._t(self.feature_details[mode][1]))
+        self.compact_nav.currentChanged.connect(self._choose_feature_tab)
+        compact_layout.addWidget(self.compact_nav, 1)
+        self.main_column_layout.addWidget(self.compact_navigation)
+        navigation_layout.addWidget(self.main_column, 1)
+        root.addWidget(self.navigation_shell, 1)
+
+    def _build_feature_pages(self) -> None:
+        self.feature_stack = QStackedWidget()
+        self.feature_stack.setObjectName("FeatureStack")
+        self.feature_page_layouts: dict[str, QVBoxLayout] = {}
+        self.feature_pages: dict[str, QWidget] = {}
+        self.feature_headers: dict[str, tuple[QLabel, QLabel, QLabel]] = {}
+        self.feature_glyphs: dict[str, QLabel] = {}
+        self.feature_queue_notes: dict[str, QLabel] = {}
+        for index, mode in enumerate(FEATURE_MODES):
+            page = QWidget()
+            page.setObjectName("FeaturePage")
+            page_layout = QVBoxLayout(page)
+            page_layout.setContentsMargins(0, 0, 0, 0)
+            page_layout.setSpacing(16)
+
+            hero = QFrame()
+            hero.setObjectName("FeatureHero")
+            hero_layout = QHBoxLayout(hero)
+            hero_layout.setContentsMargins(21, 17, 21, 17)
+            hero_layout.setSpacing(15)
+            glyph = QLabel()
+            glyph.setObjectName("FeatureGlyph")
+            glyph.setFixedSize(49, 49)
+            glyph.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            hero_layout.addWidget(glyph, 0, Qt.AlignmentFlag.AlignTop)
+            copy = QVBoxLayout()
+            copy.setContentsMargins(0, 0, 0, 0)
+            copy.setSpacing(3)
+            group = self.feature_details[mode][0]
+            eyebrow = QLabel(f"{self._t(group)}  /  {index + 1:02d}")
+            eyebrow.setObjectName("FeatureEyebrow")
+            title = QLabel(self._t(mode))
+            title.setObjectName("FeatureTitle")
+            title.setWordWrap(True)
+            description = QLabel(self._t(FEATURE_SUMMARIES[mode]))
+            description.setObjectName("FeatureDescription")
+            description.setWordWrap(True)
+            queue_note = QLabel(self._t(
+                "切换功能会保留文件队列；开始前请确认文件类型适用于当前任务。"))
+            queue_note.setObjectName("FeatureQueueNote")
+            queue_note.setWordWrap(True)
+            copy.addWidget(eyebrow)
+            copy.addWidget(title)
+            copy.addWidget(description)
+            copy.addWidget(queue_note)
+            hero_layout.addLayout(copy, 1)
+            page_layout.addWidget(hero)
+            self.feature_stack.addWidget(page)
+            self.feature_page_layouts[mode] = page_layout
+            self.feature_pages[mode] = page
+            self.feature_headers[mode] = (eyebrow, title, description)
+            self.feature_glyphs[mode] = glyph
+            self.feature_queue_notes[mode] = queue_note
+        self.content_root.addWidget(self.feature_stack, 1)
+
+    def _choose_feature(self, mode: str) -> None:
+        if self.worker:
+            return
+        index = self.mode_combo.findData(mode)
+        if index >= 0:
+            self.mode_combo.setCurrentIndex(index)
+
+    @Slot(int)
+    def _choose_feature_tab(self, index: int) -> None:
+        if hasattr(self, "mode_combo") and 0 <= index < len(self.compact_modes):
+            self._choose_feature(self.compact_modes[index])
+
+    @Slot(int)
+    def _choose_feature_group(self, _index: int) -> None:
+        group = self.compact_group_combo.currentData()
+        if hasattr(self, "mode_combo") and group in self.compact_group_modes:
+            self._choose_feature(self.compact_group_modes[group][0])
+
+    def _activate_feature_page(self, mode: str) -> None:
+        if mode not in self.feature_pages:
+            return
+        page = self.feature_pages[mode]
+        if self.feature_stack.currentWidget() is not page:
+            old_parent = self.workspace_container.parentWidget()
+            if old_parent and old_parent.layout():
+                old_parent.layout().removeWidget(self.workspace_container)
+            self.feature_page_layouts[mode].addWidget(self.workspace_container, 1)
+            self.feature_stack.setCurrentWidget(page)
+            self.workspace_container.show()
+            self.content_scroll.verticalScrollBar().setValue(0)
+        self.feature_buttons[mode].setChecked(True)
+        group = self.feature_details[mode][0]
+        if group != self.compact_group_combo.currentData():
+            with QSignalBlocker(self.compact_group_combo):
+                self.compact_group_combo.setCurrentIndex(
+                    self.compact_group_combo.findData(group))
+        if self.compact_modes != self.compact_group_modes[group]:
+            self.compact_modes = self.compact_group_modes[group]
+            with QSignalBlocker(self.compact_nav):
+                while self.compact_nav.count():
+                    self.compact_nav.removeTab(self.compact_nav.count() - 1)
+                for item in self.compact_modes:
+                    self.compact_nav.addTab(self._t(self.feature_details[item][1]))
+        with QSignalBlocker(self.compact_nav):
+            self.compact_nav.setCurrentIndex(self.compact_modes.index(mode))
+        if hasattr(self, "effective_theme"):
+            self._apply_icons(COLORS[self.effective_theme])
 
     def _build_actions(self) -> None:
         self.add_action = QAction(self._t("添加文件"), self)
@@ -626,6 +865,7 @@ class MainWindow(QMainWindow):
         self.content_root = QVBoxLayout(content)
         self.content_root.setContentsMargins(24, 20, 24, 20)
         self.content_root.setSpacing(16)
+        self._build_navigation(root)
 
         self.header_panel = QFrame()
         self.header_panel.setObjectName("HeaderPanel")
@@ -719,6 +959,7 @@ class MainWindow(QMainWindow):
         )
         self.header_layout.setColumnStretch(0, 1)
         self.content_root.addWidget(self.header_panel)
+        self._build_feature_pages()
 
         self.workspace_layout = QGridLayout()
         self.workspace_layout.setContentsMargins(0, 0, 0, 0)
@@ -754,8 +995,10 @@ class MainWindow(QMainWindow):
         file_heading.addWidget(self.file_count_label)
         file_layout.addLayout(file_heading)
 
-        toolbar = QHBoxLayout()
-        toolbar.setSpacing(8)
+        toolbar = QGridLayout()
+        toolbar.setHorizontalSpacing(8)
+        toolbar.setVerticalSpacing(8)
+        self.file_toolbar = toolbar
         self.add_files_button = QPushButton(self._t("添加文件"))
         self.add_folder_button = QPushButton(self._t("添加文件夹"))
         self.remove_button = QPushButton(self._t("移除选中"))
@@ -768,11 +1011,12 @@ class MainWindow(QMainWindow):
         self.add_folder_button.clicked.connect(self.add_folder)
         self.remove_button.clicked.connect(self.remove_selected)
         self.clear_button.clicked.connect(self.clear_files)
-        toolbar.addWidget(self.add_files_button)
-        toolbar.addWidget(self.add_folder_button)
-        toolbar.addWidget(self.remove_button)
-        toolbar.addWidget(self.clear_button)
-        toolbar.addStretch()
+        for index, button in enumerate((
+            self.add_files_button, self.add_folder_button,
+            self.remove_button, self.clear_button,
+        )):
+            toolbar.addWidget(button, 0, index)
+        toolbar.setColumnStretch(4, 1)
         file_layout.addLayout(toolbar)
 
         self.url_input_panel = QFrame()
@@ -795,7 +1039,10 @@ class MainWindow(QMainWindow):
         url_input_layout.addWidget(
             self.add_links_button, 0, Qt.AlignmentFlag.AlignBottom)
         self.url_input_panel.setVisible(False)
-        file_layout.addWidget(self.url_input_panel)
+        # The direct-download workspace leads with its own URL input. Keeping
+        # this above the queue makes the primary task visible at small sizes.
+        self.feature_page_layouts[MODE_DIRECT_DOWNLOAD].addWidget(
+            self.url_input_panel)
 
         self.file_stack = QStackedWidget()
         self.file_stack.setMinimumHeight(280)
@@ -964,9 +1211,13 @@ class MainWindow(QMainWindow):
 
         self.workspace_layout.addWidget(self.file_panel, 0, 0)
         self.workspace_layout.addWidget(self.options_panel, 0, 1)
-        self.content_root.addLayout(self.workspace_layout, 1)
+        self.workspace_container = QWidget()
+        self.workspace_container.setObjectName("WorkspaceContainer")
+        self.workspace_container.setLayout(self.workspace_layout)
+        self.feature_page_layouts[FEATURE_MODES[0]].addWidget(
+            self.workspace_container, 1)
         self.content_scroll.setWidget(content)
-        root.addWidget(self.content_scroll, 1)
+        self.main_column_layout.addWidget(self.content_scroll, 1)
 
         action_panel = QFrame()
         action_panel.setObjectName("ActionPanel")
@@ -1052,6 +1303,22 @@ class MainWindow(QMainWindow):
     def _adapt_layout(self) -> None:
         if not hasattr(self, "workspace_layout"):
             return
+        sidebar_visible = self.width() >= 1360
+        self.sidebar.setVisible(sidebar_visible)
+        self.compact_navigation.setVisible(not sidebar_visible)
+        toolbar_wrapped = (1160 <= self.width() <
+                           (1530 if sidebar_visible else 1320))
+        if getattr(self, "toolbar_wrapped", None) != toolbar_wrapped:
+            self.toolbar_wrapped = toolbar_wrapped
+            buttons = (self.add_files_button, self.add_folder_button,
+                       self.remove_button, self.clear_button)
+            for button in buttons:
+                self.file_toolbar.removeWidget(button)
+            for index, button in enumerate(buttons):
+                row, column = divmod(index, 2) if toolbar_wrapped else (0, index)
+                self.file_toolbar.addWidget(button, row, column)
+            self.file_toolbar.setColumnStretch(2, 1 if toolbar_wrapped else 0)
+            self.file_toolbar.setColumnStretch(4, 0 if toolbar_wrapped else 1)
         wide = self.width() >= 1160
         header_compact = self.width() < 1110
         if getattr(self, "workspace_wide", None) != wide:
@@ -1080,6 +1347,8 @@ class MainWindow(QMainWindow):
 
         if getattr(self, "header_compact", None) != header_compact:
             self.header_compact = header_compact
+            self.hero_subtitle.setVisible(not header_compact)
+            self.privacy_badge.setVisible(not header_compact)
             self.header_layout.removeWidget(self.header_controls)
             if header_compact:
                 self.header_layout.addWidget(
@@ -1507,6 +1776,7 @@ class MainWindow(QMainWindow):
     @Slot()
     def _update_mode(self) -> None:
         mode = self.mode_combo.currentData()
+        self._activate_feature_page(mode)
         enhance_mode = mode in {MODE_VIDEO_ENHANCE, MODE_IMAGE_ENHANCE}
         watermark_mode = mode == MODE_IMAGE_WATERMARK_REPAIR
         hidden_mode = mode == MODE_IMAGE_HIDDEN_WATERMARK
@@ -1907,6 +2177,10 @@ class MainWindow(QMainWindow):
         self.worker_thread.start()
 
     def _set_running(self, running: bool) -> None:
+        self.compact_nav.setEnabled(not running)
+        self.compact_group_combo.setEnabled(not running)
+        for button in self.feature_buttons.values():
+            button.setEnabled(not running)
         for widget in (
             self.add_files_button,
             self.add_folder_button,

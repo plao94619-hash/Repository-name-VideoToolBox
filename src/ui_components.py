@@ -45,6 +45,21 @@ _ICON_CONTENT = {
     "select": '<rect x="4" y="4" width="16" height="16" rx="3"/>'
               '<path d="M8 3v3M3 8h3M18 8h3M8 18v3M16 3v3M3 16h3M18 16h3M16 18v3"/>'
               '<path d="m10 15 2-6 2 6-2-1-2 1Z"/>',
+    "video": '<rect x="3" y="5" width="18" height="14" rx="3"/>'
+             '<path d="m10 9 5 3-5 3V9Z"/>',
+    "spark": '<path d="m12 2 1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2Z"/>'
+             '<path d="m19 17 .8 2.2L22 20l-2.2.8L19 23l-.8-2.2L16 20l2.2-.8L19 17Z"/>',
+    "compress": '<rect x="3" y="3" width="18" height="18" rx="3"/>'
+                '<path d="M5.5 12h5m-2-2-2 2 2 2M18.5 12h-5m2-2 2 2-2 2"/>',
+    "extract": '<rect x="3" y="4" width="18" height="12" rx="2"/>'
+               '<path d="m10 7 4 3-4 3V7ZM12 17v4m-3-3 3 3 3-3"/>',
+    "audio": '<path d="M9 17V6l11-2v11M9 11l11-2"/>'
+             '<ellipse cx="6" cy="18" rx="3" ry="2"/>'
+             '<ellipse cx="17" cy="16" rx="3" ry="2"/>',
+    "music": '<path d="M7 17V5l11-2v12M7 10l11-2"/>'
+             '<ellipse cx="5" cy="18" rx="2" ry="2"/>'
+             '<ellipse cx="16" cy="16" rx="2" ry="2"/>',
+    "download": '<path d="M12 3v12m-4-4 4 4 4-4M4 17v3h16v-3"/>',
 }
 
 

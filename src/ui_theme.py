@@ -100,6 +100,18 @@ QFrame#HeaderPanel { background: %(header_surface)s; border: 1px solid %(stroke)
                      border-radius: 16px; }
 QFrame#ActionPanel { background: %(action_surface)s; border: none;
                      border-top: 1px solid %(stroke)s; }
+QFrame#FeatureSidebar { background: %(header_surface)s; border: none;
+                        border-right: 1px solid %(stroke)s; }
+QWidget#SidebarContents, QScrollArea#SidebarScroll,
+QScrollArea#SidebarScroll > QWidget,
+QScrollArea#SidebarScroll > QWidget > QWidget,
+QWidget#NavigationShell, QWidget#MainColumn,
+QWidget#WorkspaceContainer, QWidget#FeaturePage,
+QStackedWidget#FeatureStack { background: transparent; }
+QFrame#CompactNavigationFrame { background: %(header_surface)s; border: none;
+                                 border-bottom: 1px solid %(stroke)s; }
+QFrame#FeatureHero { background: %(header_surface)s;
+                     border: 1px solid %(stroke)s; border-radius: 16px; }
 QFrame#UrlInputPanel { background: %(accent_soft)s; border: 1px solid %(stroke)s;
                        border-radius: 11px; }
 QFrame#WatermarkControlPanel { background: %(surface_alt)s;
@@ -112,6 +124,15 @@ QFrame#DropZone[dragActive="true"] { border: 2px dashed %(accent)s;
                                      background: %(accent_soft)s; }
 QWidget#HeaderControls { background: transparent; }
 QLabel#AppTitle { font-size: 24px; font-weight: 700; color: %(text)s; }
+QLabel#NavigationTitle { font-size: 15px; font-weight: 700; padding: 0 9px 4px;
+                         color: %(text)s; }
+QLabel#NavigationGroup { font-size: 11px; font-weight: 700; color: %(subtle)s;
+                         padding: 12px 9px 6px; }
+QLabel#FeatureGlyph { background: %(accent_soft)s; border-radius: 13px; }
+QLabel#FeatureEyebrow { color: %(accent)s; font-size: 11px; font-weight: 700; }
+QLabel#FeatureTitle { color: %(text)s; font-size: 21px; font-weight: 700; }
+QLabel#FeatureDescription { color: %(muted)s; font-size: 13px; }
+QLabel#FeatureQueueNote { color: %(subtle)s; font-size: 11px; padding-top: 4px; }
 QLabel#SectionTitle { font-size: 16px; font-weight: 700; color: %(text)s; }
 QLabel#SectionIcon { background: %(accent_soft)s; border-radius: 9px; padding: 7px; }
 QLabel#PrivacyBadge { color: %(success)s; background: %(success_bg)s;
@@ -154,6 +175,17 @@ QPushButton[role="danger"]:hover { background: %(error_bg)s; border-color: %(err
 QPushButton[role="accentSoft"] { color: %(accent)s; background: %(accent_soft)s;
                                  border-color: transparent; }
 QPushButton[role="accentSoft"]:hover { border-color: %(accent)s; }
+QPushButton#FeatureNavButton { text-align: left; min-height: 42px;
+                               padding: 0 11px; border: 1px solid transparent;
+                               background: transparent; color: %(muted)s;
+                               font-weight: 600; }
+QPushButton#FeatureNavButton:hover { background: %(hover)s; color: %(text)s; }
+QPushButton#FeatureNavButton:pressed { background: %(pressed)s; }
+QPushButton#FeatureNavButton:checked { background: %(accent_soft)s;
+                                       color: %(accent)s; border-color: %(stroke)s; }
+QPushButton#FeatureNavButton:checked:hover { border-color: %(accent)s; }
+QPushButton#FeatureNavButton:focus { border: 2px solid %(focus)s; }
+QPushButton#FeatureNavButton:disabled { color: %(disabled)s; }
 QPushButton#PrimaryButton { min-height: 44px; background: %(primary)s;
                             color: #ffffff; border: 1px solid %(primary)s;
                             border-radius: 10px; font-size: 14px; padding: 0 20px; }
@@ -168,6 +200,8 @@ QComboBox, QLineEdit { min-height: 39px; padding: 0 11px;
                        border: 1px solid %(stroke)s; border-radius: 9px;
                        selection-background-color: %(selection)s;
                        selection-color: %(text)s; }
+QComboBox#CompactGroupCombo { min-height: 35px; font-weight: 700;
+                              background: %(accent_soft)s; color: %(accent)s; }
 QComboBox:hover, QLineEdit:hover { background: %(surface)s;
                                    border-color: %(stroke_strong)s; }
 QComboBox:focus, QLineEdit:focus { background: %(surface)s;
@@ -187,6 +221,19 @@ QComboBox QAbstractItemView { background: %(surface)s; color: %(text)s;
                               selection-background-color: %(selection)s;
                               selection-color: %(text)s; border: 1px solid %(stroke)s;
                               border-radius: 8px; padding: 4px; outline: 0; }
+QTabBar#CompactNavigation { background: transparent; }
+QTabBar#CompactNavigation::tab { background: transparent; color: %(muted)s;
+                                 border: 1px solid transparent; border-radius: 8px;
+                                 padding: 7px 12px; margin-right: 5px;
+                                 min-height: 24px; }
+QTabBar#CompactNavigation::tab:hover { background: %(hover)s; color: %(text)s; }
+QTabBar#CompactNavigation::tab:selected { background: %(accent_soft)s;
+                                          color: %(accent)s; border-color: %(stroke)s;
+                                          font-weight: 700; }
+QTabBar#CompactNavigation::tab:disabled { color: %(disabled)s; }
+QTabBar#CompactNavigation::tab:focus { border: 2px solid %(focus)s; }
+QTabBar#CompactNavigation QToolButton { color: %(muted)s; background: %(surface_alt)s;
+                                       border: 1px solid %(stroke)s; border-radius: 7px; }
 QTableWidget { background: %(table_surface)s; alternate-background-color: %(table_alt)s;
                color: %(text)s; border: 1px solid %(stroke)s; border-radius: 10px;
                gridline-color: %(stroke)s; outline: 0;
