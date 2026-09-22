@@ -1,20 +1,42 @@
-#!name=TikTok 网络隐私防护（无 MITM）
-#!desc=强制 TikTok/ByteDance 相关流量走代理，并拦截部分常见日志与监控端点。仅作用于网络层，无法阻止 App 在本机通过 iOS API 读取 SIM/运营商信息。
+#!name=TikTok 网络隐私防护（增强 MITM）
+#!desc=拦截常见 TikTok 遥测域名，并在 HTTPS 解密后清理未签名请求中的 SIM、运营商、广告标识符和精确位置字段。无法阻止 App 在本机读取 SIM 信息。
 #!author=OpenAI
+#!homepage=https://github.com/plao94619-hash/Repository-name-VideoToolBox/tree/main/extras/shadowrocket
 #!system=ios
 #!category=Privacy
+#!arguments=启用HTTPS解密:true
+#!arguments-desc=启用HTTPS解密：需要先安装并信任由你自己的 Shadowrocket 生成的 CA 证书。若 TikTok 出现连接或证书错误，可先把此参数改为 false 排查。
 
 [Rule]
-# 常见日志/监控端点：优先拒绝，避免被后面的域名代理规则覆盖。
-# TikTok 可能随时调整域名；若登录、验证码或播放异常，可先逐条停用这些 REJECT 规则排查。
+# 日志、监控和实时遥测端点。使用精确域名，避免误伤 TikTok 的登录、视频和消息服务。
+DOMAIN,log.tiktokv.com,REJECT
+DOMAIN,log-sg.tiktokv.com,REJECT
 DOMAIN,log-va.tiktokv.com,REJECT
-DOMAIN,log16-normal-c-useast1a.tiktokv.com,REJECT
+DOMAIN,log16-normal.tiktokv.com,REJECT
+DOMAIN,log16-normal-alisg.tiktokv.com,REJECT
 DOMAIN,log16-normal-c-alisg.tiktokv.com,REJECT
+DOMAIN,log16-normal-c-useast1a.tiktokv.com,REJECT
+DOMAIN,log16-normal-c-useast2a.tiktokv.com,REJECT
+DOMAIN,log16-applog-useast5.us.tiktokv.com,REJECT
+DOMAIN,xlog.tiktokv.com,REJECT
+DOMAIN,xlog-va-useast2a.tiktokv.com,REJECT
+DOMAIN,xlog16-normal-c-useast1a.tiktokv.com,REJECT
+DOMAIN,xlog16-normal-c-useast2a.tiktokv.com,REJECT
+DOMAIN,mon.tiktokv.com,REJECT
+DOMAIN,mon-sg.tiktokv.com,REJECT
 DOMAIN,mon-va.tiktokv.com,REJECT
+DOMAIN,mon-useast2a.tiktokv.com,REJECT
+DOMAIN,monbk.tiktokv.com,REJECT
+DOMAIN,rtlog.tiktokv.com,REJECT
+DOMAIN,rtlog-sg.tiktokv.com,REJECT
+DOMAIN,rtlog-ru.tiktokv.com,REJECT
 DOMAIN,rtlog-va.tiktokv.com,REJECT
+DOMAIN,rtlog-va-useast2a.tiktokv.com,REJECT
 DOMAIN,log.byteoversea.com,REJECT
+DOMAIN,log15.byteoversea.com,REJECT
+DOMAIN,log16.byteoversea.com,REJECT
 
-# TikTok 与 ByteDance 国际版常用域名：统一从当前选定代理节点出站。
+# TikTok 与 ByteDance 国际版常用域名统一从当前选定代理节点出站。
 DOMAIN-SUFFIX,tiktok.com,PROXY
 DOMAIN-SUFFIX,tiktokv.com,PROXY
 DOMAIN-SUFFIX,tiktokcdn.com,PROXY
@@ -27,7 +49,14 @@ DOMAIN-SUFFIX,byteintlapi.com,PROXY
 DOMAIN-SUFFIX,ibytedtos.com,PROXY
 DOMAIN-SUFFIX,ibyteimg.com,PROXY
 DOMAIN-SUFFIX,ttwstatic.com,PROXY
-
-# 捕获少量未落在上述域名中的应用请求；不改变其他 App 的流量。
 USER-AGENT,TikTok*,PROXY
 USER-AGENT,Musical_ly*,PROXY
+
+[Script]
+# 只修改未携带已知 TikTok 签名头的文本请求；签名、二进制、multipart 和压缩正文会安全跳过。
+TikTok-隐私字段清理 = type=http-request,pattern=^https:\/\/(?:[^\/]+\.)?(?:tiktok\.com|tiktokv\.com|byteoversea\.com|byteintlapi\.com)\/,requires-body=1,max-size=1048576,script-path=https://raw.githubusercontent.com/plao94619-hash/Repository-name-VideoToolBox/7ada97d08d939a5e6c754f99e500258a26636f80/extras/shadowrocket/scripts/tiktok-privacy-request.js,script-update-interval=0,engine=jsc
+
+[MITM]
+enable={{{启用HTTPS解密}}}
+h2=true
+hostname = %APPEND% *.tiktok.com, *.tiktokv.com, *.byteoversea.com, *.byteintlapi.com
