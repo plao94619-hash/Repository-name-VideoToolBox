@@ -197,11 +197,15 @@ class LanguageUITests(unittest.TestCase):
         self.window.show()
         for width in (850, 1160, 1280, 1360, 1490, 1530, 1280, 850):
             self.window.resize(width, 850)
-            QApplication.processEvents()
+            # A visible QScrollArea can need more than one queued layout pass
+            # after crossing both the sidebar and workspace breakpoints.
+            for _ in range(4):
+                QApplication.processEvents()
             for mode in (MODE_VIDEO, MODE_AUDIO, MODE_AI_IMAGE_WATERMARK):
                 self.window.mode_combo.setCurrentIndex(
                     self.window.mode_combo.findData(mode))
-                QApplication.processEvents()
+                for _ in range(3):
+                    QApplication.processEvents()
                 self.assertLessEqual(
                     self.window.content_scroll.widget().width(),
                     self.window.content_scroll.viewport().width(),
