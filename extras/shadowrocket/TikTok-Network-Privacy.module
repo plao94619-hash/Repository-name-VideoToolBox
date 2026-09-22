@@ -1,0 +1,33 @@
+#!name=TikTok 网络隐私防护（无 MITM）
+#!desc=强制 TikTok/ByteDance 相关流量走代理，并拦截部分常见日志与监控端点。仅作用于网络层，无法阻止 App 在本机通过 iOS API 读取 SIM/运营商信息。
+#!author=OpenAI
+#!system=ios
+#!category=Privacy
+
+[Rule]
+# 常见日志/监控端点：优先拒绝，避免被后面的域名代理规则覆盖。
+# TikTok 可能随时调整域名；若登录、验证码或播放异常，可先逐条停用这些 REJECT 规则排查。
+DOMAIN,log-va.tiktokv.com,REJECT
+DOMAIN,log16-normal-c-useast1a.tiktokv.com,REJECT
+DOMAIN,log16-normal-c-alisg.tiktokv.com,REJECT
+DOMAIN,mon-va.tiktokv.com,REJECT
+DOMAIN,rtlog-va.tiktokv.com,REJECT
+DOMAIN,log.byteoversea.com,REJECT
+
+# TikTok 与 ByteDance 国际版常用域名：统一从当前选定代理节点出站。
+DOMAIN-SUFFIX,tiktok.com,PROXY
+DOMAIN-SUFFIX,tiktokv.com,PROXY
+DOMAIN-SUFFIX,tiktokcdn.com,PROXY
+DOMAIN-SUFFIX,tiktokcdn-us.com,PROXY
+DOMAIN-SUFFIX,musical.ly,PROXY
+DOMAIN-SUFFIX,muscdn.com,PROXY
+DOMAIN-SUFFIX,byteoversea.com,PROXY
+DOMAIN-SUFFIX,byteintl.com,PROXY
+DOMAIN-SUFFIX,byteintlapi.com,PROXY
+DOMAIN-SUFFIX,ibytedtos.com,PROXY
+DOMAIN-SUFFIX,ibyteimg.com,PROXY
+DOMAIN-SUFFIX,ttwstatic.com,PROXY
+
+# 捕获少量未落在上述域名中的应用请求；不改变其他 App 的流量。
+USER-AGENT,TikTok*,PROXY
+USER-AGENT,Musical_ly*,PROXY
