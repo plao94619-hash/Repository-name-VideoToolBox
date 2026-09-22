@@ -862,6 +862,12 @@ class MainWindow(QMainWindow):
         content = QWidget()
         content.setObjectName("Content")
         content.setAutoFillBackground(False)
+        # The scroll area's horizontal bar is intentionally disabled. Ignore
+        # the wide-layout size hint so a visible window can shrink across the
+        # responsive breakpoints without retaining its previous content width.
+        content.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        content.setMinimumWidth(0)
         self.content_root = QVBoxLayout(content)
         self.content_root.setContentsMargins(24, 20, 24, 20)
         self.content_root.setSpacing(16)
