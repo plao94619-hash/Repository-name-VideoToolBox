@@ -146,7 +146,7 @@ TikTok 可能随版本调整域名、请求签名和参数结构，模块需要�
 
 ## Ping0 Route Helper（独立模块）
 
-让 Ping0 检测流量经由 Shadowrocket 当前选择的 `PROXY` 策略。该模块只添加一条 `ping0.cc` 域名规则，不启用 HTTPS 解密或 MITM，也不影响 TikTok 模块。
+让 Ping0 检测流量经由 Shadowrocket 当前选择的 `PROXY` 策略。模块默认仅对 `ping0.cc` 及其子域名启用 HTTPS 解密（MITM），不影响 TikTok 模块中的主机规则；需要安装并信任自己生成的 CA。若不需要解密，可在模块“编辑参数”中关闭“启用HTTPS解密”。
 
 ### Safari 一键安装 Ping0
 

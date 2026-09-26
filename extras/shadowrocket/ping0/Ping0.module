@@ -1,8 +1,15 @@
 #!name=Ping0 Route Helper
-#!desc=Route ping0.cc diagnostics through the selected Shadowrocket proxy policy.
+#!desc=Route Ping0 traffic through PROXY and optionally decrypt HTTPS only for ping0.cc hosts.
 #!author=plao94619-hash
 #!category=Rule
 #!homepage=https://github.com/plao94619-hash/Repository-name-VideoToolBox/tree/main/extras/shadowrocket/ping0
+#!arguments=启用HTTPS解密:true
+#!arguments-desc=默认启用，仅解密 ping0.cc 及其子域名；需在 Shadowrocket 中安装并信任自己生成的 CA。遇到证书或连接问题可设为 false。
 
 [Rule]
 DOMAIN-SUFFIX,ping0.cc,PROXY
+
+[MITM]
+enable={{{启用HTTPS解密}}}
+h2=true
+hostname = %APPEND% ping0.cc, *.ping0.cc
