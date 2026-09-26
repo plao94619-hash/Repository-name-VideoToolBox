@@ -141,3 +141,15 @@ SHA-256: d323f330326fd0e6977381e3e4bdb963e6f3c1dcc007409979769a623ffaafe0
 ```
 
 TikTok 可能随版本调整域名、请求签名和参数结构，模块需要结合 Shadowrocket 请求日志定期维护。
+
+---
+
+## Ping0 Route Helper（独立模块）
+
+让 Ping0 检测流量经由 Shadowrocket 当前选择的 `PROXY` 策略。该模块只添加一条 `ping0.cc` 域名规则，不启用 HTTPS 解密或 MITM，也不影响 TikTok 模块。
+
+### Safari 一键安装 Ping0
+
+[🚀 Safari 一键跳转 Shadowrocket 并安装 Ping0 模块](https://lowertop.github.io/Shadowrocket-First/redirect.html?url=shadowrocket%3A%2F%2Finstall%3Fmodule%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fplao94619-hash%2FRepository-name-VideoToolBox%2Fmain%2Fextras%2Fshadowrocket%2Fping0%2FPing0.module)
+
+[查看 Ping0 模块说明](https://github.com/plao94619-hash/Repository-name-VideoToolBox/blob/main/extras/shadowrocket/ping0/README.md) · [手动导入模块](https://raw.githubusercontent.com/plao94619-hash/Repository-name-VideoToolBox/main/extras/shadowrocket/ping0/Ping0.module)

@@ -1,0 +1,8 @@
+#!name=Ping0 Route Helper
+#!desc=Route ping0.cc diagnostics through the selected Shadowrocket proxy policy.
+#!author=plao94619-hash
+#!category=Rule
+#!homepage=https://github.com/plao94619-hash/Repository-name-VideoToolBox/tree/main/extras/shadowrocket/ping0
+
+[Rule]
+DOMAIN-SUFFIX,ping0.cc,PROXY
