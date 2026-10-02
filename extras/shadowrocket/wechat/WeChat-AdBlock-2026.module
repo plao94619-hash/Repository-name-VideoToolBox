@@ -1,15 +1,22 @@
-#!name=微信广告拦截（2026.10.02）
-#!desc=过滤公众号广告及部分小程序 SDK、企迈、美团点餐广告。谱慧云开屏实验补充模块见主页。朋友圈 MMTLS 信息流不支持；不保证全部小程序广告。需要安装并信任自己的 CA。
+#!name=微信广告拦截合集（含谱慧云）
+#!desc=合集v1.2.0：公众号、部分通用小程序、企迈、美团点餐与谱慧云开屏资源。谱慧云已获用户见效反馈；共享域名可能影响其他图片。朋友圈MMTLS信息流不支持。HTTPS过滤需要信任自己的CA。
 #!author=plao94619-hash
 #!homepage=https://github.com/plao94619-hash/Repository-name-VideoToolBox/tree/main/extras/shadowrocket/wechat
 #!system=ios
 #!category=AdBlock
-#!arguments=启用HTTPS解密:true
-#!arguments-desc=启用HTTPS解密：先安装并完全信任你自己设备上由 Shadowrocket 生成的 CA。HTTPS 解密关闭时，URL 重写与响应脚本无法处理 HTTPS 广告。
+#!arguments=启用HTTPS解密:true,谱慧云资源策略:REJECT
+#!arguments-desc=启用HTTPS解密：先安装并完全信任你自己设备上由Shadowrocket生成的CA。关闭后HTTPS重写与响应脚本无法处理HTTPS广告。\n\n谱慧云资源策略：默认REJECT，拦截三个共享微信资源域名；改为DIRECT可单独取消这部分拦截并直连，不影响其他广告规则。使用合集时停用旧谱慧云独立模块。
+
+# Version 1.2.0, 2026-10-02. Original module URL retained for updates.
 
 [Rule]
 # 已知微信小程序广告视频资源；不封锁微信核心或整个 wxs.qq.com。
 DOMAIN-SUFFIX,wxsmsdy.video.qq.com,REJECT
+# 合入已获用户反馈见效的谱慧云资源规则；作用于整个微信，不按appid限定。
+# 默认REJECT与原独立模块一致；正常图片异常时可将该参数改为DIRECT。
+DOMAIN,wxa.wxs.qq.com,{{{谱慧云资源策略}}}
+DOMAIN,wximg.wxs.qq.com,{{{谱慧云资源策略}}}
+DOMAIN,wxsmw.wxs.qq.com,{{{谱慧云资源策略}}}
 
 [URL Rewrite]
 # 公众号专用广告接口；getappmsgad 由下方脚本保留响应结构。

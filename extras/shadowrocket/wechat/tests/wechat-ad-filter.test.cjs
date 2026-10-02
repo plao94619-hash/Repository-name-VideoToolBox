@@ -186,7 +186,7 @@ test("module blocks ad fetch/exposure with reordered query parameters", () => {
   ]) assert.equal(intercepted(url), true, url);
 });
 
-test("module leaves unrelated article/mini-program/payment operations untouched", () => {
+test("URL rewrite and response-script patterns leave unrelated article/mini-program/payment operations untouched", () => {
   for (const url of [
     "https://mp.weixin.qq.com/wapad/getaddata?action=getad_other",
     "https://mp.weixin.qq.com/wapad/getaddata?notaction=getad",
