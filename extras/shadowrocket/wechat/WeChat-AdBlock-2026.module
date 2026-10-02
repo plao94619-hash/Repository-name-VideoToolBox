@@ -1,5 +1,5 @@
 #!name=微信广告拦截（2026.10.02）
-#!desc=过滤公众号广告及部分小程序 SDK、企迈、美团点餐广告。朋友圈 MMTLS 信息流不支持；不保证全部小程序广告。需要安装并信任自己的 CA。
+#!desc=过滤公众号广告及部分小程序 SDK、企迈、美团点餐广告。谱慧云开屏实验补充模块见主页。朋友圈 MMTLS 信息流不支持；不保证全部小程序广告。需要安装并信任自己的 CA。
 #!author=plao94619-hash
 #!homepage=https://github.com/plao94619-hash/Repository-name-VideoToolBox/tree/main/extras/shadowrocket/wechat
 #!system=ios

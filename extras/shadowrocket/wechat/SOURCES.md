@@ -29,6 +29,23 @@
 
 以上是维护中公开规则的接口依据，不是来自用户设备的抓包记录。接口沿用旧日期不等于失效，也不能凭公开规则就确认其在所有最新微信版本中仍可触发。
 
+## 谱慧云开屏广告：实验补充模块
+
+- 用户在本次对话上传谱慧云的全屏广告截图，以及 Shadowrocket 导出的连接日志。
+  - 本地只读解析得到 573 条记录，时间范围为 2026-10-02 18:21:27 至 18:28:34（设备记录时间）。
+  - `wxa.wxs.qq.com`、`wximg.wxs.qq.com`、`wxsmw.wxs.qq.com` 分别出现 1、13、6 条记录，原策略均为 `DIRECT`。19 条是 `域名:443` 连接，另 1 条是 HTTP 资源请求。
+  - 日志表没有请求或响应正文，也没有小程序 appid，不能确认这 20 条均属于谱慧云广告，不能据此虚构谱慧云广告 API 或 JSON 字段。
+  - 仓库只保存上述汇总、规则与说明，原始数据库、截图和含个人参数的完整 URL 没有发布。
+- [AWAvenue-Ads-Rule：固定提交中的规则文件](https://github.com/TG-Twilight/AWAvenue-Ads-Rule/blob/99b020c21853cbed56b90456399dad6bde842309/AWAvenue-Ads-Rule.txt)
+  - 本次读取的 main 提交为 `99b020c21853cbed56b90456399dad6bde842309`，提交日期 2026-09-21；文件标记版本 1.7.8-release，更新时间 2026-09-21 21:56:59 UTC+8。
+  - 文件 blob：`8dc3bd72d74c3f925b09b37c778a818566ed072b`。
+  - 核实三个域名均被列入该公开广告过滤规则。这里只将公开域名事实与本次日志交叉核对，没有引入整个第三方规则集。
+- [217heidai/adblockfilters：微信图片不能正常加载，Issue #178](https://github.com/217heidai/adblockfilters/issues/178)
+  - 直接用户反馈要求放行 `wximg.wxs.qq.com`，说明公开黑名单不能证明该域名只承载广告。
+  - 因此本方案作为可单独启停的实验补充模块发布，不默认合并到微信主模块，不承诺正常图片完全不受影响。
+
+实验模块使用精确 `DOMAIN` 规则，作用于整个微信，无法按谱慧云 appid 区分共享资源。没有启用额外 MITM，没有对 `wxs.qq.com` 整个后缀、微信 MMTLS 通道、登录或支付接口添加拒绝规则。离线回放命中 20 条候选连接，其余 553 条不匹配，其中 165 条 MMTLS 请求全部不匹配。尚未验证广告容器和倒计时是否消失，以及谱慧云的登录、余额、充值与用水功能。
+
 ## 朋友圈协议限制
 
 - [Citizen Lab：Privacy in the WeChat Ecosystem，2023](https://citizenlab.ca/research/privacy-in-the-wechat-ecosystem-full-report/)

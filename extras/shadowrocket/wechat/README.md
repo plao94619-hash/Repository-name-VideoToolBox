@@ -1,8 +1,44 @@
 # 微信广告拦截 · Shadowrocket
 
-版本：1.0.0 · 维护日期：2026-10-02
+目录版本：1.1.0 · 主响应脚本：1.0.0 · 维护日期：2026-10-02
 
 按本次能核实到的公开接口，为 Shadowrocket 编写的微信广告模块。2026-10-02 是本模块的制作、检索和维护日期，不表示已经在所有 2026 年微信版本上实机验证。
+
+## 谱慧云开屏广告：实验补充模块
+
+新增 [Puhuiyun-AdBlock-Experimental.module](Puhuiyun-AdBlock-Experimental.module)，根据用户上传的全屏广告截图、代理日志以及公开规则，尝试阻止三个候选微信广告资源域名的加载。它可以与下面的微信主模块同时启用，也可以单独停用。
+
+**这是待手机验证的资源拦截方案，不是已经确认有效的谱慧云专用接口过滤。** 这三个域名由微信共享，规则会影响整个微信，无法按小程序名称或 appid 限定作用范围。`wximg.wxs.qq.com` 有公开的普通图片无法加载反馈，故该方案没有默认并入主模块；安装本补充模块才启用。
+
+[Safari 一键安装谱慧云开屏广告实验补充模块](https://lowertop.github.io/Shadowrocket-First/redirect.html?url=shadowrocket%3A%2F%2Finstall%3Fmodule%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fplao94619-hash%2FRepository-name-VideoToolBox%2Fmain%2Fextras%2Fshadowrocket%2Fwechat%2FPuhuiyun-AdBlock-Experimental.module)
+
+直接唤起地址：
+
+```text
+shadowrocket://install?module=https://raw.githubusercontent.com/plao94619-hash/Repository-name-VideoToolBox/main/extras/shadowrocket/wechat/Puhuiyun-AdBlock-Experimental.module
+```
+
+[手动导入地址](https://raw.githubusercontent.com/plao94619-hash/Repository-name-VideoToolBox/main/extras/shadowrocket/wechat/Puhuiyun-AdBlock-Experimental.module)。本补充模块仅包含精确 `DOMAIN` 拒绝规则，**不需要安装 CA 或开启 HTTPS 解密**；主模块的 HTTPS 过滤仍有下文的证书要求。
+
+| 候选资源域名 | 上传日志中的连接记录数 | 实验处理 |
+| --- | ---: | --- |
+| `wxa.wxs.qq.com` | 1 | 精确域名拒绝 |
+| `wximg.wxs.qq.com` | 13 | 精确域名拒绝；可能影响其他图片 |
+| `wxsmw.wxs.qq.com` | 6 | 精确域名拒绝 |
+
+日志共 573 条，覆盖 2026-10-02 18:21:27 至 18:28:34（设备记录时间）。这 20 条记录在原配置中均为 `DIRECT`。这些数字是候选资源连接数，不是已经确认的广告条数；19 条仅显示 `域名:443`，没有 HTTP 路径或正文。日志表仅记录 URL、UA、规则、策略及时间，无法核实具体广告响应结构。
+
+使用和验证：
+
+1. 在 Safari 打开上面的实验补充模块链接，确认导入；保留已安装的微信主模块。
+2. 在当前配置的模块列表启用“谱慧云开屏广告（实验）”，全局路由选择“配置”，重新连接 Shadowrocket。
+3. 彻底退出微信后重新进入谱慧云，观察广告素材、整个广告页面、倒计时三个部分是否分别消失。
+4. 查看新增连接日志，确认上述域名命中 `DOMAIN,<域名>,REJECT`。已缓存素材、已有连接、未经过 Shadowrocket 的流量以及其他广告域名不受这三条规则覆盖。
+5. 如果正常图片、小程序资源加载异常，或激励广告功能不可用，单独关闭该实验补充模块并重新连接。主模块可以继续使用。
+
+拦截资源后，广告页可能直接跳过，也可能保留空白、下载按钮或 5 秒倒计时。本补充模块没有读取 MMTLS、修改原生界面或模拟点击“跳过”；只有手机验证才能确认谱慧云当前版本的具体表现。它没有添加谱慧云登录、余额、充值、用水接口的过滤规则，也没有对这些功能做实机验证。
+
+离线回放上传日志时，新增规则会命中上述 20 条候选连接，其他 553 条不匹配，其中 165 条 `/mmtls/` 请求均不匹配。这只验证规则匹配范围，不能证明广告或倒计时已经消失。原始数据库、截图及含个人参数的 URL 没有加入本仓库。
 
 ## Safari 一键安装
 
@@ -34,6 +70,7 @@ HTTPS 跳转页复用此仓库现有模块使用的 LOWERTOP 页面。模块和�
 | 通用微信小程序广告 | 拦截 `wapad/getaddata?action=getad` 及曝光上报；拦截已知广告视频资源域名 | 只覆盖仍使用这些接口、且流量经过 Shadowrocket 的广告；不代表全部小程序 |
 | 企迈系点餐小程序 | 拦截专用画布广告接口；过滤专用广告接口内已知 `detailInfo` 结构 | 上游列举挪瓦咖啡、LINLEE 林里柠檬茶、霸王茶姬、陈香贵等，具体小程序是否继续使用该接口需要实机确认 |
 | 美团系点餐小程序 | 过滤 `queryPortalInfo` 中 `advType === true` 的模块及 `float-window` | 保留其他菜单、导航、商品和未知结构 |
+| 谱慧云开屏广告 | 可选实验补充模块拒绝 3 个候选微信资源域名 | 按域名影响整个微信，可能影响其他图片；尚未实机验证，不保证消除页面和倒计时 |
 | 朋友圈信息流广告 | **不支持可靠过滤 MMTLS 中的朋友圈广告** | 普通 HTTPS MITM / JSON 脚本无法读取这种协议的内容，本模块未实现 MMTLS 解密 |
 
 有些旧规则将公众号的 `getappmsgad` 脚本命名为“朋友圈去广告”。它处理的实际地址属于公众号接口，不能据此宣称已经过滤朋友圈信息流。协议依据与上游接口来源见 [SOURCES.md](SOURCES.md)。
@@ -73,7 +110,7 @@ MITM 主机名只追加：
 
 ## 更新
 
-在 Shadowrocket 的模块列表中更新此远程模块即可。模块地址保持不变，脚本 URL 固定引用本仓库经过本次测试的提交，以防脚本在模块未更新时发生变化。
+在 Shadowrocket 的模块列表中更新相应远程模块即可。原微信主模块地址保持不变，谱慧云实验补充模块有独立地址。脚本 URL 固定引用本仓库经过本次测试的提交，以防脚本在模块未更新时发生变化；本次响应脚本内容未变更。
 
 ## 开发验证
 

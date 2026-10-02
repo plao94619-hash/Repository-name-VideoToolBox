@@ -1,0 +1,18 @@
+#!name=谱慧云开屏广告（实验）
+#!desc=尝试拦截日志中出现的三个微信广告候选资源域名。规则作用于整个微信，可能影响其他图片、小程序资源或广告激励；不保证消除广告容器及5秒倒计时。无需HTTPS解密，出现异常时单独关闭本模块。
+#!author=plao94619-hash
+#!homepage=https://github.com/plao94619-hash/Repository-name-VideoToolBox/tree/main/extras/shadowrocket/wechat
+#!system=ios
+#!category=AdBlock
+
+# Version 1.0.0, 2026-10-02.
+# Experimental resource blocking, not a verified Puhuiyun-only API filter.
+# Observed in the supplied connection log and independently listed by AWAvenue.
+# These shared hosts cannot identify a mini-program appid or decrypt MMTLS.
+# wximg has public reports of normal-image breakage; keep this module optional.
+# Install alongside WeChat-AdBlock-2026.module; disable separately to roll back.
+
+[Rule]
+DOMAIN,wxa.wxs.qq.com,REJECT
+DOMAIN,wximg.wxs.qq.com,REJECT
+DOMAIN,wxsmw.wxs.qq.com,REJECT
