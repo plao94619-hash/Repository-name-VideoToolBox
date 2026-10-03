@@ -1,5 +1,21 @@
 # 墨鱼去广告：规则来源目录
 
+## Shadowrocket 一键安装
+
+- [Safari 一键安装「墨鱼去广告」](https://lowertop.github.io/Shadowrocket-First/redirect.html?url=shadowrocket%3A%2F%2Finstall%3Fmodule%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fplao94619-hash%2FRepository-name-VideoToolBox%2Fmain%2Fextras%2Fshadowrocket%2Fmoyu-adblock%2FMoyu-AdBlock.module)
+- [查看 Shadowrocket 模块源文件](https://raw.githubusercontent.com/plao94619-hash/Repository-name-VideoToolBox/main/extras/shadowrocket/moyu-adblock/Moyu-AdBlock.module)
+
+在 iPhone Safari 打开安装链接，按提示跳转到 Shadowrocket 并确认安装。模块文件位于 `extras/shadowrocket/moyu-adblock/Moyu-AdBlock.module`。
+
+## 模块覆盖范围与使用要求
+
+- 当前版本包含 **147 条去重后的 URL 请求拦截规则**，来自 21 个可转换的配置文件；覆盖微信小程序、YouTube、知乎、贴吧、微博、高德、网易云、菜鸟、Keep、喜马拉雅、滴滴等。
+- 上游的 `url reject`、`reject-200`、`reject-dict`、`reject-img` 规则已转换为 Shadowrocket 的 `[URL Rewrite]` 格式；`[MITM]` 使用 `%APPEND%`，追加目标主机。
+- 这不是主页 42 项功能的完整移植。响应体脚本、JavaScript、JSON 修改、仅有脚本的配置、失效条目及「墨鱼去开屏 2.0」的完整规则没有并入。微信图文源文件在上游页面已划除，并注明无法去除朋友圈广告。
+- HTTPS URL 拦截需要在 Shadowrocket 当前配置中启用 HTTPS 解密、安装并信任 Shadowrocket CA 证书。只为需要的主机启用解密；证书固定或应用版本变化可能导致个别规则不起作用。
+
+上游仓库没有统一开源许可证，模块按组保留来源链接；使用或再次发布时，请遵循每个源文件自己的说明。
+
 本目录按 [ddgksf2013 的 GitHub 主页](https://github.com/ddgksf2013/ddgksf2013)「广告屏蔽」栏目整理，共 42 项。每条链接都指向原作者或页面所列的上游来源；本文件只保存名称、来源、贡献者与页面状态，不复制或托管上游规则源码。
 
 
