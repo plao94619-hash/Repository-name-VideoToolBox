@@ -1,13 +1,13 @@
 #!name=腾讯视频广告拦截（开屏/首页弹窗/个人中心）
-#!desc=版本1.3.3：新增个人中心广告点击落地域名jump01.gw62.cn精确拦截；此规则阻止打开该广告落地页，不保证隐藏已显示的广告卡片。保留腾讯广告和开屏候选规则。HTTPS路径过滤需启用并信任自己设备生成的Shadowrocket CA。
+#!desc=版本1.3.4：新增rdelivery.qq.com个人中心候选接口开关，默认DIRECT；此前日志只有40条直连记录，没有URL或响应内容，尚未确认它提供广告。已知个人中心落地页jump01.gw62.cn仍精确拒绝。HTTPS路径过滤需启用并信任本机Shadowrocket CA。
 #!author=plao94619-hash
 #!homepage=https://github.com/plao94619-hash/Repository-name-VideoToolBox/tree/main/extras/shadowrocket/tencent-video
 #!system=ios
 #!category=AdBlock
-#!arguments=启用精准HTTPS过滤:true,腾讯广告接口策略:REJECT,腾讯广告素材策略:REJECT,开屏广告策略:REJECT,首页弹窗广告策略:REJECT,腾讯GDT广告策略:REJECT,IACC推荐接口策略:REJECT
-#!arguments-desc=启用精准HTTPS过滤：用于匹配指定HTTPS广告路径。需在当前Shadowrocket配置中开启HTTPS解密，并在iOS中信任你自己生成的CA；如腾讯视频出现网络异常，可将此参数设为false。设为false后，精确域名规则仍有效。\n\n腾讯广告接口策略：仅匹配iacc.qq.com。腾讯广告素材策略：仅匹配pgdt.gtimg.cn。开屏广告策略：匹配splashqqlive.gtimg.com。首页弹窗广告策略：匹配adsmind.gdtimg.com。腾讯GDT广告策略：仅匹配c3.gdt.qq.com、v3.gdt.qq.com、xs.gdt.qq.com、mi.gdt.qq.com；IACC推荐接口策略：仅匹配iacc.rec.qq.com。c2.l.qq.com、p2.l.qq.com、livep2.l.qq.com三个个人中心候选主机固定为REJECT，不使用可设为代理的策略参数。
+#!arguments=启用精准HTTPS过滤:true,腾讯广告接口策略:REJECT,腾讯广告素材策略:REJECT,开屏广告策略:REJECT,首页弹窗广告策略:REJECT,腾讯GDT广告策略:REJECT,IACC推荐接口策略:REJECT,腾讯视频个人中心候选接口策略:DIRECT
+#!arguments-desc=启用精准HTTPS过滤：用于匹配指定HTTPS广告路径。需在当前Shadowrocket配置中开启HTTPS解密，并在iOS中信任你自己生成的CA；如腾讯视频出现网络异常，可将此参数设为false。设为false后，精确域名规则仍有效。\n\n腾讯广告接口策略：仅匹配iacc.qq.com。腾讯广告素材策略：仅匹配pgdt.gtimg.cn。开屏广告策略：匹配splashqqlive.gtimg.com。首页弹窗广告策略：匹配adsmind.gdtimg.com。腾讯GDT广告策略：仅匹配c3.gdt.qq.com、v3.gdt.qq.com、xs.gdt.qq.com、mi.gdt.qq.com；IACC推荐接口策略：仅匹配iacc.rec.qq.com。c2.l.qq.com、p2.l.qq.com、livep2.l.qq.com三个个人中心候选主机固定为REJECT。\n\n腾讯视频个人中心候选接口策略：用于rdelivery.qq.com。此前日志仅有40条直连记录，没有请求URL或响应内容，默认DIRECT；可改为REJECT做短时验证，可能影响该主机上的其他推荐或内容请求。
 
-# Version 1.3.3, 2026-10-03. Adds the exact personal-center ad click-through host jump01.gw62.cn, based on the user-provided destination URL and the latest route log.
+# Version 1.3.4, 2026-10-03. Adds rdelivery.qq.com as an optional personal-center candidate (default DIRECT); the log has no URL or response payload to confirm its role. Keeps the exact jump01.gw62.cn click-through block.
 
 [Rule]
 # 2026-10-03 10:40流量记录中命中；精确主机匹配。
@@ -24,6 +24,8 @@ DOMAIN,xs.gdt.qq.com,{{{腾讯GDT广告策略}}}
 # Official Tencent GDT ad-request host; exact hostname only.
 DOMAIN,mi.gdt.qq.com,{{{腾讯GDT广告策略}}}
 DOMAIN,iacc.rec.qq.com,{{{IACC推荐接口策略}}}
+# The latest route log showed 40 DIRECT connections but included no URL or response body; keep this candidate opt-in.
+DOMAIN,rdelivery.qq.com,{{{腾讯视频个人中心候选接口策略}}}
 # Exact hosts from the profile-ad display window; keep scope narrow.
 DOMAIN,c2.l.qq.com,REJECT
 DOMAIN,p2.l.qq.com,REJECT
