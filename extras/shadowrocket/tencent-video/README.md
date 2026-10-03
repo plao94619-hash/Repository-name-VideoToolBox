@@ -1,6 +1,6 @@
 # 腾讯视频广告拦截（Shadowrocket）
 
-版本 **1.3.2**，更新日期 2026-10-03。保留个人中心三条固定 `REJECT` 主机，并新增 `mi.gdt.qq.com` 精确规则，用于覆盖腾讯广告官方文档列出的广告请求接口，作为启动页开屏广告候选项。
+版本 **1.3.3**，更新日期 2026-10-03。保留既有广告过滤，并新增个人中心广告点击落地域名 `jump01.gw62.cn` 的精确 `REJECT` 规则。它会阻止打开该广告落地页；单凭点击链接无法确认或隐藏广告卡片本身。
 
 ## Safari 一键安装
 
@@ -18,7 +18,7 @@
 | --- | --- | --- |
 | 启动页开屏广告 | `mi.gdt.qq.com`、`splashqqlive.gtimg.com/website/<编号>` | 精确广告请求主机与开屏素材路径；新加主机待本次开屏日志验证 |
 | 进入首页后的弹窗 | `news.l.qq.com/app?`、`wa.gtimg.com/adxcdn/*.jpg` 与 `adsmind.gdtimg.com` | 广告接口和素材路径 |
-| 个人中心视频广告卡片 | `video.dispatch.tc.qq.com/*.mp4`、`vmind.qqvideo.tc.qq.com/*.mp4` | 仅拦截对应 MP4 路径 |
+| 个人中心视频广告与点击跳转 | `video.dispatch.tc.qq.com/*.mp4`、`vmind.qqvideo.tc.qq.com/*.mp4`、`jump01.gw62.cn` | MP4素材路径过滤；精确域名拦截给定落地页访问，只阻止点击跳转，卡片仍需定位实际广告数据请求 |
 | 腾讯 GDT 广告接口 | `mi.gdt.qq.com`、`c3.gdt.qq.com`、`v3.gdt.qq.com`、`xs.gdt.qq.com` | 精确主机匹配，默认 REJECT，可单独调整 |
 | IACC 推荐接口 | `iacc.rec.qq.com` | 精确主机匹配，默认 REJECT，可单独调整 |
 | 个人中心广告相关 L 域主机 | `c2.l.qq.com`、`p2.l.qq.com`、`livep2.l.qq.com` | 三个精确主机固定 `REJECT`，避免 TCP 流量被策略组转发 |
@@ -27,11 +27,11 @@
 
 ## 日志确认的规则
 
-最新数据库显示，个人中心相关的 GDT/IACC 请求已命中 `REJECT`；三个 L 域主机也已命中规则，但 `p2.l.qq.com` 的部分 TCP 请求仍经 `PROXY`，因此 v1.3.1 将这三条规则固定为 `REJECT`。
+你最新上传的数据库覆盖 11:27:52–13:18:25，共 10,149 条记录。`jump01.gw62.cn` 出现 3 次，均按现有 `DOMAIN-SUFFIX,cn,DIRECT` 规则直连，因此 v1.3.3 新增了该主机的精确 `REJECT`。完整落地链接包含点击跟踪参数，仓库只保存域名，不保存完整 URL 或参数。
 
-这份数据库截至 12:55:26，早于本次开屏截图；其中没有 `splashqqlive.gtimg.com` 或 `mi.gdt.qq.com` 的对应请求。v1.3.2 按腾讯广告官方文档增加 `mi.gdt.qq.com` 精确规则作为候选项，是否命中这次开屏仍需新日志确认。
+同一日志的近段时间内，`xs.gdt.qq.com`、`pgdt.gtimg.cn`、`adsmind.gdtimg.com`、`c3.gdt.qq.com`、`v3.gdt.qq.com` 等请求已出现 `REJECT` 结果。`vr.gdt.qq.com` 也有直连记录；腾讯官方文档将该主机用于视频播放信息上报，因此不能仅凭域名出现在日志中就认定它提供了个人中心广告素材，本版不封它。参见[腾讯广告接口文档](https://developers.adnet.qq.com/doc/api/guide)。
 
-数据库只记录主机名、端口和路由结果，不含 HTTPS 请求路径、响应内容或广告素材 URL。`rdelivery.qq.com`、`pbaccess.video.qq.com`、`vv6.video.qq.com` 等其他主机仍有直连记录，但可能承担视频或页面功能；缺少请求路径时，不把它们直接列为广告拦截域名。日志数据库和请求参数没有上传到仓库。
+Shadowrocket 这份数据库只记录主机、端口和路由结果，不含 HTTPS 请求路径、响应内容或广告素材 URL。新增规则可以阻止点击 `jump01.gw62.cn` 后打开广告落地页，但不等于隐藏已渲染的广告卡片。卡片仍显示，说明广告可能通过其他接口或缓存内容加载；需要在打开个人中心、卡片出现的同一时段捕获完整请求 URL，才能继续精确定位。日志数据库和点击参数没有上传到仓库。
 
 ## 启用 HTTPS 路径过滤
 
@@ -42,7 +42,8 @@
 ## 故障调整与范围
 
 - 开屏、首页弹窗主机策略分别可改为 `DIRECT`。
-- v1.3.2 后若广告仍在，先清除腾讯视频缓存并完全退出再复测；若正常页面或播放异常，可临时删除对应的三条 L 域规则排查。
+- v1.3.3 的 `jump01.gw62.cn` 规则只阻止点击跳转。若个人中心卡片仍显示，需要抓取卡片显示时的广告请求，不要把此落地域名误当作素材请求。
+- 若正常页面或播放异常，可临时删除对应的三条 L 域规则排查。
 - 腾讯 GDT 规则只覆盖日志中的 `c3/v3/xs.gdt.qq.com` 和官方文档列出的 `mi.gdt.qq.com` 精确主机；IACC规则只覆盖 `iacc.rec.qq.com`；L 域规则只覆盖三个精确主机，未封锁整个 `qq.com`、`l.qq.com`、`gtimg.cn` 或 `gdtimg.com`。
 - 腾讯视频可能改用其他广告接口或将广告与正片放在同一视频流中，因此不能保证去掉每一条广告；若广告仍出现，需要在广告展示的同一时段补充新的流量记录。
 
@@ -61,4 +62,5 @@ DOMAIN,iacc.rec.qq.com,REJECT
 DOMAIN,c2.l.qq.com,REJECT
 DOMAIN,p2.l.qq.com,REJECT
 DOMAIN,livep2.l.qq.com,REJECT
+DOMAIN,jump01.gw62.cn,REJECT
 ```
