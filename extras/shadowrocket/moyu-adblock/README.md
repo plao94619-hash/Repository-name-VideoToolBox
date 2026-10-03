@@ -17,7 +17,7 @@
 
 上游仓库没有统一开源许可证；主页另声明禁止公众号/自媒体转载或发布其内容。模块按组保留来源链接，但规则语法转换不等于取得再分发授权；公开推广或二次发布前请核对对应源文件说明并取得必要许可。
 
-本目录按 [ddgksf2013 的 GitHub 主页](https://github.com/ddgksf2013/ddgksf2013)「广告屏蔽」栏目整理，共 42 项。每条链接都指向原作者或页面所列的上游来源；本文件只保存名称、来源、贡献者与页面状态，不复制或托管上游规则源码。
+本 README 按 [ddgksf2013 的 GitHub 主页](https://github.com/ddgksf2013/ddgksf2013)「广告屏蔽」栏目整理，共 42 项。每条链接都指向原作者或页面所列的上游来源；此处记录名称、来源、贡献者与页面状态。可转换的规则整理在页面顶部链接的 Shadowrocket 模块中，保留来源标注，不托管上游脚本源码。
 
 
 
@@ -72,7 +72,7 @@
 
 - 上游目录：[ddgksf2013 主页](https://github.com/ddgksf2013/ddgksf2013)、[Rewrite](https://github.com/ddgksf2013/Rewrite)、[Scripts](https://github.com/ddgksf2013/Scripts)、[Filter](https://github.com/ddgksf2013/Filter)。
 - 页面将第 4、14、22、23 项划除或标注失效；其他条目也可能随应用版本变化，请以原始来源的最新说明为准。
-- 这份目录只用于查找与核对来源，不能在 Shadowrocket 中作为去广告模块安装。Shadowrocket 使用手册说明，RULE-SET 需要匹配符合其规则格式的规则集；脚本和客户端专用重写文件需单独适配。
+- 下方 42 项是来源索引，不是安装文件；请使用页面顶部的 Shadowrocket 模块链接安装。其他脚本和客户端专用重写文件仍需逐项适配。
 - 此目录不会修改原有的腾讯视频、微信或谱慧云模块，也不替换此前的 Safari 一键安装链接。
 
 参考：[Shadowrocket 使用手册](https://lowertop.github.io/Shadowrocket/)。
