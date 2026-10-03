@@ -328,10 +328,10 @@ http-response-jq ^https:\/\/ddpay\.xiaojukeji\.com\/ddpay\/api\/manhattan-small-
 http-response ^(https?:\/\/)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*\.)+[a-zA-Z]{2,}(:\d+)?\/wp-json\/[a-zA-Z0-9_-]+\/(mp\/)?v\d\/posts "excitationAd":"\d" "excitationAd":"0" Ad":"[0-9]" Ad":"0" ad":true ad":false AdId":"[^"]*" AdId":"" adid":"[^"]*" adid":"" fr_videp_if":"1 fr_videp_if":"0"
 
 # Applet | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/Applet.conf
-^(http|https):\/\/mp\.weixin\.qq\.com\/mp\/getappmsgad advertisement ddgksf2013
+http-response ^(http|https):\/\/mp\.weixin\.qq\.com\/mp\/getappmsgad advertisement ddgksf2013
 
 # Applet / mini program bus | converted from the source response script
-^https?:\/\/wx\.mygolbs\.com\/WxBusServer\/ApiData\.do Ad":1 Ad":0 Ad_ab":1 Ad_ab":0
+http-response ^https?:\/\/wx\.mygolbs\.com\/WxBusServer\/ApiData\.do Ad":1 Ad":0 Ad_ab":1 Ad_ab":0
 
 [Script]
 # WeRead | https://github.com/Maasea/sgmodule/blob/master/WeRead.sgmodule
