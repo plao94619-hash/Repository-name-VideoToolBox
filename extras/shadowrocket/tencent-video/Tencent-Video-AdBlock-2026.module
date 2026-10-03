@@ -20,13 +20,13 @@ DOMAIN,adsmind.gdtimg.com,{{{首页弹窗广告策略}}}
 
 [URL Rewrite]
 # 开屏图素材：只匹配网站编号路径。
-^https?:\\/\\/splashqqlive\\.gtimg\\.com\\/website\\/\\d{6} - reject
+^https?:\/\/splashqqlive\.gtimg\.com\/website\/\d{6} - reject
 # 首页弹窗广告数据与创意图路径。
-^https?:\\/\\/news\\.l\\.qq\\.com\\/app\\?(?:[^#]*)$ - reject-dict
-^https?:\\/\\/wa\\.gtimg\\.com\\/adxcdn\\/[^?#]+\\.jpg(?:\\?[^#]*)?$ - reject-img
+^https?:\/\/news\.l\.qq\.com\/app\?(?:[^#]*)$ - reject-dict
+^https?:\/\/wa\.gtimg\.com\/adxcdn\/[^?#]+\.jpg(?:\?[^#]*)?$ - reject-img
 # 个人中心视频卡片：只匹配被社区规则识别为广告素材的MP4路径。
-^https?:\\/\\/video\\.dispatch\\.tc\\.qq\\.com\\/[^?#]+\\.mp4(?:\\?[^#]*)?$ - reject
-^https?:\\/\\/[^?#]*vmind\\.qqvideo\\.tc\\.qq\\.com\\/[^?#]+\\.mp4(?:\\?[^#]*)?$ - reject
+^https?:\/\/video\.dispatch\.tc\.qq\.com\/[^?#]+\.mp4(?:\?[^#]*)?$ - reject
+^https?:\/\/[^?#]*vmind\.qqvideo\.tc\.qq\.com\/[^?#]+\.mp4(?:\?[^#]*)?$ - reject
 
 [MITM]
 enable={{{启用精准HTTPS过滤}}}
