@@ -1,16 +1,34 @@
-#!name=腾讯视频广告拦截（日志定向版）
-#!desc=基于2026-10-03流量记录的精确域名拦截。若腾讯视频启动、播放或资源加载异常，可在模块参数中将对应策略改为DIRECT。域名级规则不保证拦截所有视频广告。
+#!name=腾讯视频广告拦截（开屏/首页弹窗/个人中心）
+#!desc=版本1.1.0：保留日志命中的广告接口与素材拦截，新增开屏、首页弹窗和个人中心视频广告路径过滤。HTTPS路径过滤需要启用并信任自己设备生成的Shadowrocket CA。
 #!author=plao94619-hash
 #!homepage=https://github.com/plao94619-hash/Repository-name-VideoToolBox/tree/main/extras/shadowrocket/tencent-video
 #!system=ios
 #!category=AdBlock
-#!arguments=腾讯广告接口策略:REJECT,腾讯广告素材策略:REJECT
-#!arguments-desc=腾讯广告接口策略：iacc.qq.com，默认REJECT；出现启动或功能异常时可改为DIRECT。\n\n腾讯广告素材策略：pgdt.gtimg.cn，默认REJECT；此精确域名也可能被其他腾讯应用使用，出现资源异常时可改为DIRECT。
+#!arguments=启用精准HTTPS过滤:true,腾讯广告接口策略:REJECT,腾讯广告素材策略:REJECT,开屏广告策略:REJECT,首页弹窗广告策略:REJECT
+#!arguments-desc=启用精准HTTPS过滤：用于匹配指定HTTPS广告路径。需在当前Shadowrocket配置中开启HTTPS解密，并在iOS中信任你自己生成的CA；如腾讯视频出现网络异常，可将此参数设为false。设为false后，下面的精确域名规则仍有效。\n\n腾讯广告接口策略：仅匹配iacc.qq.com。腾讯广告素材策略：仅匹配pgdt.gtimg.cn。开屏广告策略：匹配splashqqlive.gtimg.com。首页弹窗广告策略：匹配adsmind.gdtimg.com。各项如影响正常功能，可分别改为DIRECT。
 
-# Version 1.0.0, 2026-10-03. Exact hosts observed in the supplied Tencent Video traffic log.
+# Version 1.1.0, 2026-10-03. Adds targeted URL filters for the three supplied Tencent Video ad placements.
 
 [Rule]
-# 日志中出现于腾讯视频客户端流量；精确主机匹配，不扩展到 qq.com。
+# 2026-10-03 10:40流量记录中命中；精确主机匹配。
 DOMAIN,iacc.qq.com,{{{腾讯广告接口策略}}}
-# 腾讯广告素材域名；精确主机匹配，不扩展到 gtimg.cn。
 DOMAIN,pgdt.gtimg.cn,{{{腾讯广告素材策略}}}
+# Splash asset host from community Tencent Video filters; exact host only.
+DOMAIN,splashqqlive.gtimg.com,{{{开屏广告策略}}}
+# Tencent ad creative host from community Tencent Video filters; exact host only.
+DOMAIN,adsmind.gdtimg.com,{{{首页弹窗广告策略}}}
+
+[URL Rewrite]
+# 开屏图素材：只匹配网站编号路径。
+^https?:\\/\\/splashqqlive\\.gtimg\\.com\\/website\\/\\d{6} - reject
+# 首页弹窗广告数据与创意图路径。
+^https?:\\/\\/news\\.l\\.qq\\.com\\/app\\?(?:[^#]*)$ - reject-dict
+^https?:\\/\\/wa\\.gtimg\\.com\\/adxcdn\\/[^?#]+\\.jpg(?:\\?[^#]*)?$ - reject-img
+# 个人中心视频卡片：只匹配被社区规则识别为广告素材的MP4路径。
+^https?:\\/\\/video\\.dispatch\\.tc\\.qq\\.com\\/[^?#]+\\.mp4(?:\\?[^#]*)?$ - reject
+^https?:\\/\\/[^?#]*vmind\\.qqvideo\\.tc\\.qq\\.com\\/[^?#]+\\.mp4(?:\\?[^#]*)?$ - reject
+
+[MITM]
+enable={{{启用精准HTTPS过滤}}}
+h2=true
+hostname = %APPEND% splashqqlive.gtimg.com, news.l.qq.com, wa.gtimg.com, video.dispatch.tc.qq.com, vmind.qqvideo.tc.qq.com
