@@ -1,0 +1,203 @@
+#!name=墨鱼去广告
+#!desc=Shadowrocket兼容合集：移植上游可转换的URL拦截规则；响应体脚本和失效条目不包含
+#!author=规则源作者见模块注释与项目README
+#!homepage=https://github.com/plao94619-hash/Repository-name-VideoToolBox/tree/main/extras/shadowrocket/moyu-adblock
+#!category=AdBlock
+
+# 墨鱼去广告 Shadowrocket 转换版
+# 仅包含上游文件中的 URL reject / reject-200 / reject-dict / reject-img 规则。
+# 上游响应体脚本、脚本型功能及失效条目未移植；来源按应用分组保留。
+
+[URL Rewrite]
+
+# Applet | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/Applet.conf
+^https?:\/\/api\.blibee\.com\/cvsnotify-api\/cvs\/notify\/app\/banner\/v\d+$ - reject-200
+^https?:\/\/ucmp\.sf-express\.com\/proxy\/operation-platform\/info-flow-adver\/query$ - reject-200
+
+# AmapAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/AmapAds.conf
+^https?:\/\/.*\.amap\.com\/ws\/aos\/alimama\/splash_screen - reject-200
+^https?:\/\/.*\.amap\.com\/v\d\/ai_rec\/ - reject-dict
+^https?:\/\/.*\.amap\.com\/ws\/faas\/amap-navigation\/card-service-route-plan\? - reject-dict
+^https?:\/\/.*\.amap\.com\/ws\/boss\/order_web\/\w{8}_information - reject-200
+^https?:\/\/.*\.amap\.com\/ws\/asa\/ads_attribution - reject
+^https?:\/\/.*\.amap\.com\/ws\/shield\/scene\/recommend - reject-dict
+^https?:\/\/.*\.amap\.com\/uploadimg\/\w+\.gif - reject-img
+^https?:\/\/.*\.amap\.com\/ws\/valueadded\/weather - reject-dict
+
+# BingSimplify | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/BingSimplify.conf
+^https?:\/\/assets\.msn\.com\/service\/weather\/locations\/search - reject-dict
+^https:\/\/assets\.msn\.com\/service\/news\/feed\/pages\/startmhp - reject-dict
+^https?:\/\/api\.msn\.com\/weather - reject-dict
+
+# CaiYunAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/CaiYunAds.conf
+^https?:\/\/ad\.cyapi\.cn\/v\d - reject-200
+
+# CainiaoAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/CainiaoAds.conf
+^https?:\/\/[a-zA-Z0-9_.-]+\.cainiao\.com\/gw\/mtop\.cainiao\.guoguo\.nbnetflow\.ads\.(?!.*_home) - reject-200
+^https?:\/\/[a-zA-Z0-9_.-]+\.cainiao\.com\/gw\/mtop\.cainiao\.guoguo\.nbnetflow\.ads\.mshow\.cn - reject-200
+^https?:\/\/[a-zA-Z0-9_.-]+\.cainiao\.com\/gw\/mtop\.cainiao\.nbcps\.presentation\.fetch\.cn - reject-200
+^https?:\/\/[a-zA-Z0-9_.-]+\.cainiao\.com\/gw\/mtop\.cainiao\.app\.home\.v\d+\.bottom\.area - reject-200
+^https?:\/\/[a-zA-Z0-9_.-]+\.taobao\.com\/gw\/mtop\.cainiao\.guoguo\.nbnetflow\.ads\. - reject-200
+^https?:\/\/[a-zA-Z0-9_.-]+\.taobao\.com\/gw\/mtop\.alimama\.abyss\.unionpage\.get - reject-200
+^https?:\/\/[a-zA-Z0-9_.-]+\.taobao\.com\/gw\/mtop\.cainiao\.adx\.flyad\.getad - reject-200
+^https?:\/\/[a-zA-Z0-9_.-]+\.taobao\.com\/gw\/mtop\.cainiao\.nbmensa\.research\.researchservice\.consultmerge - reject-200
+
+# CheLaiLeAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/CheLaiLeAds.conf
+^https?:\/\/.*chelaile\.net\.cn\/goocity\/flowPos\/listByPos - reject
+^https?:\/\/cdn\.web\.chelaile\.net\.cn\/info-flow\/index\.html - reject-200
+^https?:\/\/.*chelaile\.net\.cn\/(api\/)?adpub - reject-200
+^https?:\/\/124\.70\.194\.16\/(ip|adpub) - reject-200
+^https?:\/\/124\.70\.194\.16\/goocity\/flowPos\/listByPos - reject-200
+^https?:\/\/web\.chelaile\.net\.cn\/api\/operative_position\/infoflow - reject-200
+^https?:\/\/atrace\.chelaile\.net\.cn\/(wx_preloadAd|adAnalysis) - reject-200
+
+# ChinaUnicomAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/ChinaUnicomAds.conf
+^https?:\/\/m\.client\.10010\.com\/mobileserviceimportant\/customer\/querySmartServicekhd.htm - reject
+^https?:\/\/m\.client\.10010\.com\/clientIndex\/api\/v1\/index\/queryIndexExclusiveOffers - reject
+^https?:\/\/img\.client\.10010\.com\/homejingxuan12\/js\/(pubuliu|1homeView) - reject
+
+# GoofishAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/GoofishAds.conf
+^https?:\/\/(g-)?acs\.m\.goofish\.com\/gw\/mtop.*splash\.ads - reject-200
+^https?:\/\/(g-)?acs\.m\.goofish\.com\/gw\/mtop.idle.ad.expose - reject-200
+
+# KeepAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/KeepAds.conf
+^https?:\/\/api\.gotokeep\.com\/guide-webapp\/v\d\/popup\/getPopUp - reject-200
+^https?:\/\/api\.gotokeep\.com\/running\/v\d\/home\/dialog - reject-200
+^https?:\/\/api\.gotokeep\.com\/kprime\/v\d\/popups\/primeGuide - reject-200
+^https?:\/\/hc-ssp\.sm\.cn - reject-200
+^https?:\/\/kad\.gotokeep\.com\/op-engine-webapp\/v\d\/ad - reject-200
+^https?:\/\/api.gotokeep.com/cauchy/growth/init - reject-200
+^https?:\/\/api\.gotokeep\.com\/search\/v\d\/default\/keyword\/list - reject-200
+^https?:\/\/api\.gotokeep\.com\/search\/v\d\/hotword\/list - reject-200
+^https?:\/\/api\.gotokeep\.com\/search\/v\d\/hotHashtag\/list - reject-200
+^https?:\/\/api\.gotokeep\.com\/search\/v\d\/hotCourse\/list - reject-200
+^https?:\/\/api\.gotokeep\.com\/op-engine-webapp\/v\d\/ad - reject-200
+^https?:\/\/api\.gotokeep\.com\/ads\/v\d\/ads\/preload - reject-200
+^https?:\/\/api\.gotokeep\.com\/training\/box\/config - reject-200
+^https?:\/\/api\.gotokeep\.com\/anno\/v\d\/upgrade\/check - reject-200
+
+# MoJiWeatherAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/MoJiWeatherAds.conf
+^https?:\/\/.*api\.moji\.com\/flycard\/flyCard - reject-200
+^https?:\/\/.*api\.moji\.com\/shortvideo - reject-200
+^https?:\/\/.*api\.moji\.com\/json\/advertising_goods - reject-200
+^https?:\/\/.*api\.moji\.com\/forum - reject-200
+^https?:\/\/.*api\.moji\.com\/user\/dynamic_v\d\/json\/someone_interest - reject-200
+^https:\/\/tnc.*zijieapi\.com\/get_domains - reject-200
+
+# NeteaseAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/NeteaseAds.conf
+^https?:\/\/interface(\d)?\.music\.163\.com\/e?api\/content\/activity\/music\/jar\/template\/list - reject-200
+^https?:\/\/interface(\d)?\.music\.163\.com\/e?api\/sp\/flow\/popup\/query - reject-200
+^https?:\/\/interface(\d)?\.music\.163\.com\/e?api\/vipmall\/couponcfg\/get - reject-200
+^https?:\/\/interface(\d)?\.music\.163\.com\/w?eapi\/(resource-exposure\/)?activity - reject-200
+^https?:\/\/interface(\d)?\.music\.163\.com\/e?api\/comment\/feed\/inserted\/resources - reject-200
+^https?:\/\/interface(\d)?\.music\.163\.com\/e?api\/resource-exposure\/config - reject-200
+
+# NeteaseMailAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/NeteaseMailAds.conf
+^https?:\/\/dashi\.163\.com\/task-center-api\/fapi\/task - reject-dict
+^https?:\/\/appconf\.mail\.163\.com\/mmad\/master\/get\.do - reject-200
+^https?:\/\/appconf\.mail\.163\.com\/mailoperating\/mailmaster\/api\/operator\/get - reject-dict
+^https?:\/\/appconf\.mail\.163\.com\/mailmaster\/getRegConfig\.do - reject-dict
+^https?:\/\/appconf\.mail\.163\.com\/mailmaster\/api\/config\/function\.do - reject-dict
+
+# QiShuiMusicAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/QiShuiMusicAds.conf
+^https:\/\/[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+){1,3}\/luna\/media_ads - reject-200
+^https:\/\/[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+){1,3}\/luna\/ads - reject-200
+^https:\/\/[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+){1,3}\/location\/info - reject-200
+^https:\/\/[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+){1,3}\/luna\/commerce - reject-200
+^https:\/\/[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+){1,3}\/luna\/hashtag\/recommend - reject-200
+
+# SmzdmAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/SmzdmAds.conf
+^https?:\/\/haojia\.m\.smzdm\.com\/detail_modul\/other_modul - reject-200
+^https?:\/\/haojia\.m\.smzdm\.com\/detail_modul\/user_related_modul - reject-200
+^https?:\/\/haojia\.m\.smzdm\.com\/detail_modul\/wiki_related_modul - reject-200
+
+# TieBaAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/TieBaAds.conf
+^https?:\/\/tieba(c)?\.baidu\.com\/c\/f\/ad\/getFeedAd - reject-200
+
+# WeiboAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/WeiboAds.conf
+^https?:\/\/api\.weibo\.cn\/\d\/statuses\/container_positive - reject-200
+^https?:\/\/api\.weibo\.cn\/\d\/push\/info - reject-200
+^https?:\/\/api\.weibo\.cn\/.*account\/recommend_interesttags - reject-dict
+^https?:\/\/api\.weibo\.cn\/.*\/media_homelist - reject-200
+^https?:\/\/api\.weibo\.cn\/.*finder\/searchbarchange - reject-200
+^https?:\/\/api\.weibo\.cn\/\d\/ad\/preload - reject-dict
+^https?:\/\/api\.weibo\.cn\/\d\/profile\/recommend_popuser - reject-dict
+^https?:\/\/boot.*weibo\.com\/v\d\/ad\/realtime - reject-200
+^https?:\/\/api\.weibo\.cn\/.*discovery_home_bottom_getdotinfo - reject-dict
+^https?:\/\/m?api\.weibo\.c(n|om)\/\d/push/daily - reject-dict
+^https?:\/\/(preload-click|preload-impression)\.uve\.weibo\.com\/(interface\/wbpullad\/wbpullad_click\.php|wbapplua\/get_wbpullad_log\.lua) - reject
+^https?:\/\/sdkapp\.uve\.weibo\.com\/interface\/sdk\/sdkconfig\.php - reject
+^https?:\/\/m?api\.weibo\.c(n|om)\/\d\/hot\/hours_spotlight - reject-dict
+^https?:\/\/api\.weibo\.cn\/\d\/cardlist\?v_f=.*Weibo_intl - reject-dict
+^https?:\/\/weibointl\.api\.weibo\.c(n|om)\/portal\.php\?a=hot_search_users - reject-dict
+^https?:\/\/m?api\.weibo\.c(n|om)\/\d\/ad\/weibointl\? - reject-dict
+
+# XiaoYuZhouAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/XiaoYuZhouAds.conf
+^https?:\/\/api\.xiaoyuzhoufm\.com\/v\d\/search\/get-express - reject-200
+^https?:\/\/api\.xiaoyuzhoufm\.com\/v\d\/search\/get-preset - reject-200
+^https?:\/\/api\.xiaoyuzhoufm\.com\/v\d\/category\/list-daily-suggestion - reject-200
+^https?:\/\/api\.xiaoyuzhoufm\.com\/v\d\/flash-screen\/list - reject-200
+
+# Ximalaya | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/Ximalaya.conf
+^https?:\/\/.*\.xima.*\.com\/discovery-feed\/focus\/queryF - reject
+^https?:\/\/.*\.xima.*\.com\/mobile-playpage\/view\/ - reject
+^https?:\/\/.*\.xima.*\.com\/chaos-notice-web\/v1\/message\/preview\/list - reject
+^https?:\/\/.*\.xima.*\.com\/social-web\/bottomTabs\/dynamicEntrance\/status - reject
+^https?:\/\/.*\.xmcdn\.com\/\w{8}\/\w{4}-\w{16}\/.+gif$ - reject
+^https?:\/\/gslb.*\.xima.*\.com\/ - reject
+^https?:\/\/.*\.xima.*\.com\/(dog-portal\/checkOld|(child-mobile\/child|aged-mobile\/aged)\/mode\/query) - reject
+^https?:\/\/.*\.xima.*\.com\/discovery-feed\/isShowUserGiftPendant - reject
+^https?:\/\/.*\.xima.*\.com\/mobile-user\/unread - reject
+^https?:\/\/.*\.xima.*\.com/mobile-user/minorProtection/pop - reject
+^https?:\/\/.*\.xima.*\.com\/collector\/xl\/v\d - reject
+^https?:\/\/.*\.xima.*\.com\/butler-portal\/versionCheck - reject
+^https?:\/\/(adse\.wsa|adse|adbehavior|xdcs-collector)\.xima.*\.com\/.* - reject
+^https?:\/\/.*\.xima.*\.com\/mobile\/discovery\/v\d\/location - reject
+^https?:\/\/.*\.xima.*\.com\/(hub\/)?hotWord - reject
+^https?:\/\/.*\.xima.*\.com\/(hub\/)?hotWordBillboard - reject
+^https?:\/\/.*\.xima.*\.com\/(hub)?guideWord - reject
+^https?:\/\/.*\.xima.*\.com\/api\/v\d\/adRealTime - reject
+^https?:\/\/.*\.xima.*\.com\/ting\/(loading|feed|home)? - reject
+
+# YoutubeAds | https://github.com/ddgksf2013/Rewrite/blob/master/AdBlock/YoutubeAds.conf
+^https?:\/\/[\w-]+\.googlevideo\.com\/(?!(dclk_video_ads|videoplayback\?)).+&oad - reject-200
+^https?:\/\/(www|s)\.youtube\.com\/api\/stats\/ads - reject-200
+^https?:\/\/(www|s)\.youtube\.com\/(pagead|ptracking) - reject-200
+^https?:\/\/s\.youtube\.com\/api\/stats\/qoe\?adcontext - reject-200
+
+# zhihu | https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/script/zheye/zheye.snippet
+^https?:\/\/118\.89\.204\.198 - reject-dict
+^https?:\/\/103\.41\.167\.237 - reject-dict
+^https?:\/\/2402:4e00:1200:ed00:0:9089:6dac:96b6 - reject-200
+^https?:\/\/api\.zhihu\.com\/commercial_api - reject-dict
+^https?:\/\/api\.zhihu\.com\/commercial_api\/answer/\d+/bottom-v2 - reject-dict
+^https?:\/\/api\.zhihu\.com\/message-push\/event - reject-dict
+^https?:\/\/api\.zhihu\.com\/guide_center\/strategy - reject-dict
+^https?:\/\/api\.zhihu\.com\/bazaar\/float_window - reject-dict
+^https?:\/\/api\.zhihu\.com\/metrics\/report - reject-dict
+^https?:\/\/api\.zhihu\.com\/settings\/new\/notification - reject-dict
+^https?:\/\/api\.zhihu\.com\/bazaar\/vip_tab\/header - reject-dict
+^https?:\/\/api\.zhihu\.com\/(notifications\/v\d\/count) - reject-dict
+^https?:\/\/api\.zhihu\.com\/root\/window - reject-dict
+^https?:\/\/api\.zhihu\.com\/me\/guides - reject-dict
+^https?:\/\/api\.zhihu\.com\/moments\/recent - reject-dict
+^https?:\/\/api\.zhihu\.com\/api\/v4\/ecom_data\/config - reject-dict
+^https?:\/\/api\.zhihu\.com\/feed\/render\/revisit\/tag_config - reject-dict
+^https?:\/\/api\.zhihu\.com\/content-distribution-core\/sections\/ - reject-dict
+
+# didi | https://raw.githubusercontent.com/ZenmoFeiShi/Qx/main/Didichuxing.snippet
+^https:\/\/res\.xiaojukeji\.com\/resapi\/activity\/getMulti\? - reject-dict
+^https:\/\/res\.xiaojukeji\.com\/resapi\/activity\/xpget - reject-dict
+^https:\/\/ct\.xiaojukeji\.com\/agent\/v3\/feeds - reject-dict
+^https:\/\/freight\.xiaojukeji\.com\/gateway - reject-dict
+^https:\/\/daijia\.kuaidadi\.com:443\/gateway - reject-dict
+^https:\/\/res\.xiaojukeji\.com\/resapi\/activity\/mget - reject-dict
+^https:\/\/conf\.diditaxi\.com\.cn\/homepage\/v\d\/other\/fast - reject-dict
+^https:\/\/conf\.diditaxi\.com\.cn\/homepage\/v\d\/other\/slow - reject-dict
+^https:\/\/conf\.diditaxi\.com\.cn\/dynamic\/conf - reject-dict
+^https:\/\/api\.udache\.com\/gulfstream\/watson\/v1\/bubble\/getBubble - reject-dict
+^https:\/\/res\.xiaojukeji\.com\/resapi\/activity\/getInsActivityV2 - reject-dict
+^https:\/\/conf\.diditaxi\.com\.cn\/ota\/na\/yuantu\/infoList - reject-dict
+
+[MITM]
+hostname = %APPEND% *.amap.com, *.api.moji.com, *.api.weibo.cn, *.api.weibo.com, *.cainiao.com, *.chelaile.net.cn, *.googlevideo.com, *.taobao.com, *.uve.weibo.com, *.xima*.com, *.xmcdn.com, *.zijieapi.com, 103.41.167.237, 118.89.204.198, 124.70.194.16, 2402:4e00:1200:ed00:0:9089:6dac:96b6, acs.m.goofish.com, ad.cyapi.cn, api.blibee.com, api.gotokeep.com, api.moji.com, api.msn.com, api.qishui.com, api.udache.com, api.weibo.cn, api.weibo.com, api.xiaoyuzhoufm.com, api.zhihu.com, appconf.mail.163.com, assets.msn.com, beta-luna.douyin.com, boot.biz.weibo.com, conf.diditaxi.com.cn, ct.xiaojukeji.com, daijia.kuaidadi.com, dashi.163.com, freight.xiaojukeji.com, g-acs.m.goofish.com, haojia.m.smzdm.com, hc-ssp.sm.cn, img.client.10010.com, interface*.music.163.com, kad.gotokeep.com, m.client.10010.com, mail.163.com, mapi.weibo.cn, mapi.weibo.com, res.xiaojukeji.com, s.youtube.com, sdkapp.uve.weibo.com, tieba.baidu.com, tiebac.baidu.com, ucmp.sf-express.com, weibointl.api.weibo.cn, weibointl.api.weibo.com, www.youtube.com, youtubei.googleapis.com
