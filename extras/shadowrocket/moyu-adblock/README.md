@@ -9,10 +9,11 @@
 
 ## 模块覆盖范围与使用要求
 
-- 当前版本包含 **147 条去重后的 URL 请求拦截规则**，来自 21 个可转换的配置文件；覆盖微信小程序、YouTube、知乎、贴吧、微博、高德、网易云、菜鸟、Keep、喜马拉雅、滴滴等。
-- 上游的 `url reject`、`reject-200`、`reject-dict`、`reject-img` 规则已转换为 Shadowrocket 的 `[URL Rewrite]` 格式；`[MITM]` 使用 `%APPEND%`，追加目标主机。
-- 这不是主页 42 项功能的完整移植。响应体脚本、JavaScript、JSON 修改、仅有脚本的配置、失效条目及「墨鱼去开屏 2.0」的完整规则没有并入。微信图文源文件在上游页面已划除，并注明无法去除朋友圈广告。
-- 使用时将 Shadowrocket 全局路由设为“配置”模式；随后在当前配置中启用 HTTPS 解密，并安装、信任 Shadowrocket CA 证书。模块只追加目标主机。应用证书固定或版本变化可能导致个别规则不起作用，详见 [Shadowrocket 使用手册](https://lowertop.github.io/Shadowrocket/)。
+- 当前版本包含 **148 条 `[URL Rewrite]` 规则**（147 条请求拦截 + 1 条 YouTube 302 重写）、**22 条 `[Rule]` 域名/IP 拒绝规则**，以及 **53 条 JSON jq 正文规则**。
+- `[Body Rewrite]` 另含 3 条正则替换规则（共 9 组替换）：微信图文广告响应、部分小程序响应和掌上公交响应。微信读书保留 1 条 Shadowrocket `[Script]` 响应脚本规则，脚本由上游地址远程加载。
+- 本次覆盖 21 个 `AdBlock` 配置文件，以及知乎、贴吧、起点、微信读书和滴滴等 5 个补充配置。QX 的 `jsonjq-response-body`、URL 302、域名和 IP 拒绝语法已转换为 Shadowrocket 对应格式。
+- 这不是主页 42 项功能的完整移植。依赖 Quantumult X 专用 JavaScript API 的脚本规则、完整「墨鱼去开屏 2.0」及失效条目仍未并入；小程序脚本中一个空字符串替换也未转换。WeRead 脚本保留了上游 `.sgmodule` 格式，但尚未在设备上验证。
+- Shadowrocket 全局路由设为“配置”模式；在当前配置启用 HTTPS 解密，并安装、信任 Shadowrocket CA 证书。正文重写和脚本规则需要 HTTPS 解密；模块使用 `%APPEND%` 追加主机名。应用证书固定或版本变化可能令个别规则失效，详见 [Shadowrocket 使用手册](https://lowertop.github.io/Shadowrocket/)。
 
 上游仓库没有统一开源许可证；主页另声明禁止公众号/自媒体转载或发布其内容。模块按组保留来源链接，但规则语法转换不等于取得再分发授权；公开推广或二次发布前请核对对应源文件说明并取得必要许可。
 
