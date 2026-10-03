@@ -1,5 +1,28 @@
 # Shadowrocket 模块
 
+## 去广告规则合集
+
+把现有的微信广告拦截、墨鱼去广告 Shadowrocket 转换规则和腾讯视频广告拦截合并为一个模块；三个原模块继续保留。
+
+### Safari 一键安装
+
+> 在已安装 Shadowrocket 的 iPhone 或 iPad 上，用 Safari 打开下面的链接并确认跳转安装。
+
+[🚀 一键跳转 Shadowrocket 安装「去广告规则」](https://lowertop.github.io/Shadowrocket-First/redirect.html?url=shadowrocket%3A%2F%2Finstall%3Fmodule%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fplao94619-hash%2FRepository-name-VideoToolBox%2Fmain%2Fextras%2Fshadowrocket%2FAdBlock-All-In-One.module)
+
+手动导入：[模块原始文件](https://raw.githubusercontent.com/plao94619-hash/Repository-name-VideoToolBox/main/extras/shadowrocket/AdBlock-All-In-One.module)
+
+### 启用说明与范围
+
+- 安装后启用模块；若已单独启用微信、墨鱼或腾讯视频旧模块，请停用旧模块以免重复处理。
+- 微信/腾讯视频的 HTTPS 路径与响应过滤需要在本设备启用 Shadowrocket HTTPS 解密，并安装、完全信任本机 Shadowrocket 生成的 CA。不要安装他人提供的证书。
+- 谱慧云资源策略默认拒绝三个微信共享资源域名，可能影响普通图片；遇到异常时可在模块参数中把“谱慧云资源策略”改为 `DIRECT`。
+- 腾讯视频个人中心广告链接的 `jump01.gw62.cn` 规则会拦截广告落地跳转；腾讯视频将广告卡片直接渲染在页面时，网络模块无法保证隐藏卡片本身。
+- 微信朋友圈使用的 MMTLS 信息流无法由 Shadowrocket 规则可靠过滤；模块不拦截该加密信息流。
+- 墨鱼部分依赖 Quantumult X/Loon 专用脚本接口的规则无法直接移植，本合集包含原墨鱼 Shadowrocket 转换模块中可转换的规则。
+
+模块文件：[AdBlock-All-In-One.module](AdBlock-All-In-One.module)
+
 新增：[微信广告拦截合集（含谱慧云）](wechat/README.md)，版本1.2.0，将公众号、部分通用小程序、企迈、美团点餐与已获用户见效反馈的谱慧云资源规则合并到一个模块；原微信模块地址与Safari一键安装链接保持不变。朋友圈MMTLS信息流不支持。
 
 谱慧云规则在合集内默认启用，不需要额外安装独立模块；正常图片异常时可把“谱慧云资源策略”改为DIRECT，单独取消这组拦截并直连。旧[独立模块](wechat/Puhuiyun-AdBlock-Experimental.module)保留兼容，使用合集时应停用旧独立模块。
