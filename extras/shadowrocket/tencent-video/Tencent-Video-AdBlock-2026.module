@@ -1,13 +1,13 @@
 #!name=腾讯视频广告拦截（开屏/首页弹窗/个人中心）
-#!desc=版本1.1.0：保留日志命中的广告接口与素材拦截，新增开屏、首页弹窗和个人中心视频广告路径过滤。HTTPS路径过滤需要启用并信任自己设备生成的Shadowrocket CA。
+#!desc=版本1.2.0：新增日志命中的腾讯GDT广告域（gdt.qq.com）与IACC推荐接口（iacc.rec.qq.com）拦截，并保留开屏、首页弹窗和个人中心视频路径规则。HTTPS路径过滤需启用并信任自己设备生成的Shadowrocket CA。
 #!author=plao94619-hash
 #!homepage=https://github.com/plao94619-hash/Repository-name-VideoToolBox/tree/main/extras/shadowrocket/tencent-video
 #!system=ios
 #!category=AdBlock
-#!arguments=启用精准HTTPS过滤:true,腾讯广告接口策略:REJECT,腾讯广告素材策略:REJECT,开屏广告策略:REJECT,首页弹窗广告策略:REJECT
-#!arguments-desc=启用精准HTTPS过滤：用于匹配指定HTTPS广告路径。需在当前Shadowrocket配置中开启HTTPS解密，并在iOS中信任你自己生成的CA；如腾讯视频出现网络异常，可将此参数设为false。设为false后，下面的精确域名规则仍有效。\n\n腾讯广告接口策略：仅匹配iacc.qq.com。腾讯广告素材策略：仅匹配pgdt.gtimg.cn。开屏广告策略：匹配splashqqlive.gtimg.com。首页弹窗广告策略：匹配adsmind.gdtimg.com。各项如影响正常功能，可分别改为DIRECT。
+#!arguments=启用精准HTTPS过滤:true,腾讯广告接口策略:REJECT,腾讯广告素材策略:REJECT,开屏广告策略:REJECT,首页弹窗广告策略:REJECT,腾讯GDT广告策略:REJECT,IACC推荐接口策略:REJECT
+#!arguments-desc=启用精准HTTPS过滤：用于匹配指定HTTPS广告路径。需在当前Shadowrocket配置中开启HTTPS解密，并在iOS中信任你自己生成的CA；如腾讯视频出现网络异常，可将此参数设为false。设为false后，下面的精确域名规则仍有效。\n\n腾讯广告接口策略：仅匹配iacc.qq.com。腾讯广告素材策略：仅匹配pgdt.gtimg.cn。开屏广告策略：匹配splashqqlive.gtimg.com。首页弹窗广告策略：匹配adsmind.gdtimg.com。腾讯GDT广告策略：仅覆盖 gdt.qq.com 子域；IACC推荐接口策略：仅匹配 iacc.rec.qq.com。若相关广告推荐或客户端功能异常，可单独改为DIRECT。各项如影响正常功能，可分别改为DIRECT。
 
-# Version 1.1.0, 2026-10-03. Adds targeted URL filters for the three supplied Tencent Video ad placements.
+# Version 1.2.0, 2026-10-03. Adds exact GDT/IACC endpoints observed in the latest Tencent Video traffic log.
 
 [Rule]
 # 2026-10-03 10:40流量记录中命中；精确主机匹配。
@@ -17,6 +17,9 @@ DOMAIN,pgdt.gtimg.cn,{{{腾讯广告素材策略}}}
 DOMAIN,splashqqlive.gtimg.com,{{{开屏广告策略}}}
 # Tencent ad creative host from community Tencent Video filters; exact host only.
 DOMAIN,adsmind.gdtimg.com,{{{首页弹窗广告策略}}}
+# 11:37 traffic while the profile ad card was displayed routed these ad network endpoints DIRECT.
+DOMAIN-SUFFIX,gdt.qq.com,{{{腾讯GDT广告策略}}}
+DOMAIN,iacc.rec.qq.com,{{{IACC推荐接口策略}}}
 
 [URL Rewrite]
 # 开屏图素材：只匹配网站编号路径。
