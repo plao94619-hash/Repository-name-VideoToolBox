@@ -1,6 +1,6 @@
 # 腾讯视频广告拦截（Shadowrocket）
 
-版本 **1.3.1**，更新日期 2026-10-03。针对新日志里 `p2.l.qq.com` 的部分 TCP 请求仍走 `PROXY`，将 `c2.l.qq.com`、`p2.l.qq.com`、`livep2.l.qq.com` 三条精确规则固定为 `REJECT`，不再依赖可选策略参数。
+版本 **1.3.2**，更新日期 2026-10-03。保留个人中心三条固定 `REJECT` 主机，并新增 `mi.gdt.qq.com` 精确规则，用于覆盖腾讯广告官方文档列出的广告请求接口，作为启动页开屏广告候选项。
 
 ## Safari 一键安装
 
@@ -16,22 +16,22 @@
 
 | 截图位置 | 过滤目标 | 命中方式 |
 | --- | --- | --- |
-| 启动页开屏广告 | `splashqqlive.gtimg.com/website/<编号>` | 精确 URL 路径，并有单独的开屏域名策略 |
+| 启动页开屏广告 | `mi.gdt.qq.com`、`splashqqlive.gtimg.com/website/<编号>` | 精确广告请求主机与开屏素材路径；新加主机待本次开屏日志验证 |
 | 进入首页后的弹窗 | `news.l.qq.com/app?`、`wa.gtimg.com/adxcdn/*.jpg` 与 `adsmind.gdtimg.com` | 广告接口和素材路径 |
 | 个人中心视频广告卡片 | `video.dispatch.tc.qq.com/*.mp4`、`vmind.qqvideo.tc.qq.com/*.mp4` | 仅拦截对应 MP4 路径 |
-| 腾讯 GDT 广告接口 | `c3.gdt.qq.com`、`v3.gdt.qq.com`、`xs.gdt.qq.com` | 精确主机匹配，默认 REJECT，可单独调整 |
+| 腾讯 GDT 广告接口 | `mi.gdt.qq.com`、`c3.gdt.qq.com`、`v3.gdt.qq.com`、`xs.gdt.qq.com` | 精确主机匹配，默认 REJECT，可单独调整 |
 | IACC 推荐接口 | `iacc.rec.qq.com` | 精确主机匹配，默认 REJECT，可单独调整 |
 | 个人中心广告相关 L 域主机 | `c2.l.qq.com`、`p2.l.qq.com`、`livep2.l.qq.com` | 三个精确主机固定 `REJECT`，避免 TCP 流量被策略组转发 |
 
-路径写法参考了公开社区规则中的腾讯视频素材与页面过滤条目：[腾讯视频广告规则示例](https://github.com/bai1zi/shadowrocket-surge-loon-qx/blob/main/ADs.sgmodule#L2526-L2549)、[开屏资源规则示例](https://github.com/Masstone/Rules/blob/master/Dler%20Cloud#L2886-L2922)、[GDT 域规则示例](https://github.com/SukkaW/Clash-Rules/blob/master/clash_rules)。这些是社区维护的规则，不是腾讯官方接口文档；IACC 推荐接口项按本次流量记录精确添加。
+现有素材路径参考公开社区规则：[腾讯视频广告规则示例](https://github.com/bai1zi/shadowrocket-surge-loon-qx/blob/main/ADs.sgmodule#L2526-L2549)、[开屏资源规则示例](https://github.com/Masstone/Rules/blob/master/Dler%20Cloud#L2886-L2922)。腾讯广告官方[广告请求接口文档](https://developers.adnet.qq.com/doc/api/guide)将 `http://mi.gdt.qq.com/api/v3` 列为广告请求地址，并说明开屏广告位实时请求广告。此文档支持新增 `mi.gdt.qq.com` 规则，但这张截图对应的请求尚无新日志验证；IACC 与 L 域规则按你提供的流量记录精确添加。
 
 ## 日志确认的规则
 
-此前日志显示 `iacc.qq.com`、`pgdt.gtimg.cn` 以及若干 GDT/IACC/L 域主机直连，因此逐步加入了对应规则。最新数据库确认 GDT 与 IACC 主机规则已命中 `REJECT`；新增 L 域规则也已命中，但其中 `p2.l.qq.com` 有 TCP 请求被路由到 `PROXY`，而 UDP 请求被拒绝。v1.3.1 将三个 L 域主机改为固定 `REJECT`，消除策略参数误设为代理时的漏拦截。
+最新数据库显示，个人中心相关的 GDT/IACC 请求已命中 `REJECT`；三个 L 域主机也已命中规则，但 `p2.l.qq.com` 的部分 TCP 请求仍经 `PROXY`，因此 v1.3.1 将这三条规则固定为 `REJECT`。
 
-这份数据库只记录主机名、端口和路由结果，不含 HTTPS 请求路径、响应内容或广告素材 URL。`rdelivery.qq.com`、`pbaccess.video.qq.com`、`vv6.video.qq.com` 等其他主机仍有直连记录，但它们可能承担视频或页面功能；在没有具体请求路径之前，不应把它们直接列为广告拦截域名。若 v1.3.1 后卡片仍显示，需要检查清除缓存后的新日志，并获取广告请求的 HTTPS 主机与路径，才能判断是否需要更精确的 URL 规则。
+这份数据库截至 12:55:26，早于本次开屏截图；其中没有 `splashqqlive.gtimg.com` 或 `mi.gdt.qq.com` 的对应请求。v1.3.2 按腾讯广告官方文档增加 `mi.gdt.qq.com` 精确规则作为候选项，是否命中这次开屏仍需新日志确认。
 
-日志数据库和请求参数没有上传到仓库。
+数据库只记录主机名、端口和路由结果，不含 HTTPS 请求路径、响应内容或广告素材 URL。`rdelivery.qq.com`、`pbaccess.video.qq.com`、`vv6.video.qq.com` 等其他主机仍有直连记录，但可能承担视频或页面功能；缺少请求路径时，不把它们直接列为广告拦截域名。日志数据库和请求参数没有上传到仓库。
 
 ## 启用 HTTPS 路径过滤
 
@@ -52,6 +52,7 @@
 DOMAIN,iacc.qq.com,REJECT
 DOMAIN,pgdt.gtimg.cn,REJECT
 DOMAIN,splashqqlive.gtimg.com,REJECT
+DOMAIN,mi.gdt.qq.com,REJECT
 DOMAIN,adsmind.gdtimg.com,REJECT
 DOMAIN,c3.gdt.qq.com,REJECT
 DOMAIN,v3.gdt.qq.com,REJECT
