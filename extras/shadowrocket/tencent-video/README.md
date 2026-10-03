@@ -1,35 +1,51 @@
 # 腾讯视频广告拦截（Shadowrocket）
 
-版本 1.0.0，依据你提供的 2026-10-03 流量记录制作。日志筛选窗口为 10:40–10:42；数据库中实际记录到 **10:40:44**，窗口内共 64 条记录。日志没有提交到仓库。
+版本 **1.1.0**，更新日期 2026-10-03。此版按你发来的三张截图增加开屏、首页进入弹窗、个人中心视频卡片的过滤路径，并保留上一版从流量日志确认的两条精确域名规则。
 
 ## Safari 一键安装
 
 请在已安装 Shadowrocket 的 iPhone 或 iPad 上用 Safari 打开：
 
-[🚀 一键跳转 Shadowrocket 并安装](${install})
+[🚀 一键跳转 Shadowrocket 并安装](https://lowertop.github.io/Shadowrocket-First/redirect.html?url=shadowrocket%3A%2F%2Finstall%3Fmodule%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fplao94619-hash%2FRepository-name-VideoToolBox%2Fmain%2Fextras%2Fshadowrocket%2Ftencent-video%2FTencent-Video-AdBlock-2026.module)
 
-系统询问是否打开 Shadowrocket 时选择“打开”，再确认安装并启用模块。
+系统询问是否打开 Shadowrocket 时选择“打开”，然后确认安装或更新并启用模块。此模块沿用上一版的原始文件地址，可重复打开同一链接更新。
 
-手动导入：[模块原始文件](${raw})
+手动导入：[模块原始文件](https://raw.githubusercontent.com/plao94619-hash/Repository-name-VideoToolBox/main/extras/shadowrocket/tencent-video/Tencent-Video-AdBlock-2026.module)
 
-## 规则范围
+## 本次新增的三类广告路径
 
-| 精确域名 | 默认策略 | 依据 |
+| 截图位置 | 过滤目标 | 命中方式 |
 | --- | --- | --- |
-| `iacc.qq.com` | `REJECT` | 该时间段记录到 5 次请求；腾讯视频客户端流量中出现。 |
-| `pgdt.gtimg.cn` | `REJECT` | 该时间段记录到 12 次请求；腾讯视频客户端流量中出现。 |
+| 启动页开屏广告 | \`splashqqlive.gtimg.com/website/<编号>\` | 精确 URL 路径，并有单独的开屏域名策略 |
+| 进入首页后的弹窗 | \`news.l.qq.com/app?\`、\`wa.gtimg.com/adxcdn/*.jpg\` 与 \`adsmind.gdtimg.com\` | 广告接口和素材路径 |
+| 个人中心视频广告卡片 | \`video.dispatch.tc.qq.com/*.mp4\`、\`vmind.qqvideo.tc.qq.com/*.mp4\` | 仅拦截对应 MP4 路径 |
 
-这两个精确域名也出现在公开的社区广告规则集合中；该资料是社区维护的规则，不是腾讯官方接口说明。参考：[Hackl0us 国内网站广告追踪屏蔽规则](https://github.com/Hackl0us/SS-Rule-Snippet/blob/master/%E8%A7%84%E5%88%99%E7%89%87%E6%AE%B5%E9%9B%86/%E8%87%AA%E9%80%89%E8%A7%84%E5%88%99%E9%9B%86/%E5%9B%BD%E5%86%85%E7%BD%91%E7%AB%99%E5%B9%BF%E5%91%8A%E8%BF%BD%E8%B8%AA%E5%B1%8F%E8%94%BD.txt)；另见 [TencentVideo 分流规则](https://clashios.app/rule/tencentvideo)。
+路径写法参考了公开社区规则中的腾讯视频素材与页面过滤条目：[腾讯视频广告规则示例](https://github.com/bai1zi/shadowrocket-surge-loon-qx/blob/main/ADs.sgmodule#L2526-L2549)、[开屏资源规则示例](https://github.com/Masstone/Rules/blob/master/Dler%20Cloud#L2886-L2922)。这些是社区维护的规则，不是腾讯官方接口文档。
 
-## 调整与限制
+## 日志确认的规则
 
-模块只拒绝上表中的两个主机，不匹配整个 `qq.com` 或 `gtimg.cn`，也不加入播放器、视频 CDN、会员或支付域名。由于 Shadowrocket 的这类规则按主机名匹配，`pgdt.gtimg.cn` 也可能被其他腾讯应用使用。
+提供的数据库在 10:40–10:42 这个筛选窗口内实际只记录到 **10:40:44**，共 64 条记录；其中 \`iacc.qq.com\` 出现 5 次，\`pgdt.gtimg.cn\` 出现 12 次。这两条精确域名继续默认拒绝。日志文件及其中的请求参数没有上传到仓库。
 
-如果腾讯视频启动、播放或图片加载异常，在 Shadowrocket 中编辑模块参数，将对应的“腾讯广告接口策略”或“腾讯广告素材策略”改为 `DIRECT`，然后重新测试。广告也可能由视频播放接口或其他共享域名返回，所以不能保证移除所有开屏、贴片或信息流广告；若广告仍出现，应根据新的广告时段日志再添加经确认的精确域名。
+截图时间显示为 10:56，因此上述新增路径不是由同一时刻的流量日志逐条映射出来的，而是结合截图位置与公开社区规则加入的候选过滤路径。实际命中情况需要在设备上看 Shadowrocket 日志确认。
 
-### 当前规则
+## 启用 HTTPS 路径过滤
 
-```ini
+精确 URL 路径需要 Shadowrocket 解密相应 HTTPS 主机。模块的“启用精准HTTPS过滤”默认开启；请在你自己的 Shadowrocket 配置中开启 HTTPS 解密，并只安装、信任由该设备上的 Shadowrocket 生成的 CA 证书。
+
+若不想使用 HTTPS 解密，或腾讯视频因此出现连接异常，可把“启用精准HTTPS过滤”改为 \`false\`。这样会停用路径级过滤，但 \`iacc.qq.com\`、\`pgdt.gtimg.cn\`、\`splashqqlive.gtimg.com\` 与 \`adsmind.gdtimg.com\` 的精确主机策略仍按各自参数生效。
+
+## 故障调整与范围
+
+- 开屏、首页弹窗主机策略分别可改为 \`DIRECT\`。
+- 如果个人中心卡片或正常视频播放异常，先把“启用精准HTTPS过滤”改为 \`false\`，再测试。
+- 所有域名规则都是精确主机匹配，没有封锁整个 \`qq.com\`、\`gtimg.cn\` 或 \`gdtimg.com\`。
+- 腾讯视频可能改用其他广告接口或将广告与正片放在同一视频流中，因此不能保证去掉每一条广告；若广告仍出现，需要在广告展示的同一时段补充新的流量记录。
+
+### 规则摘要
+
+\`\`\`ini
 DOMAIN,iacc.qq.com,REJECT
 DOMAIN,pgdt.gtimg.cn,REJECT
-```
+DOMAIN,splashqqlive.gtimg.com,REJECT
+DOMAIN,adsmind.gdtimg.com,REJECT
+\`\`\`
