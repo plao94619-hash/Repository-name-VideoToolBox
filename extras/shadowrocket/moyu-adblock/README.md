@@ -12,7 +12,7 @@
 - 当前版本包含 **147 条去重后的 URL 请求拦截规则**，来自 21 个可转换的配置文件；覆盖微信小程序、YouTube、知乎、贴吧、微博、高德、网易云、菜鸟、Keep、喜马拉雅、滴滴等。
 - 上游的 `url reject`、`reject-200`、`reject-dict`、`reject-img` 规则已转换为 Shadowrocket 的 `[URL Rewrite]` 格式；`[MITM]` 使用 `%APPEND%`，追加目标主机。
 - 这不是主页 42 项功能的完整移植。响应体脚本、JavaScript、JSON 修改、仅有脚本的配置、失效条目及「墨鱼去开屏 2.0」的完整规则没有并入。微信图文源文件在上游页面已划除，并注明无法去除朋友圈广告。
-- HTTPS URL 拦截需要在 Shadowrocket 当前配置中启用 HTTPS 解密、安装并信任 Shadowrocket CA 证书。只为需要的主机启用解密；证书固定或应用版本变化可能导致个别规则不起作用。
+- 使用时将 Shadowrocket 全局路由设为“配置”模式；随后在当前配置中启用 HTTPS 解密，并安装、信任 Shadowrocket CA 证书。模块只追加目标主机。应用证书固定或版本变化可能导致个别规则不起作用，详见 [Shadowrocket 使用手册](https://lowertop.github.io/Shadowrocket/)。
 
 上游仓库没有统一开源许可证，模块按组保留来源链接；使用或再次发布时，请遵循每个源文件自己的说明。
 
