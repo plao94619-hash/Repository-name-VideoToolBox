@@ -1,14 +1,15 @@
 #!name=去广告规则
-#!desc=微信（公众号/小程序/企迈/美团/谱慧云）+墨鱼可转换规则+腾讯视频广告规则合集。朋友圈MMTLS信息流无法可靠过滤；HTTPS响应规则需信任本机Shadowrocket CA。
+#!desc=微信（公众号/小程序/企迈/美团/谱慧云）+墨鱼可转换规则+腾讯视频广告规则合集。rdelivery.qq.com为默认DIRECT的可选候选项。朋友圈MMTLS无法可靠过滤；HTTPS响应规则需信任本机Shadowrocket CA。
 #!author=plao94619-hash；规则来源见各模块原注释
 #!homepage=https://github.com/plao94619-hash/Repository-name-VideoToolBox/tree/main/extras/shadowrocket
 #!system=ios
 #!category=AdBlock
-#!arguments=启用HTTPS解密:true,谱慧云资源策略:REJECT,腾讯广告接口策略:REJECT,腾讯广告素材策略:REJECT,开屏广告策略:REJECT,首页弹窗广告策略:REJECT,腾讯GDT广告策略:REJECT,IACC推荐接口策略:REJECT
-#!arguments-desc=启用HTTPS解密：微信与腾讯视频HTTPS正文/路径规则使用；先在本设备生成并完全信任Shadowrocket CA。关闭后，域名拒绝规则仍有效。\n\n谱慧云资源策略：默认REJECT，拦截微信共享资源域名，可能影响普通图片；改为DIRECT可恢复直连。\n\n腾讯视频各广告策略：分别控制对应的精确广告主机；jump01.gw62.cn落地域名保持REJECT，只阻止打开广告目标，不保证隐藏个人中心广告卡片。\n\n微信朋友圈广告：朋友圈MMTLS信息流无法由本模块可靠过滤。
+#!arguments=启用HTTPS解密:true,谱慧云资源策略:REJECT,腾讯广告接口策略:REJECT,腾讯广告素材策略:REJECT,开屏广告策略:REJECT,首页弹窗广告策略:REJECT,腾讯GDT广告策略:REJECT,IACC推荐接口策略:REJECT,腾讯视频个人中心候选接口策略:DIRECT
+#!arguments-desc=启用HTTPS解密：微信与腾讯视频HTTPS正文/路径规则使用；先在本设备生成并完全信任Shadowrocket CA。关闭后，域名拒绝规则仍有效。\n\n谱慧云资源策略：默认REJECT，拦截微信共享资源域名，可能影响普通图片；改为DIRECT可恢复直连。\n\n腾讯视频各广告策略：分别控制对应的精确广告主机；jump01.gw62.cn落地域名保持REJECT，只阻止打开广告目标，不保证隐藏个人中心广告卡片。\n\n腾讯视频个人中心候选接口策略：rdelivery.qq.com默认DIRECT；此前日志只有40条直连记录，没有请求URL或响应内容，尚未确认它提供广告。可改REJECT做短时验证，可能影响同主机上的其他推荐或内容请求。\n\n微信朋友圈广告：朋友圈MMTLS信息流无法由本模块可靠过滤。
 
 # 统一模块：微信广告拦截、墨鱼去广告可转换规则、腾讯视频广告拦截。
 # 原模块保留不变；合并时按活动规则行去重，并汇总 MITM 主机。
+# Aggregate update 1.0.1: adds the optional rdelivery.qq.com candidate, default DIRECT; no URL/body proof yet.
 # Sources: extras/shadowrocket/wechat/WeChat-AdBlock-2026.module
 #          extras/shadowrocket/moyu-adblock/Moyu-AdBlock.module
 #          extras/shadowrocket/tencent-video/Tencent-Video-AdBlock-2026.module
@@ -88,6 +89,8 @@ DOMAIN,xs.gdt.qq.com,{{{腾讯GDT广告策略}}}
 # Official Tencent GDT ad-request host; exact hostname only.
 DOMAIN,mi.gdt.qq.com,{{{腾讯GDT广告策略}}}
 DOMAIN,iacc.rec.qq.com,{{{IACC推荐接口策略}}}
+# Optional candidate: route logs show 40 DIRECT connections but no request URL/response body.
+DOMAIN,rdelivery.qq.com,{{{腾讯视频个人中心候选接口策略}}}
 # Exact hosts from the profile-ad display window; keep scope narrow.
 DOMAIN,c2.l.qq.com,REJECT
 DOMAIN,p2.l.qq.com,REJECT
