@@ -37,7 +37,7 @@
 
 精确 URL 路径需要 Shadowrocket 解密相应 HTTPS 主机。模块的“启用精准HTTPS过滤”默认开启；请在你自己的 Shadowrocket 配置中开启 HTTPS 解密，并只安装、信任由该设备上的 Shadowrocket 生成的 CA 证书。
 
-若不想使用 HTTPS 解密，或腾讯视频因此出现连接异常，可把“启用精准HTTPS过滤”改为 `false`。这样会停用路径级过滤，但 `iacc.qq.com`、`pgdt.gtimg.cn`、`splashqqlive.gtimg.com` 与 `adsmind.gdtimg.com` 的精确主机策略仍按各自参数生效。
+若不想使用 HTTPS 解密，或腾讯视频因此出现连接异常，可把“启用精准HTTPS过滤”改为 `false`。这样会停用路径级过滤，但 `[Rule]` 下全部精确主机规则仍按各自参数生效，包括 GDT、IACC 和本版新增的三条 L 域规则。
 
 ## 故障调整与范围
 
