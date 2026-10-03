@@ -4,9 +4,10 @@
 
 谱慧云规则在合集内默认启用，不需要额外安装独立模块；正常图片异常时可把“谱慧云资源策略”改为DIRECT，单独取消这组拦截并直连。旧[独立模块](wechat/Puhuiyun-AdBlock-Experimental.module)保留兼容，使用合集时应停用旧独立模块。
 
-新增：[腾讯视频广告拦截模块](tencent-video/README.md)，依据 2026-10-03 10:40 流量记录，仅默认拦截 `iacc.qq.com` 与 `pgdt.gtimg.cn` 两个精确域名；是否移除具体广告需在设备上验证。
+新增：[腾讯视频广告拦截模块](tencent-video/README.md)，版本1.1.0，按截图新增开屏、首页弹窗和个人中心视频广告路径过滤；保留日志确认的精确域名规则。HTTPS路径过滤需信任设备自己的Shadowrocket CA。
 
-Safari 一键安装：[🚀 安装腾讯视频模块](https://lowertop.github.io/Shadowrocket-First/redirect.html?url=shadowrocket%3A%2F%2Finstall%3Fmodule%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fplao94619-hash%2FRepository-name-VideoToolBox%2Fmain%2Fextras%2Fshadowrocket%2Ftencent-video%2FTencent-Video-AdBlock-2026.module) · [手动导入模块](https://raw.githubusercontent.com/plao94619-hash/Repository-name-VideoToolBox/main/extras/shadowrocket/tencent-video/Tencent-Video-AdBlock-2026.module)
+Safari 一键安装：[🚀 安装或更新腾讯视频模块](https://lowertop.github.io/Shadowrocket-First/redirect.html?url=shadowrocket%3A%2F%2Finstall%3Fmodule%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fplao94619-hash%2FRepository-name-VideoToolBox%2Fmain%2Fextras%2Fshadowrocket%2Ftencent-video%2FTencent-Video-AdBlock-2026.module) · [手动导入模块](https://raw.githubusercontent.com/plao94619-hash/Repository-name-VideoToolBox/main/extras/shadowrocket/tencent-video/Tencent-Video-AdBlock-2026.module)
+
 
 # TikTok 网络隐私防护模块
 
