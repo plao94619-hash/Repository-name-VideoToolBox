@@ -1,6 +1,6 @@
 # 腾讯视频广告拦截（Shadowrocket）
 
-版本 **1.3.0**，更新日期 2026-10-03。此版保留开屏、首页弹窗、GDT/IACC 与个人中心视频路径规则，并新增日志中与个人中心广告卡片同一时段仍按 `qq.com` 的 `DIRECT` 规则放行的 `c2.l.qq.com`、`p2.l.qq.com`、`livep2.l.qq.com` 精确拦截；没有封锁整个 `l.qq.com` 或 `qq.com`。
+版本 **1.3.1**，更新日期 2026-10-03。针对新日志里 `p2.l.qq.com` 的部分 TCP 请求仍走 `PROXY`，将 `c2.l.qq.com`、`p2.l.qq.com`、`livep2.l.qq.com` 三条精确规则固定为 `REJECT`，不再依赖可选策略参数。
 
 ## Safari 一键安装
 
@@ -21,17 +21,17 @@
 | 个人中心视频广告卡片 | `video.dispatch.tc.qq.com/*.mp4`、`vmind.qqvideo.tc.qq.com/*.mp4` | 仅拦截对应 MP4 路径 |
 | 腾讯 GDT 广告接口 | `c3.gdt.qq.com`、`v3.gdt.qq.com`、`xs.gdt.qq.com` | 精确主机匹配，默认 REJECT，可单独调整 |
 | IACC 推荐接口 | `iacc.rec.qq.com` | 精确主机匹配，默认 REJECT，可单独调整 |
-| 个人中心广告相关 L 域主机 | `c2.l.qq.com`、`p2.l.qq.com`、`livep2.l.qq.com` | 只拦截日志中出现的三个精确主机，默认 REJECT，可单独调整 |
+| 个人中心广告相关 L 域主机 | `c2.l.qq.com`、`p2.l.qq.com`、`livep2.l.qq.com` | 三个精确主机固定 `REJECT`，避免 TCP 流量被策略组转发 |
 
 路径写法参考了公开社区规则中的腾讯视频素材与页面过滤条目：[腾讯视频广告规则示例](https://github.com/bai1zi/shadowrocket-surge-loon-qx/blob/main/ADs.sgmodule#L2526-L2549)、[开屏资源规则示例](https://github.com/Masstone/Rules/blob/master/Dler%20Cloud#L2886-L2922)、[GDT 域规则示例](https://github.com/SukkaW/Clash-Rules/blob/master/clash_rules)。这些是社区维护的规则，不是腾讯官方接口文档；IACC 推荐接口项按本次流量记录精确添加。
 
 ## 日志确认的规则
 
-此前提供的数据库在 10:40–10:42 这个筛选窗口内实际只记录到 **10:40:44**，共 64 条记录；其中 `iacc.qq.com` 出现 5 次，`pgdt.gtimg.cn` 出现 12 次。这两条精确域名继续默认拒绝。
+此前日志显示 `iacc.qq.com`、`pgdt.gtimg.cn` 以及若干 GDT/IACC/L 域主机直连，因此逐步加入了对应规则。最新数据库确认 GDT 与 IACC 主机规则已命中 `REJECT`；新增 L 域规则也已命中，但其中 `p2.l.qq.com` 有 TCP 请求被路由到 `PROXY`，而 UDP 请求被拒绝。v1.3.1 将三个 L 域主机改为固定 `REJECT`，消除策略参数误设为代理时的漏拦截。
 
-另一份个人中心广告卡片显示时段的日志中，`c3.gdt.qq.com`、`v3.gdt.qq.com`、`xs.gdt.qq.com`、`iacc.rec.qq.com`、`c2.l.qq.com`、`p2.l.qq.com` 和 `livep2.l.qq.com` 都曾按通用 `DOMAIN-SUFFIX,qq.com,DIRECT` 规则直连。v1.2.1 已加入前四个精确主机；v1.3.0 再加入后三个精确主机。日志仅记录主机与路由结果，不能单凭它确认具体哪个主机承载了广告素材，因此保持精确拦截，不扩展为整个 `l.qq.com`。
+这份数据库只记录主机名、端口和路由结果，不含 HTTPS 请求路径、响应内容或广告素材 URL。`rdelivery.qq.com`、`pbaccess.video.qq.com`、`vv6.video.qq.com` 等其他主机仍有直连记录，但它们可能承担视频或页面功能；在没有具体请求路径之前，不应把它们直接列为广告拦截域名。若 v1.3.1 后卡片仍显示，需要检查清除缓存后的新日志，并获取广告请求的 HTTPS 主机与路径，才能判断是否需要更精确的 URL 规则。
 
-这些流量记录早于 v1.2.1 发布，不能作为 v1.2.1 或 v1.3.0 的更新后命中验证。日志数据库和请求参数没有上传到仓库；要确认本次更新是否生效，需要在更新模块后重新打开个人中心并查看新日志。
+日志数据库和请求参数没有上传到仓库。
 
 ## 启用 HTTPS 路径过滤
 
@@ -42,7 +42,7 @@
 ## 故障调整与范围
 
 - 开屏、首页弹窗主机策略分别可改为 `DIRECT`。
-- 如果个人中心卡片或正常视频播放异常，先把“启用精准HTTPS过滤”改为 `false`，再测试。
+- 如果个人中心卡片仍出现，先清除腾讯视频缓存并完全退出后复测；三个 L 域主机已固定为 `REJECT`。若正常页面或播放异常，可临时删除对应的三条 L 域规则排查。
 - 腾讯 GDT 规则只覆盖日志中出现的三个主机，IACC规则只覆盖 `iacc.rec.qq.com`；L 域规则只覆盖三个精确主机，未封锁整个 `qq.com`、`l.qq.com`、`gtimg.cn` 或 `gdtimg.com`。
 - 腾讯视频可能改用其他广告接口或将广告与正片放在同一视频流中，因此不能保证去掉每一条广告；若广告仍出现，需要在广告展示的同一时段补充新的流量记录。
 - 已加载的广告卡片和素材可能由客户端缓存；更新规则不会清除本地缓存。清理腾讯视频缓存、强制退出后再复测。
