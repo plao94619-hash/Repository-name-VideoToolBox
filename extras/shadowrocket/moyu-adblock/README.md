@@ -2,11 +2,7 @@
 
 本目录按 [ddgksf2013 的 GitHub 主页](https://github.com/ddgksf2013/ddgksf2013)「广告屏蔽」栏目整理，共 42 项。每条链接都指向原作者或页面所列的上游来源；本文件只保存名称、来源、贡献者与页面状态，不复制或托管上游规则源码。
 
-## 先看兼容性
 
-这份目录不是可直接安装的 Shadowrocket 模块。上游条目混有 Quantumult X 配置、脚本响应规则、JavaScript、snippet、Shadowrocket/Surge 模块，以及第三方来源。Shadowrocket 的 RULE-SET 需要对应格式的规则集，不能把这些不同格式的文件当作同一个列表直接导入。将其做成一个真正可执行的模块，需要逐条转换并按对应应用测试；部分脚本还依赖 HTTPS 解密和客户端专用 API。
-
-GitHub 仓库元数据没有为 ddgksf2013、Rewrite、Filter、Profile 声明统一的开源许可证；因此这里保留上游链接和页面注明的作者，不镜像规则内容。具体使用与再分发请遵循每个源文件自己的许可和说明。
 
 ## 上游页面列出的 42 项
 
