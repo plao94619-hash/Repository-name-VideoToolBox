@@ -7,7 +7,7 @@ namespace WinCare;
 
 public sealed class LargeFileScanForm : Form
 {
-    private sealed record SizeOption(string Name, long Bytes)
+    private sealed record SizeOption(string Name, long MinimumAllocatedBytes)
     {
         public override string ToString() => Name;
     }
@@ -62,7 +62,7 @@ public sealed class LargeFileScanForm : Form
             WrapContents = false,
             Padding = new Padding(0, 5, 0, 0)
         };
-        toolbar.Controls.Add(new Label { Text = "最小文件大小", AutoSize = true, Margin = new Padding(0, 8, 6, 0), ForeColor = Ink });
+        toolbar.Controls.Add(new Label { Text = "最小磁盘占用", AutoSize = true, Margin = new Padding(0, 8, 6, 0), ForeColor = Ink });
         _minimumSize.DropDownStyle = ComboBoxStyle.DropDownList;
         _minimumSize.Width = 150;
         _minimumSize.Items.AddRange(
@@ -103,7 +103,7 @@ public sealed class LargeFileScanForm : Form
             Padding = new Padding(12, 8, 12, 6),
             BackColor = Color.FromArgb(235, 242, 252),
             ForeColor = Color.FromArgb(45, 67, 98),
-            Text = "只读扫描当前账户可访问的 C 盘文件；跳过链接，不会删除文件。只保留最大的 2,000 项。显示逻辑大小，硬链接、稀疏文件或云端占位文件会使数值不同于可释放空间。"
+            Text = "包含隐藏/系统项，按 Windows 报告的分配空间扫描；用卷序列号和文件 ID 合并可识别的硬链接。跳过链接，不读内容、不删除。分配空间不等于删除后一定能释放的空间。"
         };
 
         _grid.Dock = DockStyle.Fill;
@@ -131,10 +131,11 @@ public sealed class LargeFileScanForm : Form
         _grid.AutoGenerateColumns = false;
         _grid.ShowCellToolTips = true;
         _grid.VirtualMode = true;
-        _grid.Columns.Add(TextColumn("Name", "文件", 260));
-        _grid.Columns.Add(TextColumn("Path", "完整路径", 570, fill: true));
-        _grid.Columns.Add(TextColumn("Size", "逻辑大小", 125));
-        _grid.Columns.Add(TextColumn("Modified", "修改时间", 165));
+        _grid.Columns.Add(TextColumn("Name", "文件", 230));
+        _grid.Columns.Add(TextColumn("Path", "完整路径", 480, fill: true));
+        _grid.Columns.Add(TextColumn("Allocated", "磁盘占用", 135));
+        _grid.Columns.Add(TextColumn("Logical", "逻辑大小", 135));
+        _grid.Columns.Add(TextColumn("Modified", "修改时间", 150));
         _grid.CellValueNeeded += GridCellValueNeeded;
         _grid.CellToolTipTextNeeded += (_, e) =>
         {
@@ -171,24 +172,24 @@ public sealed class LargeFileScanForm : Form
         _openLocation.Enabled = false;
         _items.Clear();
         _grid.RowCount = 0;
-        _status.Text = $"正在只读扫描 C 盘，筛选 {option.Name} 及以上的文件…";
+        _status.Text = $"正在只读扫描 C 盘，筛选分配空间 {option.Name} 及以上的文件…";
 
         var progress = new Progress<LargeFileScanProgress>(value =>
         {
             if (!IsDisposed && ReferenceEquals(_scanCancellation, cancellation))
-                _status.Text = $"正在扫描：已检查 {value.ScannedFiles:N0} 个文件，匹配 {value.MatchingFiles:N0} 个，读取错误 {value.ReadErrors:N0} 次。";
+                _status.Text = $"正在扫描：已检查 {value.ScannedPaths:N0} 个路径，匹配 {value.MatchingFiles:N0} 个文件，合并硬链接路径 {value.DuplicateHardLinkPaths:N0} 个，读取错误 {value.ReadErrors:N0} 次。";
         });
 
         try
         {
             var result = await Task.Run(
-                () => DiskUsageService.ScanLargeFiles(option.Bytes, progress, cancellation.Token),
+                () => DiskUsageService.ScanLargeFiles(option.MinimumAllocatedBytes, progress, cancellation.Token),
                 cancellation.Token);
             _items.AddRange(result.LargestFiles);
             _grid.RowCount = _items.Count;
             _grid.Invalidate();
-            var shown = result.ResultsTruncated ? $"；列表显示最大的 {_items.Count:N0} 项" : $"；列出 {_items.Count:N0} 项";
-            _status.Text = $"完成：检查 {result.ScannedFiles:N0} 个文件，找到 {result.MatchingFiles:N0} 个 {option.Name} 及以上的文件，逻辑大小合计 {StartupScanner.FormatSize(result.MatchingBytes)}{shown}；读取错误 {result.ReadErrors:N0} 次。";
+            var shown = result.ResultsTruncated ? $"；列表显示磁盘占用最大的 {_items.Count:N0} 项" : $"；列出 {_items.Count:N0} 项";
+            _status.Text = $"完成：检查 {result.ScannedPaths:N0} 个路径，找到 {result.MatchingFiles:N0} 个文件；磁盘占用 {StartupScanner.FormatSize(result.MatchingAllocatedBytes)}，逻辑大小 {StartupScanner.FormatSize(result.MatchingLogicalBytes)}；合并硬链接路径 {result.DuplicateHardLinkPaths:N0} 个{shown}；读取错误 {result.ReadErrors:N0} 次。";
         }
         catch (OperationCanceledException)
         {
@@ -220,7 +221,8 @@ public sealed class LargeFileScanForm : Form
         {
             "Name" => item.Name,
             "Path" => item.Path,
-            "Size" => StartupScanner.FormatSize(item.Bytes),
+            "Allocated" => StartupScanner.FormatSize(item.AllocatedBytes),
+            "Logical" => StartupScanner.FormatSize(item.LogicalBytes),
             "Modified" => item.ModifiedUtc.ToLocalTime().ToString("g"),
             _ => null
         };

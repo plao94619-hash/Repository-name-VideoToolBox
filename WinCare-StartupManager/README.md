@@ -10,7 +10,7 @@
 - **隐藏项标记**：标记计划任务中的隐藏任务、启动文件夹中的隐藏文件、无显示名称的服务，以及 Windows 关键启动位置。列表默认包含这些项目。
 - **逐项关闭与恢复**：注册表值会移至同一位置下的 `WinCareDisabled` 子项；启动文件会移至用户配置目录的恢复区；新版本的计划任务和服务恢复标记存放在管理员保护的注册表位置。管理员操作会在 UAC 后再次显示对象名称、位置和动作供确认。WinCare 不会替用户重新启用由 Windows 或其他工具禁用的项目。
 - **安全清理**：扫描 C 盘的当前用户临时目录和 `Windows\\Temp`，预览超过 7 天未修改的文件和预计空间。链接、被占用和无权访问的文件会跳过。也可打开 Windows 存储设置。
-- **大文件查找**：按 100 MiB、250 MiB、500 MiB、1 GiB 或 2 GiB 门槛只读扫描 C 盘文件信息，保留最大的 2,000 项并可在资源管理器定位；支持取消，不提供从结果列表直接删除。
+- **大文件查找**：按 100 MiB、250 MiB、500 MiB、1 GiB 或 2 GiB 磁盘分配空间门槛只读扫描 C 盘文件，包含隐藏和系统项；分别显示 Windows 报告的分配空间和逻辑大小，并合并扫描范围内可识别的硬链接。仅保留最大的 2,000 项，支持取消和资源管理器定位，不提供从结果列表直接删除。
 
 ## 覆盖范围说明
 
@@ -22,13 +22,15 @@ Windows 程序可以通过许多机制自动运行，因此任何独立清理工
 
 清理动作仅处理修改时间超过 7 天的白名单临时文件；不会删除下载、文档、浏览器数据、回收站或 WinSxS 中的文件。正在使用或权限不足的文件会跳过。清理系统临时目录会由 Windows 请求管理员权限。组件存储清理请使用 Windows 自带维护入口；本工具不会接管 WinSxS 权限、修改 ACL 或使用 `/ResetBase`。
 
-大文件分析是独立的只读功能：它会检查当前账户有权限枚举的 C 盘路径，包括用户文件夹，但不读取文件内容、不移动或删除文件。分析跳过链接和其他重解析点，权限不足的目录会记录为读取错误；列表最多显示最大的 2,000 个匹配文件。结果按逻辑文件大小排序，硬链接可能重复计数；硬链接、稀疏文件或云端占位文件都可能使文件大小合计与实际占用或可释放空间不同，需先自行核实再用 Windows 或其他工具处理。
+大文件分析是独立的只读功能：它会检查当前账户有权限枚举的 C 盘路径，包括用户文件夹，但不读取文件内容、不移动或删除文件。它通过文件句柄查询 Windows 报告的分配空间和文件 ID，结果按分配空间排序；相同卷序列号与文件 ID 的硬链接在扫描范围内只计一次。分析跳过链接及其他重解析点，权限不足或无法读取文件 ID 的项目会记录为读取错误；列表最多显示最大的 2,000 个唯一文件。文件 ID 不会识别扫描范围之外的其他硬链接，因此分配空间不等于删除某一路径后一定能释放的空间。稀疏文件和云端占位文件也可能令逻辑大小与本地磁盘占用不同；清理前请核实文件用途。
 
 **1.3.0 性能优化：** 临时目录按需逐项枚举文件和子目录，不再为每个目录一次性建立完整数组；大目录扫描时可减少额外内存占用。此前 1.2.0 的单目标重新校验和管理员单目录预估也继续保留。清理年龄、目录白名单、跳过规则和确认步骤不变。
 
 **1.4.0 性能优化：** 启动项清单改为虚拟化表格；搜索输入增加短暂防抖，并缓存每项的搜索文本，减少大清单下的行对象、临时字符串和重复刷新。
 
 **1.5.0 存储分析：** 增加可取消的 C 盘大文件扫描、文件大小门槛、最大的 2,000 项结果和资源管理器定位。分析与清理分开，扫描结果不会自动删除。
+
+**1.6.0 文件系统统计：** 按微软 `FILE_STANDARD_INFO.AllocationSize` 显示和排序文件的分配空间，同时保留逻辑大小；对 `NumberOfLinks` 大于 1 的文件使用 `FILE_ID_INFO` 按卷和 128 位 ID 合并扫描范围内的硬链接。用 `CreateFileW` 的零访问请求查询元数据，并以 `FILE_FLAG_OPEN_REPARSE_POINT` 打开后识别重解析点，避免把链接目标当作普通文件跟随。目录枚举显式设置 `AttributesToSkip = 0`，避免 .NET 默认跳过隐藏和系统项；不可访问路径不静默忽略，而是计入读取错误。
 
 ## 使用
 
@@ -69,6 +71,16 @@ dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true `
 - [Microsoft PC Manager](https://pcmanager.microsoft.com/)：参考其把存储管理作为独立入口的产品组织方式；WinCare 清理仍限定于明确列出的临时目录。
 - [WinDirStat](https://github.com/windirstat/windirstat)：参考其按大小检查磁盘文件并提供文件列表的思路。WinCare 当前提供可取消的最大文件列表和资源管理器定位，不包含 WinDirStat 的 treemap 可视化。
 - [Windows 存储设置与存储感知](https://support.microsoft.com/windows/manage-drive-space-with-storage-sense)：参考 Windows 对临时文件、存储类别和清理建议的区分。WinCare 将临时文件清理与大文件分析分开，避免把大文件误当成垃圾文件。
+
+## Microsoft 技术文档
+
+- [FILE_STANDARD_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_standard_info)：使用 `AllocationSize` 显示文件系统报告的已分配字节，并保留 `EndOfFile` 作为逻辑大小。
+- [GetFileInformationByHandleEx](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfileinformationbyhandleex)：通过已打开的文件句柄查询标准信息、属性和文件 ID。
+- [FILE_ID_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_info)：卷序列号与 128 位文件 ID 组合，用于识别重复目录项所指向的同一文件。
+- [CreateFileW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew)：零访问请求可在适当权限下查询文件元数据；`FILE_FLAG_OPEN_REPARSE_POINT` 用于打开重解析点本身。
+- [Hard Links and Junctions](https://learn.microsoft.com/en-us/windows/win32/fileio/hard-links-and-junctions)：说明多个路径可以指向同一文件，因此不能简单把每个路径的大小都累加为独立磁盘占用。
+- [.NET EnumerationOptions.AttributesToSkip](https://learn.microsoft.com/en-us/dotnet/api/system.io.enumerationoptions.attributestoskip?view=net-10.0)：其默认值包含 Hidden 和 System；扫描器显式设为零以枚举这些项，并自行跳过重解析点。
+- [Maximum Path Length Limitation](https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation)：为清单加入 `longPathAware` 声明，并在原生文件句柄调用中使用扩展路径形式。
 
 ## 许可证
 
