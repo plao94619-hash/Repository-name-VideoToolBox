@@ -6,14 +6,15 @@ using System.Text.Json;
 using System.Windows.Forms;
 using WinCare.Models;
 using WinCare.Services;
+using WinCare.UI;
 
 namespace WinCare;
 
-public sealed class MainForm : Form
+public sealed class MainForm : GlassForm
 {
-    private static readonly Color Ink = Color.FromArgb(28, 35, 49);
-    private static readonly Color Muted = Color.FromArgb(99, 109, 126);
-    private static readonly Color Accent = Color.FromArgb(39, 103, 210);
+    private static readonly Color Ink = WinCareTheme.Ink;
+    private static readonly Color Muted = WinCareTheme.Muted;
+    private static readonly Color Accent = WinCareTheme.Accent;
     private readonly DataGridView _startupGrid = new();
     private readonly DataGridView _cleanupGrid = new();
     private readonly TextBox _search = new();
@@ -27,7 +28,11 @@ public sealed class MainForm : Form
     private readonly List<StartupEntry> _entries = [];
     private List<StartupEntry> _visibleEntries = [];
     private IReadOnlyList<CleanupTarget> _cleanupTargets = [];
-    private readonly TabControl _tabs = new();
+    private readonly Panel _pageHost = new();
+    private readonly Button _startupNavigation = new();
+    private readonly Button _cleanupNavigation = new();
+    private Panel _startupPage = null!;
+    private Panel _cleanupPage = null!;
     private readonly System.Windows.Forms.Timer _searchDebounce = new() { Interval = 180 };
     private bool _startupActionInProgress;
     private bool _cleanupActionInProgress;
@@ -36,11 +41,11 @@ public sealed class MainForm : Form
     {
         Text = "WinCare · 启动项管理与 C 盘清理";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(1000, 650);
-        Size = new Size(1240, 780);
-        BackColor = Color.FromArgb(245, 247, 250);
+        MinimumSize = new Size(1080, 680);
+        Size = new Size(1360, 860);
+        BackColor = WinCareTheme.Canvas;
         ForeColor = Ink;
-        Font = new Font("Segoe UI", 9.5F);
+        Font = SystemFonts.MessageBoxFont;
         AutoScaleMode = AutoScaleMode.Dpi;
 
         BuildUi();
@@ -59,56 +64,222 @@ public sealed class MainForm : Form
 
     private void BuildUi()
     {
-        var appHeader = new Panel { Dock = DockStyle.Top, Height = 76, BackColor = Color.White, Padding = new Padding(22, 13, 18, 8) };
-        var title = new Label { Text = "WinCare", Font = new Font("Segoe UI Semibold", 18F, FontStyle.Bold), ForeColor = Ink, AutoSize = true, Location = new Point(22, 9) };
-        var subtitle = new Label { Text = "Windows 启动项管理与 C 盘清理", Font = new Font("Segoe UI", 9.5F), ForeColor = Muted, AutoSize = true, Location = new Point(126, 22) };
-        appHeader.Controls.Add(title);
-        appHeader.Controls.Add(subtitle);
+        var canvas = new LiquidBackdropPanel { Dock = DockStyle.Fill, Padding = new Padding(18) };
+        var shell = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = Color.Transparent,
+            Margin = Padding.Empty
+        };
+        shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 252));
+        shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-        _tabs.Dock = DockStyle.Fill;
-        _tabs.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-        _tabs.TabPages.Add(BuildStartupPage());
-        _tabs.TabPages.Add(BuildCleanupPage());
-        Controls.Add(_tabs);
-        Controls.Add(appHeader);
+        var sidebar = BuildSidebar();
+        sidebar.Dock = DockStyle.Fill;
+        sidebar.Margin = new Padding(0, 0, 16, 0);
+
+        _startupPage = BuildStartupPage();
+        _cleanupPage = BuildCleanupPage();
+        _startupPage.Dock = DockStyle.Fill;
+        _cleanupPage.Dock = DockStyle.Fill;
+        _cleanupPage.Visible = false;
+        _pageHost.Dock = DockStyle.Fill;
+        _pageHost.BackColor = Color.Transparent;
+        _pageHost.Controls.Add(_cleanupPage);
+        _pageHost.Controls.Add(_startupPage);
+
+        shell.Controls.Add(sidebar, 0, 0);
+        shell.Controls.Add(_pageHost, 1, 0);
+        canvas.Controls.Add(shell);
+        Controls.Add(canvas);
+        SelectPage(startup: true);
     }
 
-    private TabPage BuildStartupPage()
+    private Control BuildSidebar()
     {
-        var page = new TabPage("启动项管理") { BackColor = Color.FromArgb(245, 247, 250), Padding = new Padding(14) };
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, BackColor = page.BackColor };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 64));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        var sidebar = new GlassSurface
+        {
+            CornerRadius = 28,
+            TopColor = WinCareTheme.GlassTop,
+            BottomColor = WinCareTheme.GlassBottom,
+            Padding = new Padding(16)
+        };
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 6,
+            BackColor = Color.Transparent,
+            Margin = Padding.Empty
+        };
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 91));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 92));
 
-        var heading = new Panel { Dock = DockStyle.Fill };
-        var headingTitle = new Label { Text = "启动项", Font = new Font("Segoe UI Semibold", 16F, FontStyle.Bold), AutoSize = true, ForeColor = Ink, Location = new Point(2, 3) };
-        var headingCaption = new Label { Text = "覆盖常见登录 / 开机入口；隐藏项默认显示，系统关键项只读。", Font = new Font("Segoe UI", 9F), AutoSize = true, ForeColor = Muted, Location = new Point(2, 34) };
+        var brand = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
+        var mark = new GlassSurface
+        {
+            Location = new Point(2, 12),
+            Size = new Size(48, 48),
+            CornerRadius = 16,
+            TopColor = Color.FromArgb(255, 116, 105, 244),
+            BottomColor = Color.FromArgb(255, 76, 93, 216),
+            OutlineColor = Color.FromArgb(180, 255, 255, 255),
+            Padding = Padding.Empty
+        };
+        mark.Controls.Add(new Label
+        {
+            Dock = DockStyle.Fill,
+            Text = "W",
+            TextAlign = ContentAlignment.MiddleCenter,
+            ForeColor = Color.White,
+            Font = new Font(SystemFonts.MessageBoxFont.FontFamily, 20F, FontStyle.Bold),
+            BackColor = Color.Transparent
+        });
+        var brandTitle = new Label
+        {
+            Text = "WinCare",
+            AutoSize = true,
+            Location = new Point(60, 12),
+            ForeColor = Ink,
+            Font = new Font(SystemFonts.MessageBoxFont.FontFamily, 17F, FontStyle.Bold),
+            BackColor = Color.Transparent
+        };
+        var brandCaption = new Label
+        {
+            Text = "Windows 系统管理",
+            AutoSize = true,
+            Location = new Point(61, 42),
+            ForeColor = Muted,
+            Font = new Font(SystemFonts.MessageBoxFont.FontFamily, 8.5F),
+            BackColor = Color.Transparent
+        };
+        brand.Controls.Add(mark);
+        brand.Controls.Add(brandTitle);
+        brand.Controls.Add(brandCaption);
+
+        var section = new Label
+        {
+            Text = "工具",
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.BottomLeft,
+            ForeColor = Muted,
+            Font = new Font(SystemFonts.MessageBoxFont.FontFamily, 9F, FontStyle.Bold),
+            Padding = new Padding(7, 0, 0, 7),
+            BackColor = Color.Transparent
+        };
+        _startupNavigation.Text = "◉   启动项管理";
+        _cleanupNavigation.Text = "◈   C 盘空间";
+        StyleNavigationButton(_startupNavigation);
+        StyleNavigationButton(_cleanupNavigation);
+        _startupNavigation.Click += (_, _) => SelectPage(startup: true);
+        _cleanupNavigation.Click += (_, _) => SelectPage(startup: false);
+
+        var spacer = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
+        var note = new GlassSurface
+        {
+            Dock = DockStyle.Fill,
+            CornerRadius = 20,
+            Padding = new Padding(12, 10, 12, 8),
+            TopColor = WinCareTheme.GlassTop,
+            BottomColor = WinCareTheme.GlassBottom
+        };
+        note.Controls.Add(new Label
+        {
+            Dock = DockStyle.Fill,
+            Text = "预览后再操作\n启动项逐项确认 · 清理范围固定",
+            ForeColor = Muted,
+            Font = SystemFonts.MessageBoxFont,
+            TextAlign = ContentAlignment.MiddleLeft,
+            BackColor = Color.Transparent
+        });
+
+        layout.Controls.Add(brand, 0, 0);
+        layout.Controls.Add(section, 0, 1);
+        layout.Controls.Add(_startupNavigation, 0, 2);
+        layout.Controls.Add(_cleanupNavigation, 0, 3);
+        layout.Controls.Add(spacer, 0, 4);
+        layout.Controls.Add(note, 0, 5);
+        sidebar.Controls.Add(layout);
+        return sidebar;
+    }
+
+    private static void StyleNavigationButton(Button button)
+    {
+        button.Dock = DockStyle.Fill;
+        button.TextAlign = ContentAlignment.MiddleLeft;
+        button.Padding = new Padding(14, 0, 8, 0);
+        button.Margin = new Padding(0, 3, 0, 3);
+        WinCareTheme.StyleButton(button, filled: false);
+    }
+
+    private void SelectPage(bool startup)
+    {
+        _startupPage.Visible = startup;
+        _cleanupPage.Visible = !startup;
+        StyleNavigationState(_startupNavigation, startup);
+        StyleNavigationState(_cleanupNavigation, !startup);
+        _pageHost.AccessibleDescription = startup ? "启动项管理页面" : "C 盘清理和空间分析页面";
+    }
+
+    private static void StyleNavigationState(Button button, bool selected)
+    {
+        button.BackColor = selected ? WinCareTheme.NavSelected : WinCareTheme.NavSurface;
+        button.ForeColor = selected ? WinCareTheme.Accent : WinCareTheme.Ink;
+        button.FlatAppearance.BorderSize = selected ? 0 : 1;
+        button.FlatAppearance.BorderColor = WinCareTheme.NavBorder;
+        button.FlatAppearance.MouseOverBackColor = selected ? WinCareTheme.Selection : WinCareTheme.NavHover;
+        button.AccessibleRole = AccessibleRole.PageTab;
+        button.AccessibleDescription = selected ? "当前选中" : "切换页面";
+    }
+
+    private Panel BuildStartupPage()
+    {
+        var page = new Panel { BackColor = Color.Transparent, Padding = new Padding(2, 2, 2, 2) };
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, BackColor = Color.Transparent };
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 60));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+
+        var heading = new GlassSurface { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 7), Padding = new Padding(17, 11, 16, 10), CornerRadius = 22 };
+        var headingTitle = new Label { Text = "启动项管理", Font = new Font(SystemFonts.MessageBoxFont.FontFamily, 17F, FontStyle.Bold), AutoSize = true, ForeColor = Ink, Location = new Point(17, 10), BackColor = Color.Transparent };
+        var headingCaption = new Label { Text = "查看开机与登录入口；隐藏项默认显示，系统关键项保持只读。", Font = SystemFonts.MessageBoxFont, AutoSize = true, ForeColor = Muted, Location = new Point(18, 43), BackColor = Color.Transparent };
         _refreshStartup.Text = "重新扫描";
         StyleButton(_refreshStartup, filled: false);
-        _refreshStartup.Size = new Size(108, 34);
+        _refreshStartup.Size = new Size(116, 36);
         _refreshStartup.Anchor = AnchorStyles.Right | AnchorStyles.Top;
         _refreshStartup.Location = new Point(Width - 185, 12);
         _refreshStartup.Click += async (_, _) => await ReloadStartupAsync();
-        heading.Resize += (_, _) => _refreshStartup.Location = new Point(heading.ClientSize.Width - _refreshStartup.Width - 4, 14);
+        heading.Resize += (_, _) => _refreshStartup.Location = new Point(heading.ClientSize.Width - _refreshStartup.Width - 14, 20);
         heading.Controls.Add(headingTitle);
         heading.Controls.Add(headingCaption);
         heading.Controls.Add(_refreshStartup);
 
-        var toolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = new Padding(0, 5, 0, 0) };
+        var toolbarSurface = new GlassSurface { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 7), Padding = new Padding(13, 7, 12, 5), CornerRadius = 18, TopColor = WinCareTheme.GlassTop, BottomColor = WinCareTheme.GlassBottom };
+        var toolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = Padding.Empty, BackColor = Color.Transparent };
         _search.PlaceholderText = "搜索名称、路径或启动命令";
-        _search.Width = 290;
-        _search.Height = 32;
+        _search.Width = 310;
+        _search.Height = 36;
         _search.BorderStyle = BorderStyle.FixedSingle;
+        _search.BackColor = WinCareTheme.Field;
+        _search.ForeColor = Ink;
         _search.TextChanged += (_, _) =>
         {
             _searchDebounce.Stop();
             _searchDebounce.Start();
         };
         _category.DropDownStyle = ComboBoxStyle.DropDownList;
-        _category.Width = 220;
-        _category.Height = 32;
+        _category.Width = 230;
+        _category.Height = 36;
+        _category.FlatStyle = FlatStyle.Flat;
+        _category.BackColor = WinCareTheme.Field;
+        _category.ForeColor = Ink;
         _category.Items.Add("全部来源");
         _category.SelectedIndex = 0;
         _category.SelectedIndexChanged += (_, _) => ApplyStartupFilters();
@@ -120,6 +291,7 @@ public sealed class MainForm : Form
         toolbar.Controls.Add(_search);
         toolbar.Controls.Add(_category);
         toolbar.Controls.Add(_showHidden);
+        toolbarSurface.Controls.Add(toolbar);
 
         ConfigureGrid(_startupGrid);
         _startupGrid.Columns.Add(TextColumn("Name", "名称", 185));
@@ -159,38 +331,41 @@ public sealed class MainForm : Form
         footer.Controls.Add(_startupSummary, 0, 0);
         footer.Controls.Add(_startupWarnings, 1, 0);
 
+        var gridSurface = new GlassSurface { Dock = DockStyle.Fill, Padding = new Padding(12), CornerRadius = 23, Margin = new Padding(0, 0, 0, 4) };
+        gridSurface.Controls.Add(_startupGrid);
+
         layout.Controls.Add(heading, 0, 0);
-        layout.Controls.Add(toolbar, 0, 1);
-        layout.Controls.Add(_startupGrid, 0, 2);
+        layout.Controls.Add(toolbarSurface, 0, 1);
+        layout.Controls.Add(gridSurface, 0, 2);
         layout.Controls.Add(footer, 0, 3);
         page.Controls.Add(layout);
         return page;
     }
 
-    private TabPage BuildCleanupPage()
+    private Panel BuildCleanupPage()
     {
-        var page = new TabPage("C 盘清理") { BackColor = Color.FromArgb(245, 247, 250), Padding = new Padding(14) };
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, BackColor = page.BackColor };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 64));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 94));
+        var page = new Panel { BackColor = Color.Transparent, Padding = new Padding(2, 2, 2, 2) };
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, BackColor = Color.Transparent };
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
 
-        var heading = new Panel { Dock = DockStyle.Fill };
-        var headingTitle = new Label { Text = "C 盘清理与空间分析", Font = new Font("Segoe UI Semibold", 16F, FontStyle.Bold), AutoSize = true, ForeColor = Ink, Location = new Point(2, 3) };
-        var headingCaption = new Label { Text = "临时文件预览后逐项清理；大文件可单独只读分析。", Font = new Font("Segoe UI", 9F), AutoSize = true, ForeColor = Muted, Location = new Point(2, 34) };
+        var heading = new GlassSurface { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 7), Padding = new Padding(17, 11, 16, 10), CornerRadius = 22 };
+        var headingTitle = new Label { Text = "C 盘空间管理", Font = new Font(SystemFonts.MessageBoxFont.FontFamily, 17F, FontStyle.Bold), AutoSize = true, ForeColor = Ink, Location = new Point(17, 10), BackColor = Color.Transparent };
+        var headingCaption = new Label { Text = "临时文件清理前预览确认；大文件分析保持只读。", Font = SystemFonts.MessageBoxFont, AutoSize = true, ForeColor = Muted, Location = new Point(18, 43), BackColor = Color.Transparent };
         _refreshCleanup.Text = "重新扫描";
         StyleButton(_refreshCleanup, filled: false);
-        _refreshCleanup.Size = new Size(108, 34);
+        _refreshCleanup.Size = new Size(116, 36);
         _refreshCleanup.Click += async (_, _) => await ReloadCleanupAsync();
-        var storageSettings = new Button { Text = "Windows 存储设置", Size = new Size(152, 34) };
+        var storageSettings = new Button { Text = "Windows 存储设置", Size = new Size(152, 36) };
         StyleButton(storageSettings, filled: false);
         storageSettings.Click += (_, _) =>
         {
             try { Process.Start(new ProcessStartInfo("ms-settings:storage") { UseShellExecute = true }); }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "无法打开 Windows 存储设置", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         };
-        var largeFileSearch = new Button { Text = "查找大文件", Size = new Size(112, 34) };
+        var largeFileSearch = new Button { Text = "查找大文件", Size = new Size(116, 36) };
         StyleButton(largeFileSearch, filled: false);
         largeFileSearch.Click += (_, _) =>
         {
@@ -199,28 +374,39 @@ public sealed class MainForm : Form
         };
         heading.Resize += (_, _) =>
         {
-            _refreshCleanup.Location = new Point(heading.ClientSize.Width - _refreshCleanup.Width - 4, 14);
-            storageSettings.Location = new Point(_refreshCleanup.Left - storageSettings.Width - 10, 14);
-            largeFileSearch.Location = new Point(storageSettings.Left - largeFileSearch.Width - 10, 14);
+            _refreshCleanup.Location = new Point(heading.ClientSize.Width - _refreshCleanup.Width - 14, 20);
+            storageSettings.Location = new Point(_refreshCleanup.Left - storageSettings.Width - 10, 20);
+            largeFileSearch.Location = new Point(storageSettings.Left - largeFileSearch.Width - 10, 20);
         };
-        _refreshCleanup.Location = new Point(Width - _refreshCleanup.Width - 30, 14);
-        storageSettings.Location = new Point(_refreshCleanup.Left - storageSettings.Width - 10, 14);
-        largeFileSearch.Location = new Point(storageSettings.Left - largeFileSearch.Width - 10, 14);
+        _refreshCleanup.Location = new Point(Width - _refreshCleanup.Width - 30, 20);
+        storageSettings.Location = new Point(_refreshCleanup.Left - storageSettings.Width - 10, 20);
+        largeFileSearch.Location = new Point(storageSettings.Left - largeFileSearch.Width - 10, 20);
         heading.Controls.Add(largeFileSearch);
         heading.Controls.Add(storageSettings);
         heading.Controls.Add(headingTitle);
         heading.Controls.Add(headingCaption);
         heading.Controls.Add(_refreshCleanup);
 
+        var guidanceSurface = new GlassSurface
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 8),
+            Padding = new Padding(14, 10, 14, 8),
+            CornerRadius = 19,
+            TopColor = WinCareTheme.GuideTop,
+            BottomColor = WinCareTheme.GuideBottom
+        };
         var guidance = new Label
         {
             Dock = DockStyle.Fill,
             AutoSize = false,
-            Padding = new Padding(14, 11, 12, 8),
-            BackColor = Color.FromArgb(235, 242, 252),
-            ForeColor = Color.FromArgb(45, 67, 98),
+            Padding = new Padding(1, 1, 1, 1),
+            BackColor = Color.Transparent,
+            ForeColor = WinCareTheme.GuideText,
+            Font = SystemFonts.MessageBoxFont,
             Text = "仅扫描 C 盘的当前用户 TEMP 与 Windows\\Temp，默认只清理修改时间超过 7 天的文件。清理会永久删除文件（不进入回收站），并跳过链接、正在使用或无权限访问的文件。不会触碰下载、文档、浏览器数据、回收站或 WinSxS。"
         };
+        guidanceSurface.Controls.Add(guidance);
 
         ConfigureGrid(_cleanupGrid);
         _cleanupGrid.Columns.Add(TextColumn("Name", "区域", 190));
@@ -236,7 +422,7 @@ public sealed class MainForm : Form
             {
                 e.Value = row.ActionText;
                 e.CellStyle.ForeColor = row.Target.EligibleFiles > 0 ? Accent : Muted;
-                e.CellStyle.BackColor = Color.White;
+                e.CellStyle.BackColor = WinCareTheme.GridBackground;
             }
         };
         _cleanupGrid.CellContentClick += async (_, e) =>
@@ -248,11 +434,13 @@ public sealed class MainForm : Form
 
         _cleanupSummary.AutoSize = true;
         _cleanupSummary.ForeColor = Muted;
-        var footer = new Panel { Dock = DockStyle.Fill, Padding = new Padding(2, 11, 0, 0) };
+        var footer = new Panel { Dock = DockStyle.Fill, Padding = new Padding(2, 11, 0, 0), BackColor = Color.Transparent };
         footer.Controls.Add(_cleanupSummary);
+        var gridSurface = new GlassSurface { Dock = DockStyle.Fill, Padding = new Padding(12), CornerRadius = 23, Margin = new Padding(0, 0, 0, 4) };
+        gridSurface.Controls.Add(_cleanupGrid);
         layout.Controls.Add(heading, 0, 0);
-        layout.Controls.Add(guidance, 0, 1);
-        layout.Controls.Add(_cleanupGrid, 0, 2);
+        layout.Controls.Add(guidanceSurface, 0, 1);
+        layout.Controls.Add(gridSurface, 0, 2);
         layout.Controls.Add(footer, 0, 3);
         page.Controls.Add(layout);
         return page;
@@ -260,30 +448,7 @@ public sealed class MainForm : Form
 
     private static void ConfigureGrid(DataGridView grid)
     {
-        grid.Dock = DockStyle.Fill;
-        grid.BackgroundColor = Color.White;
-        grid.BorderStyle = BorderStyle.None;
-        grid.EnableHeadersVisualStyles = false;
-        grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(239, 243, 249);
-        grid.ColumnHeadersDefaultCellStyle.ForeColor = Ink;
-        grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
-        grid.ColumnHeadersHeight = 38;
-        grid.DefaultCellStyle.BackColor = Color.White;
-        grid.DefaultCellStyle.ForeColor = Ink;
-        grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(229, 239, 253);
-        grid.DefaultCellStyle.SelectionForeColor = Ink;
-        grid.DefaultCellStyle.Padding = new Padding(6, 2, 6, 2);
-        grid.RowTemplate.Height = 42;
-        grid.GridColor = Color.FromArgb(232, 236, 242);
-        grid.RowHeadersVisible = false;
-        grid.AllowUserToAddRows = false;
-        grid.AllowUserToDeleteRows = false;
-        grid.AllowUserToResizeRows = false;
-        grid.MultiSelect = false;
-        grid.ReadOnly = true;
-        grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-        grid.AutoGenerateColumns = false;
-        grid.ShowCellToolTips = true;
+        WinCareTheme.StyleGrid(grid, rowHeight: 44);
     }
 
     private static DataGridViewTextBoxColumn TextColumn(string property, string heading, int width, bool fill = false) =>
@@ -291,12 +456,7 @@ public sealed class MainForm : Form
 
     private static void StyleButton(Button button, bool filled)
     {
-        button.FlatStyle = FlatStyle.Flat;
-        button.FlatAppearance.BorderSize = filled ? 0 : 1;
-        button.FlatAppearance.BorderColor = Color.FromArgb(208, 216, 227);
-        button.BackColor = filled ? Accent : Color.White;
-        button.ForeColor = filled ? Color.White : Ink;
-        button.Cursor = Cursors.Hand;
+        WinCareTheme.StyleButton(button, filled);
     }
 
     private void StartupCellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
@@ -307,7 +467,7 @@ public sealed class MainForm : Form
         {
             e.Value = entry.ActionText;
             e.CellStyle.ForeColor = entry.CanToggle ? Accent : Muted;
-            e.CellStyle.BackColor = Color.White;
+            e.CellStyle.BackColor = WinCareTheme.GridBackground;
         }
         if (_startupGrid.Columns[e.ColumnIndex].Name == "MarkText" && entry.Hidden)
             e.CellStyle.ForeColor = Color.FromArgb(171, 92, 33);

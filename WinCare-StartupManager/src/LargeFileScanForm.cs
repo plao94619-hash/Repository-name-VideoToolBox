@@ -2,19 +2,20 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using WinCare.Services;
+using WinCare.UI;
 
 namespace WinCare;
 
-public sealed class LargeFileScanForm : Form
+public sealed class LargeFileScanForm : GlassForm
 {
     private sealed record SizeOption(string Name, long MinimumAllocatedBytes)
     {
         public override string ToString() => Name;
     }
 
-    private static readonly Color Ink = Color.FromArgb(28, 35, 49);
-    private static readonly Color Muted = Color.FromArgb(99, 109, 126);
-    private static readonly Color Accent = Color.FromArgb(39, 103, 210);
+    private static readonly Color Ink = WinCareTheme.Ink;
+    private static readonly Color Muted = WinCareTheme.Muted;
+    private static readonly Color Accent = WinCareTheme.Accent;
     private readonly ComboBox _minimumSize = new();
     private readonly Button _scan = new();
     private readonly Button _cancel = new();
@@ -28,11 +29,11 @@ public sealed class LargeFileScanForm : Form
     {
         Text = "C 盘大文件分析 · WinCare";
         StartPosition = FormStartPosition.CenterParent;
-        MinimumSize = new Size(900, 580);
-        Size = new Size(1180, 760);
-        BackColor = Color.FromArgb(245, 247, 250);
+        MinimumSize = new Size(1000, 640);
+        Size = new Size(1240, 800);
+        BackColor = WinCareTheme.Canvas;
         ForeColor = Ink;
-        Font = new Font("Segoe UI", 9.5F);
+        Font = SystemFonts.MessageBoxFont;
         AutoScaleMode = AutoScaleMode.Dpi;
 
         BuildUi();
@@ -46,25 +47,58 @@ public sealed class LargeFileScanForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 4,
-            Padding = new Padding(14),
-            BackColor = BackColor
+            RowCount = 5,
+            Padding = new Padding(18),
+            BackColor = Color.Transparent
         };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 64));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
 
+        var heading = new GlassSurface { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 7), Padding = new Padding(16, 10, 14, 8), CornerRadius = 22 };
+        heading.Controls.Add(new Label
+        {
+            Text = "大文件分析",
+            AutoSize = true,
+            Location = new Point(16, 8),
+            ForeColor = Ink,
+            Font = new Font(SystemFonts.MessageBoxFont.FontFamily, 17F, FontStyle.Bold),
+            BackColor = Color.Transparent
+        });
+        heading.Controls.Add(new Label
+        {
+            Text = "只读查询文件系统元数据，不打开内容、不执行删除。",
+            AutoSize = true,
+            Location = new Point(17, 40),
+            ForeColor = Muted,
+            Font = SystemFonts.MessageBoxFont,
+            BackColor = Color.Transparent
+        });
+
+        var toolbarSurface = new GlassSurface
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 7),
+            Padding = new Padding(12, 6, 12, 4),
+            CornerRadius = 18,
+            TopColor = WinCareTheme.GlassTop,
+            BottomColor = WinCareTheme.GlassBottom
+        };
         var toolbar = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            Padding = new Padding(0, 5, 0, 0)
+            Padding = Padding.Empty,
+            BackColor = Color.Transparent
         };
-        toolbar.Controls.Add(new Label { Text = "最小磁盘占用", AutoSize = true, Margin = new Padding(0, 8, 6, 0), ForeColor = Ink });
+        toolbar.Controls.Add(new Label { Text = "最小磁盘占用", AutoSize = true, Margin = new Padding(0, 9, 8, 0), ForeColor = Ink });
         _minimumSize.DropDownStyle = ComboBoxStyle.DropDownList;
-        _minimumSize.Width = 150;
+        _minimumSize.Width = 156;
+        _minimumSize.FlatStyle = FlatStyle.Flat;
+        _minimumSize.BackColor = WinCareTheme.Field;
+        _minimumSize.ForeColor = Ink;
         _minimumSize.Items.AddRange(
         [
             new SizeOption("100 MiB", 100L * 1024 * 1024),
@@ -95,41 +129,29 @@ public sealed class LargeFileScanForm : Form
         StyleButton(_openLocation, filled: false);
         _openLocation.Click += (_, _) => OpenSelectedLocation();
         toolbar.Controls.Add(_openLocation);
+        toolbarSurface.Controls.Add(toolbar);
 
-        var guidance = new Label
+        var guidanceSurface = new GlassSurface
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 7),
+            Padding = new Padding(13, 8, 13, 7),
+            CornerRadius = 19,
+            TopColor = WinCareTheme.GuideTop,
+            BottomColor = WinCareTheme.GuideBottom
+        };
+        guidanceSurface.Controls.Add(new Label
         {
             Dock = DockStyle.Fill,
             AutoSize = false,
-            Padding = new Padding(12, 8, 12, 6),
-            BackColor = Color.FromArgb(235, 242, 252),
-            ForeColor = Color.FromArgb(45, 67, 98),
-            Text = "包含隐藏/系统项，按 Windows 报告的分配空间扫描；用卷序列号和文件 ID 合并可识别的硬链接。跳过链接，不读内容、不删除。分配空间不等于删除后一定能释放的空间。"
-        };
+            Padding = Padding.Empty,
+            BackColor = Color.Transparent,
+            ForeColor = WinCareTheme.GuideText,
+            Font = SystemFonts.MessageBoxFont,
+            Text = "包含隐藏和系统项，按 Windows 报告的分配空间筛选；用卷序列号和文件 ID 合并可识别的硬链接。跳过链接，不读取内容、不删除文件。分配空间不等于删除某个路径后一定能释放的空间。"
+        });
 
-        _grid.Dock = DockStyle.Fill;
-        _grid.BackgroundColor = Color.White;
-        _grid.BorderStyle = BorderStyle.None;
-        _grid.EnableHeadersVisualStyles = false;
-        _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(239, 243, 249);
-        _grid.ColumnHeadersDefaultCellStyle.ForeColor = Ink;
-        _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
-        _grid.ColumnHeadersHeight = 38;
-        _grid.DefaultCellStyle.BackColor = Color.White;
-        _grid.DefaultCellStyle.ForeColor = Ink;
-        _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(229, 239, 253);
-        _grid.DefaultCellStyle.SelectionForeColor = Ink;
-        _grid.DefaultCellStyle.Padding = new Padding(6, 2, 6, 2);
-        _grid.RowTemplate.Height = 36;
-        _grid.GridColor = Color.FromArgb(232, 236, 242);
-        _grid.RowHeadersVisible = false;
-        _grid.AllowUserToAddRows = false;
-        _grid.AllowUserToDeleteRows = false;
-        _grid.AllowUserToResizeRows = false;
-        _grid.MultiSelect = false;
-        _grid.ReadOnly = true;
-        _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-        _grid.AutoGenerateColumns = false;
-        _grid.ShowCellToolTips = true;
+        WinCareTheme.StyleGrid(_grid, rowHeight: 40);
         _grid.VirtualMode = true;
         _grid.Columns.Add(TextColumn("Name", "文件", 230));
         _grid.Columns.Add(TextColumn("Path", "完整路径", 480, fill: true));
@@ -147,16 +169,21 @@ public sealed class LargeFileScanForm : Form
         };
         _grid.SelectionChanged += (_, _) => _openLocation.Enabled = _scanCancellation is null && _grid.CurrentCell is not null;
 
-        _status.AutoSize = true;
+        _status.AutoSize = false;
+        _status.Dock = DockStyle.Fill;
+        _status.AutoEllipsis = true;
         _status.ForeColor = Muted;
         _status.Text = "准备扫描；扫描过程可随时取消。";
-        var footer = new Panel { Dock = DockStyle.Fill, Padding = new Padding(2, 10, 0, 0) };
+        var footer = new GlassSurface { Dock = DockStyle.Fill, Padding = new Padding(12, 7, 12, 6), CornerRadius = 18, Margin = new Padding(0, 6, 0, 0) };
         footer.Controls.Add(_status);
+        var gridSurface = new GlassSurface { Dock = DockStyle.Fill, Padding = new Padding(12), CornerRadius = 23, Margin = new Padding(0, 0, 0, 4) };
+        gridSurface.Controls.Add(_grid);
 
-        layout.Controls.Add(toolbar, 0, 0);
-        layout.Controls.Add(guidance, 0, 1);
-        layout.Controls.Add(_grid, 0, 2);
-        layout.Controls.Add(footer, 0, 3);
+        layout.Controls.Add(heading, 0, 0);
+        layout.Controls.Add(toolbarSurface, 0, 1);
+        layout.Controls.Add(guidanceSurface, 0, 2);
+        layout.Controls.Add(gridSurface, 0, 3);
+        layout.Controls.Add(footer, 0, 4);
         Controls.Add(layout);
     }
 
@@ -260,12 +287,7 @@ public sealed class LargeFileScanForm : Form
 
     private static void StyleButton(Button button, bool filled)
     {
-        button.FlatStyle = FlatStyle.Flat;
-        button.FlatAppearance.BorderSize = filled ? 0 : 1;
-        button.FlatAppearance.BorderColor = Color.FromArgb(208, 216, 227);
-        button.BackColor = filled ? Accent : Color.White;
-        button.ForeColor = filled ? Color.White : Ink;
-        button.Cursor = Cursors.Hand;
+        WinCareTheme.StyleButton(button, filled);
         button.Margin = new Padding(8, 0, 0, 0);
     }
 }
