@@ -177,8 +177,8 @@ public sealed class MainForm : Form
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
 
         var heading = new Panel { Dock = DockStyle.Fill };
-        var headingTitle = new Label { Text = "C 盘临时文件", Font = new Font("Segoe UI Semibold", 16F, FontStyle.Bold), AutoSize = true, ForeColor = Ink, Location = new Point(2, 3) };
-        var headingCaption = new Label { Text = "先扫描预估空间，再逐项清理。", Font = new Font("Segoe UI", 9F), AutoSize = true, ForeColor = Muted, Location = new Point(2, 34) };
+        var headingTitle = new Label { Text = "C 盘清理与空间分析", Font = new Font("Segoe UI Semibold", 16F, FontStyle.Bold), AutoSize = true, ForeColor = Ink, Location = new Point(2, 3) };
+        var headingCaption = new Label { Text = "临时文件预览后逐项清理；大文件可单独只读分析。", Font = new Font("Segoe UI", 9F), AutoSize = true, ForeColor = Muted, Location = new Point(2, 34) };
         _refreshCleanup.Text = "重新扫描";
         StyleButton(_refreshCleanup, filled: false);
         _refreshCleanup.Size = new Size(108, 34);
@@ -190,13 +190,23 @@ public sealed class MainForm : Form
             try { Process.Start(new ProcessStartInfo("ms-settings:storage") { UseShellExecute = true }); }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "无法打开 Windows 存储设置", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         };
+        var largeFileSearch = new Button { Text = "查找大文件", Size = new Size(112, 34) };
+        StyleButton(largeFileSearch, filled: false);
+        largeFileSearch.Click += (_, _) =>
+        {
+            using var form = new LargeFileScanForm();
+            form.ShowDialog(this);
+        };
         heading.Resize += (_, _) =>
         {
             _refreshCleanup.Location = new Point(heading.ClientSize.Width - _refreshCleanup.Width - 4, 14);
             storageSettings.Location = new Point(_refreshCleanup.Left - storageSettings.Width - 10, 14);
+            largeFileSearch.Location = new Point(storageSettings.Left - largeFileSearch.Width - 10, 14);
         };
         _refreshCleanup.Location = new Point(Width - _refreshCleanup.Width - 30, 14);
         storageSettings.Location = new Point(_refreshCleanup.Left - storageSettings.Width - 10, 14);
+        largeFileSearch.Location = new Point(storageSettings.Left - largeFileSearch.Width - 10, 14);
+        heading.Controls.Add(largeFileSearch);
         heading.Controls.Add(storageSettings);
         heading.Controls.Add(headingTitle);
         heading.Controls.Add(headingCaption);
