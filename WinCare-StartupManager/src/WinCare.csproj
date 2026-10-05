@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>WinCare</AssemblyName>
+    <RootNamespace>WinCare</RootNamespace>
+    <Version>1.1.0</Version>
+    <Product>WinCare 启动项管理与 C 盘清理</Product>
+  </PropertyGroup>
+</Project>

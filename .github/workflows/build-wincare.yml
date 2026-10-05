@@ -1,0 +1,80 @@
+name: Build WinCare installer
+
+on:
+  push:
+    branches:
+      - main
+      - "wincare/**"
+    tags:
+      - "wincare-v*"
+    paths:
+      - "WinCare-StartupManager/**"
+      - ".github/workflows/build-wincare.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish self-contained app
+        shell: pwsh
+        run: dotnet publish WinCare-StartupManager/src/WinCare.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o WinCare-StartupManager/publish
+
+      - name: Install Inno Setup if needed
+        shell: pwsh
+        run: |
+          $programFilesX86 = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFilesX86)
+          $programFiles = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
+          $candidates = @(
+            "$programFilesX86\Inno Setup 6\ISCC.exe",
+            "$programFiles\Inno Setup 6\ISCC.exe"
+          )
+          if (-not ($candidates | Where-Object { Test-Path $_ })) {
+            choco install innosetup --yes --no-progress
+          }
+          $compiler = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $compiler) { throw "Inno Setup compiler was not found." }
+          & $compiler "WinCare-StartupManager\installer\WinCare.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE." }
+
+      - name: Calculate SHA-256
+        shell: pwsh
+        run: Get-FileHash WinCare-StartupManager/artifacts/WinCare-Setup-x64.exe -Algorithm SHA256 | Format-List
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinCare-Setup-x64
+          path: WinCare-StartupManager/artifacts/WinCare-Setup-x64.exe
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/wincare-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: WinCare-Setup-x64
+          path: release
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" release/WinCare-Setup-x64.exe --title "WinCare $GITHUB_REF_NAME" --generate-notes

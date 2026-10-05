@@ -2,6 +2,10 @@
 
 一款面向 Windows 10/11 的音视频工具。图形界面使用 Qt for Python，转换核心使用 FFmpeg；本地媒体处理不会上传用户文件，并提供边界明确的授权音频直链下载模式。
 
+## 同仓库中的独立项目
+
+- [WinCare：启动项管理与 C 盘清理](./WinCare-StartupManager/README.md)：Windows 10/11 x64 启动项管理和限定范围的临时文件清理工具。
+
 ## 功能
 
 - 视频格式转换：MP4、MKV、MOV、WebM、AVI
