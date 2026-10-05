@@ -2,7 +2,7 @@
 
 一个面向 Windows 10 / 11 x64 的轻量桌面工具。它扫描常见的登录和开机启动入口，可逐项关闭并恢复；C 盘清理页只处理安全范围内的临时文件。
 
-界面沿用 WinForms 和 Windows 标准窗口框架，以系统消息字体、启动时读取的系统深浅色和高对比度设置为基础；Windows 11 22H2 及以上版本请求 DWM Mica 窗口背景，支持时请求系统圆角。内容区参考 Apple Liquid Glass 的分层、半透明面板和高光描边，用于视觉表达，不替换系统标题栏、窗口按钮、键盘焦点或无障碍导航。高对比度开启时跳过自定义 DWM 材质，采用系统颜色；Windows 10 与不支持 Mica 的版本回退到渐变背景。
+界面沿用 WinForms 和 Windows 标准窗口框架，以系统消息字体、启动时读取的系统深浅色和高对比度设置为基础；Windows 11 22H2 及以上版本请求 DWM Mica 窗口背景，支持时请求系统圆角。内容区参考 Apple Liquid Glass 的分层、半透明面板和高光描边，不替换系统标题栏、窗口按钮、键盘焦点或无障碍导航。WinForms 内容区仍绘制自有渐变底色，因此系统 Mica 不会穿透这些不透明区域；面板的毛玻璃观感由 GDI+ 半透明渐变模拟，并非 Acrylic 或实时模糊。高对比度开启时跳过自定义 DWM 材质，采用系统颜色；Windows 10 与不支持 Mica 的版本回退到渐变背景。
 
 ## 功能
 
@@ -34,7 +34,7 @@ Windows 程序可以通过许多机制自动运行，因此任何独立清理工
 
 **1.6.0 文件系统统计：** 按微软 `FILE_STANDARD_INFO.AllocationSize` 显示和排序文件的分配空间，同时保留逻辑大小；逐个查询文件分配信息，不按逻辑长度预筛，以免漏掉预留空间大于 EOF 的文件。对 `NumberOfLinks` 大于 1 的文件使用 `FILE_ID_INFO` 按卷和 128 位 ID 合并扫描范围内的硬链接。用 `CreateFileW` 的零访问请求查询元数据，并以 `FILE_FLAG_OPEN_REPARSE_POINT` 打开后识别重解析点，避免把链接目标当作普通文件跟随。目录枚举显式设置 `AttributesToSkip = 0`，避免 .NET 默认跳过隐藏和系统项；不可访问路径不静默忽略，而是计入读取错误。
 
-**1.7.0 界面优化：** 改用侧边栏导航和响应式内容布局，表格、搜索和筛选仍使用 Windows WinForms 原生控件。读取 Windows 当前应用配色和高对比度设置；在 Windows 11 通过 `DwmSetWindowAttribute` 请求系统 Mica 窗口背景、圆角和深色标题栏支持。高对比度下不覆盖系统材质。内容卡片采用轻量 GDI+ 透明渐变、圆角和边缘高光，参考 iOS 26/27 Liquid Glass 的视觉层次；Windows 10、早期 Windows 11 或不支持 Mica 时保留浅色或深色背景渐变。
+**1.7.0 界面优化：** 改用侧边栏导航和响应式内容布局，表格、搜索和筛选仍使用 Windows WinForms 原生控件。读取 Windows 当前应用配色和高对比度设置；在 Windows 11 通过 `DwmSetWindowAttribute` 请求系统 Mica 窗口背景、圆角和深色标题栏支持。高对比度下不覆盖系统材质。内容卡片采用轻量 GDI+ 半透明渐变、圆角和边缘高光，参考 iOS 26/27 Liquid Glass 的视觉层次；这层效果不是系统实时模糊。Windows 10、早期 Windows 11 或不支持 Mica 时保留浅色或深色背景渐变。
 
 ## 使用
 
