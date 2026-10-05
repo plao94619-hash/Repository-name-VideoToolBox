@@ -12,13 +12,8 @@ public static class CleanupService
 
     public static IReadOnlyList<CleanupTarget> ScanCDrive()
     {
-        var candidates = new[]
-        {
-            (Name: "当前用户临时文件", Path: Path.GetTempPath(), RequiresAdmin: false),
-            (Name: "Windows 临时文件", Path: Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp"), RequiresAdmin: true)
-        };
         var targets = new List<CleanupTarget>();
-        foreach (var candidate in candidates)
+        foreach (var candidate in GetCandidates())
         {
             string fullPath;
             try { fullPath = Path.GetFullPath(candidate.Path); }
@@ -31,12 +26,20 @@ public static class CleanupService
         return targets;
     }
 
-    public static CleanupResult Clean(string targetPath)
+    public static CleanupTarget PreviewTarget(string targetPath, bool requiresAdmin)
     {
-        var known = ScanCDrive().FirstOrDefault(t => string.Equals(t.Path, Path.GetFullPath(targetPath), PathComparison));
-        if (known is null) throw new InvalidOperationException("清理路径不在 WinCare 的安全清理清单中。");
+        var known = ResolveTarget(targetPath, requiresAdmin);
+        if (!Directory.Exists(known.Path)) return known;
+        var (count, bytes) = Measure(known.Path, DateTime.UtcNow.AddDays(-MinimumAgeDays));
+        return known with { EligibleFiles = count, EstimatedBytes = bytes };
+    }
+
+    public static CleanupResult Clean(string targetPath, bool requiresAdmin = false)
+    {
+        // Revalidate only the requested whitelist path. A full preview scan here
+        // would traverse both temp trees again immediately before deletion.
+        var known = ResolveTarget(targetPath, requiresAdmin);
         if (!Directory.Exists(known.Path)) return new CleanupResult(0, 0, 0);
-        if (IsReparsePoint(known.Path)) throw new InvalidOperationException("为避免跟随链接，WinCare 不会清理重解析点目录。");
         var cutoff = DateTime.UtcNow.AddDays(-MinimumAgeDays);
         var deleted = 0;
         long bytes = 0;
@@ -64,6 +67,35 @@ public static class CleanupService
             }
         }
         return new CleanupResult(deleted, bytes, skipped);
+    }
+
+    private static IEnumerable<(string Name, string Path, bool RequiresAdmin)> GetCandidates()
+    {
+        var userTemp = Path.GetTempPath();
+        if (!string.IsNullOrWhiteSpace(userTemp))
+            yield return ("当前用户临时文件", userTemp, false);
+
+        var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (!string.IsNullOrWhiteSpace(windows))
+            yield return ("Windows 临时文件", Path.Combine(windows, "Temp"), true);
+    }
+
+    private static CleanupTarget ResolveTarget(string targetPath, bool requiresAdmin)
+    {
+        var requestedPath = Path.GetFullPath(targetPath);
+        foreach (var candidate in GetCandidates())
+        {
+            string fullPath;
+            try { fullPath = Path.GetFullPath(candidate.Path); }
+            catch { continue; }
+            if (candidate.RequiresAdmin != requiresAdmin || !string.Equals(fullPath, requestedPath, PathComparison))
+                continue;
+            if (!IsOnCDrive(fullPath)) break;
+            if (Directory.Exists(fullPath) && IsReparsePoint(fullPath))
+                throw new InvalidOperationException("为避免跟随链接，WinCare 不会清理重解析点目录。");
+            return new CleanupTarget(candidate.Name, fullPath, candidate.RequiresAdmin, 0, 0);
+        }
+        throw new InvalidOperationException("清理路径不在 WinCare 对应权限范围的安全清理清单中。");
     }
 
     private static (int Count, long Bytes) Measure(string root, DateTime cutoff)

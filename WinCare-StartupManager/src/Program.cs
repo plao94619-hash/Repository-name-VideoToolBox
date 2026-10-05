@@ -57,15 +57,13 @@ internal static class Program
         {
             var path = Encoding.UTF8.GetString(Convert.FromBase64String(encodedPath));
             var fullPath = Path.GetFullPath(path);
-            var target = CleanupService.ScanCDrive().FirstOrDefault(t => t.RequiresAdmin &&
-                string.Equals(t.Path, fullPath, StringComparison.OrdinalIgnoreCase))
-                ?? throw new InvalidOperationException("清理路径不在 WinCare 的系统临时文件清单中。");
+            var target = CleanupService.PreviewTarget(fullPath, requiresAdmin: true);
             var confirm = MessageBox.Show(
                 $"将永久删除“{target.Name}”中修改时间超过 {CleanupService.MinimumAgeDays} 天的文件，不会进入回收站。{Environment.NewLine}{target.Path}{Environment.NewLine}{Environment.NewLine}重新扫描预估：{target.EligibleFiles:N0} 个文件、{StartupScanner.FormatSize(target.EstimatedBytes)}。正在使用或无法访问的文件会跳过。",
                 "确认管理员清理", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             if (confirm != DialogResult.Yes) return 0;
 
-            var result = CleanupService.Clean(target.Path);
+            var result = CleanupService.Clean(target.Path, requiresAdmin: true);
             MessageBox.Show($"已删除 {result.DeletedFiles:N0} 个文件，释放约 {StartupScanner.FormatSize(result.DeletedBytes)}。跳过 {result.SkippedFiles:N0} 个文件。",
                 "清理完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return 0;

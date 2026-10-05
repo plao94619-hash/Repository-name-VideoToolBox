@@ -76,7 +76,7 @@ jobs:
           retention-days: 30
 
   release:
-    if: github.ref == 'refs/heads/wincare/1.1.0'
+    if: startsWith(github.ref, 'refs/heads/wincare/')
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -101,9 +101,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag="wincare-v1.1.0"
+          tag="wincare-v${GITHUB_REF_NAME##*/}"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$tag" release/WinCare-Portable-x64.exe --clobber --repo "$GITHUB_REPOSITORY"
+            gh release upload "$tag" release/WinCare-Setup-x64.exe release/WinCare-Portable-x64.exe --clobber --repo "$GITHUB_REPOSITORY"
           else
             gh release create "$tag" release/WinCare-Setup-x64.exe release/WinCare-Portable-x64.exe --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "WinCare $tag" --generate-notes
           fi
