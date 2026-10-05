@@ -103,7 +103,7 @@ public sealed class LargeFileScanForm : Form
             Padding = new Padding(12, 8, 12, 6),
             BackColor = Color.FromArgb(235, 242, 252),
             ForeColor = Color.FromArgb(45, 67, 98),
-            Text = "只读扫描 C 盘当前账户可访问的文件；跳过目录链接，不会删除文件。只保留最大的 2,000 项。显示逻辑文件大小，硬链接可能重复计数，数值不代表可释放空间。"
+            Text = "只读扫描当前账户可访问的 C 盘文件；跳过链接，不会删除文件。只保留最大的 2,000 项。显示逻辑大小，硬链接、稀疏文件或云端占位文件会使数值不同于可释放空间。"
         };
 
         _grid.Dock = DockStyle.Fill;

@@ -48,11 +48,12 @@ public static class DiskUsageService
 
                     scannedFiles++;
                     var attributes = info.Attributes;
-                    if ((attributes & FileAttributes.ReparsePoint) == 0 && info.Length >= minimumBytes)
+                    var size = info.Length;
+                    if ((attributes & FileAttributes.ReparsePoint) == 0 && size >= minimumBytes)
                     {
                         matchingFiles++;
-                        matchingBytes = SaturatingAdd(matchingBytes, info.Length);
-                        var item = new LargeFileItem(info.Name, info.FullName, info.Length, info.LastWriteTimeUtc);
+                        matchingBytes = SaturatingAdd(matchingBytes, size);
+                        var item = new LargeFileItem(info.Name, info.FullName, size, info.LastWriteTimeUtc);
                         if (largest.Count < MaximumResults)
                         {
                             largest.Enqueue(item, item.Bytes);
