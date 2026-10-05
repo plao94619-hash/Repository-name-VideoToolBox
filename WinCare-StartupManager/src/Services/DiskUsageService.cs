@@ -100,25 +100,25 @@ public static class DiskUsageService
         uint flagsAndAttributes,
         IntPtr templateFile);
 
-    [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+    [DllImport("kernel32.dll", EntryPoint = "GetFileInformationByHandleEx", SetLastError = true, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetFileInformationByHandleEx(
+    private static extern bool GetFileAttributeTagInfo(
         SafeFileHandle file,
         FileInfoByHandleClass fileInformationClass,
         out FileAttributeTagInfo fileInformation,
         uint bufferSize);
 
-    [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+    [DllImport("kernel32.dll", EntryPoint = "GetFileInformationByHandleEx", SetLastError = true, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetFileInformationByHandleEx(
+    private static extern bool GetFileStandardInfo(
         SafeFileHandle file,
         FileInfoByHandleClass fileInformationClass,
         out FileStandardInfo fileInformation,
         uint bufferSize);
 
-    [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+    [DllImport("kernel32.dll", EntryPoint = "GetFileInformationByHandleEx", SetLastError = true, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetFileInformationByHandleEx(
+    private static extern bool GetFileIdInfo(
         SafeFileHandle file,
         FileInfoByHandleClass fileInformationClass,
         out FileIdInfo fileInformation,
@@ -260,7 +260,7 @@ public static class DiskUsageService
         if (handle.IsInvalid)
             throw new Win32Exception(Marshal.GetLastWin32Error());
 
-        if (!GetFileInformationByHandleEx(
+        if (!GetFileAttributeTagInfo(
                 handle,
                 FileInfoByHandleClass.FileAttributeTagInfo,
                 out var attributes,
@@ -269,7 +269,7 @@ public static class DiskUsageService
         if ((attributes.FileAttributes & (uint)FileAttributes.ReparsePoint) != 0)
             return null;
 
-        if (!GetFileInformationByHandleEx(
+        if (!GetFileStandardInfo(
                 handle,
                 FileInfoByHandleClass.FileStandardInfo,
                 out var standardInfo,
@@ -282,7 +282,7 @@ public static class DiskUsageService
         FileIdentity? identity = null;
         if (standardInfo.NumberOfLinks > 1)
         {
-            if (!GetFileInformationByHandleEx(
+            if (!GetFileIdInfo(
                     handle,
                     FileInfoByHandleClass.FileIdInfo,
                     out var idInfo,
