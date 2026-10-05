@@ -30,7 +30,7 @@ Windows 程序可以通过许多机制自动运行，因此任何独立清理工
 
 **1.5.0 存储分析：** 增加可取消的 C 盘大文件扫描、文件大小门槛、最大的 2,000 项结果和资源管理器定位。分析与清理分开，扫描结果不会自动删除。
 
-**1.6.0 文件系统统计：** 按微软 `FILE_STANDARD_INFO.AllocationSize` 显示和排序文件的分配空间，同时保留逻辑大小；对 `NumberOfLinks` 大于 1 的文件使用 `FILE_ID_INFO` 按卷和 128 位 ID 合并扫描范围内的硬链接。用 `CreateFileW` 的零访问请求查询元数据，并以 `FILE_FLAG_OPEN_REPARSE_POINT` 打开后识别重解析点，避免把链接目标当作普通文件跟随。目录枚举显式设置 `AttributesToSkip = 0`，避免 .NET 默认跳过隐藏和系统项；不可访问路径不静默忽略，而是计入读取错误。
+**1.6.0 文件系统统计：** 按微软 `FILE_STANDARD_INFO.AllocationSize` 显示和排序文件的分配空间，同时保留逻辑大小；逐个查询文件分配信息，不按逻辑长度预筛，以免漏掉预留空间大于 EOF 的文件。对 `NumberOfLinks` 大于 1 的文件使用 `FILE_ID_INFO` 按卷和 128 位 ID 合并扫描范围内的硬链接。用 `CreateFileW` 的零访问请求查询元数据，并以 `FILE_FLAG_OPEN_REPARSE_POINT` 打开后识别重解析点，避免把链接目标当作普通文件跟随。目录枚举显式设置 `AttributesToSkip = 0`，避免 .NET 默认跳过隐藏和系统项；不可访问路径不静默忽略，而是计入读取错误。
 
 ## 使用
 
@@ -75,6 +75,7 @@ dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true `
 ## Microsoft 技术文档
 
 - [FILE_STANDARD_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_standard_info)：使用 `AllocationSize` 显示文件系统报告的已分配字节，并保留 `EndOfFile` 作为逻辑大小。
+- [FILE_ALLOCATION_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_allocation_info)：文件系统分配大小可独立于 EOF，因而扫描器不依赖逻辑长度过滤候选文件。
 - [GetFileInformationByHandleEx](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfileinformationbyhandleex)：通过已打开的文件句柄查询标准信息、属性和文件 ID。
 - [FILE_ID_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_info)：卷序列号与 128 位文件 ID 组合，用于识别重复目录项所指向的同一文件。
 - [CreateFileW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew)：零访问请求可在适当权限下查询文件元数据；`FILE_FLAG_OPEN_REPARSE_POINT` 用于打开重解析点本身。

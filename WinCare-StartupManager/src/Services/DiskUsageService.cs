@@ -30,7 +30,6 @@ public sealed record LargeFileScanResult(
 public static class DiskUsageService
 {
     public const int MaximumResults = 2_000;
-    private const long AllocationProbeMarginBytes = 1024L * 1024;
     private const uint FileShareRead = 0x0001;
     private const uint FileShareWrite = 0x0002;
     private const uint FileShareDelete = 0x0004;
@@ -143,7 +142,6 @@ public static class DiskUsageService
         long duplicateHardLinkPaths = 0;
         int readErrors = 0;
         long nextProgressAt = 1_024;
-        var logicalProbeFloor = Math.Max(0, minimumAllocatedBytes - AllocationProbeMarginBytes);
 
         while (pending.Count > 0)
         {
@@ -162,11 +160,6 @@ public static class DiskUsageService
 
                     var attributes = info.Attributes;
                     if ((attributes & FileAttributes.ReparsePoint) != 0) continue;
-
-                    var logicalSizeHint = info.Length;
-                    // Avoid opening almost all small files. The margin accounts for normal
-                    // allocation-unit rounding while still catching candidates near the limit.
-                    if (logicalSizeHint < logicalProbeFloor) continue;
 
                     var metrics = ReadFileMetrics(filePath, info.LastWriteTimeUtc);
                     if (metrics is null || metrics.Value.AllocatedBytes < minimumAllocatedBytes) continue;
