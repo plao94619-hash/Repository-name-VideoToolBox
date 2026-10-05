@@ -23,23 +23,25 @@ WinCare 默认仅删除修改时间超过 7 天的临时文件，不扫描或删
 
 ## 使用
 
-1. 从 GitHub Releases 下载 `WinCare-Setup-x64.exe`。
-2. 运行安装包。程序以普通权限启动，仅在需要修改系统范围启动项或清理 Windows 临时目录时请求 UAC。
+1. 从 GitHub Releases 下载 `WinCare-Setup-x64.exe` 安装版，或下载 `WinCare-Portable-x64.exe` 单文件便携版；便携版可直接运行，无需安装。
+2. 程序以普通权限启动，仅在需要修改系统范围启动项或清理 Windows 临时目录时请求 UAC。
 3. 在“启动项管理”页查看入口；用每行的“一键关闭”关闭单项，已由 WinCare 关闭的项目可按“恢复”。
 4. 在“C 盘清理”页查看预估，逐个目录确认后清理。
+
+便携版不在 EXE 所在目录保存状态；启动文件恢复数据保存在 `%LOCALAPPDATA%\\WinCare`，系统级服务和任务恢复标记保存在受保护的注册表位置。
 
 修改系统范围启动项和清理 Windows 临时目录前，WinCare 会在 UAC 授权后再次显示确认提示。服务设置一般在下次启动时生效；请先检查说明和任务动作。
 
 ## 构建
 
-项目使用 .NET 10 LTS WinForms，安装包由 GitHub Actions 在 Windows runner 上构建：
+项目使用 .NET 10 LTS WinForms。该自包含发布命令会生成可直接运行的单文件 EXE；GitHub Actions 再用 Inno Setup 生成安装版：
 
 ```powershell
 dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true `
   -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 ```
 
-随后使用 Inno Setup 编译 `installer/WinCare.iss`。推送到 `main` 会上传安装包工作流 artifact；推送 `v*` 标签会创建 GitHub Release 并附上安装包。
+随后使用 Inno Setup 编译 `installer/WinCare.iss`。现有仓库的 WinCare 工作流会同时发布安装版和便携版构建产物，并将便携版附加到 WinCare Release。
 
 ## 安全与隐私
 

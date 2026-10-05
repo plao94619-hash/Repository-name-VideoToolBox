@@ -47,15 +47,31 @@ jobs:
           & $compiler "WinCare-StartupManager\installer\WinCare.iss"
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE." }
 
+      - name: Prepare portable executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path WinCare-StartupManager/artifacts | Out-Null
+          Copy-Item WinCare-StartupManager/publish/WinCare.exe WinCare-StartupManager/artifacts/WinCare-Portable-x64.exe
+
       - name: Calculate SHA-256
         shell: pwsh
-        run: Get-FileHash WinCare-StartupManager/artifacts/WinCare-Setup-x64.exe -Algorithm SHA256 | Format-List
+        run: |
+          Get-FileHash WinCare-StartupManager/artifacts/WinCare-Setup-x64.exe -Algorithm SHA256 | Format-List
+          Get-FileHash WinCare-StartupManager/artifacts/WinCare-Portable-x64.exe -Algorithm SHA256 | Format-List
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: WinCare-Setup-x64
           path: WinCare-StartupManager/artifacts/WinCare-Setup-x64.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload portable executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinCare-Portable-x64
+          path: WinCare-StartupManager/artifacts/WinCare-Portable-x64.exe
           if-no-files-found: error
           retention-days: 30
 
@@ -75,13 +91,19 @@ jobs:
           name: WinCare-Setup-x64
           path: release
 
+      - name: Download portable executable artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: WinCare-Portable-x64
+          path: release
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="wincare-v1.1.0"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag already exists; keeping its assets."
-            exit 0
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" release/WinCare-Portable-x64.exe --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$tag" release/WinCare-Setup-x64.exe release/WinCare-Portable-x64.exe --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "WinCare $tag" --generate-notes
           fi
-          gh release create "$tag" release/WinCare-Setup-x64.exe --target "$GITHUB_SHA" --title "WinCare $tag" --generate-notes
