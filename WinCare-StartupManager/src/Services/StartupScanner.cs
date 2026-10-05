@@ -248,7 +248,7 @@ public static class StartupScanner
             dynamic service = serviceObject!;
             service.Connect();
             dynamic root = service.GetFolder("\\");
-            WalkTaskFolder(result, root, "\\");
+            WalkTaskFolder(result, root, "\\", restoreSnapshot);
         }
         catch (Exception ex)
         {
@@ -260,7 +260,7 @@ public static class StartupScanner
         }
     }
 
-    private static void WalkTaskFolder(ScanResult result, dynamic folder, string folderPath)
+    private static void WalkTaskFolder(ScanResult result, dynamic folder, string folderPath, StartupActions.RestoreSnapshot restoreSnapshot)
     {
         try
         {
@@ -318,7 +318,7 @@ public static class StartupScanner
             {
                 dynamic child = folders.Item(i);
                 string childPath = folderPath == "\\" ? $"\\{child.Name}" : $"{folderPath}\\{child.Name}";
-                WalkTaskFolder(result, child, childPath);
+                WalkTaskFolder(result, child, childPath, restoreSnapshot);
             }
         }
         catch (Exception ex)
