@@ -217,7 +217,7 @@ public static class WechatCleanupService
             {
                 if (!File.Exists(manifestPath) || IsReparsePoint(manifestPath)) continue;
                 var manifest = JsonSerializer.Deserialize<ArchiveManifest>(File.ReadAllText(manifestPath));
-                foreach (var record in manifest?.Files.Where(x => x.State is "Archived" or "Pending") ?? [])
+                foreach (var record in manifest?.Files.Where(x => x.State is "Archived" or "CopyRetained" or "Pending") ?? [])
                 {
                     var payload = Path.Combine(session, "payload", record.Id);
                     if (string.Equals(Path.GetFileName(record.Id), record.Id, StringComparison.Ordinal) &&
