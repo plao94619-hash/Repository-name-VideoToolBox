@@ -126,15 +126,10 @@ public static class CleanupService
         while (pending.Count > 0)
         {
             var directory = pending.Pop();
-            string[] files;
-            try { files = Directory.GetFiles(directory, "*", SearchOption.TopDirectoryOnly); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException) { continue; }
-            foreach (var file in files) yield return file;
+            foreach (var file in EnumerateDirectoryEntries(directory, files: true))
+                yield return file;
 
-            string[] subdirectories;
-            try { subdirectories = Directory.GetDirectories(directory, "*", SearchOption.TopDirectoryOnly); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException) { continue; }
-            foreach (var child in subdirectories)
+            foreach (var child in EnumerateDirectoryEntries(directory, files: false))
             {
                 try
                 {
@@ -142,6 +137,43 @@ public static class CleanupService
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException) { }
             }
+        }
+    }
+
+    private static IEnumerable<string> EnumerateDirectoryEntries(string directory, bool files)
+    {
+        IEnumerator<string>? enumerator = null;
+        try
+        {
+            var entries = files
+                ? Directory.EnumerateFiles(directory, "*", SearchOption.TopDirectoryOnly)
+                : Directory.EnumerateDirectories(directory, "*", SearchOption.TopDirectoryOnly);
+            enumerator = entries.GetEnumerator();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException) { }
+
+        if (enumerator is null) yield break;
+        try
+        {
+            while (true)
+            {
+                var hasNext = false;
+                string? current = null;
+                try
+                {
+                    hasNext = enumerator.MoveNext();
+                    if (hasNext) current = enumerator.Current;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException) { }
+
+                if (!hasNext) yield break;
+                yield return current!;
+            }
+        }
+        finally
+        {
+            try { enumerator.Dispose(); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException) { }
         }
     }
 
