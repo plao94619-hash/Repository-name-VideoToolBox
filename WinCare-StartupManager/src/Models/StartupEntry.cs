@@ -10,6 +10,8 @@ public enum StartupEntryKind
 
 public sealed class StartupEntry
 {
+    private string? _searchText;
+
     public required string Id { get; init; }
     public required string Name { get; init; }
     public required string Category { get; init; }
@@ -34,6 +36,7 @@ public sealed class StartupEntry
     public string MarkText => string.Join(" · ", new[] { Hidden ? "隐藏项" : null, SystemItem ? "系统项" : null, RequiresAdmin ? "需管理员" : null }.Where(x => x is not null));
     public string ActionText => !CanToggle ? "只读" : Enabled ? "一键关闭" : "恢复";
     public string DisplayDetails => $"{Location}  ·  {Details}";
+    internal string SearchText => _searchText ??= $"{Name} {Category} {Location} {Details}";
 }
 
 public sealed class ScanResult

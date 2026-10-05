@@ -25,8 +25,10 @@ public sealed class MainForm : Form
     private readonly Button _refreshStartup = new();
     private readonly Button _refreshCleanup = new();
     private readonly List<StartupEntry> _entries = [];
+    private List<StartupEntry> _visibleEntries = [];
     private IReadOnlyList<CleanupTarget> _cleanupTargets = [];
     private readonly TabControl _tabs = new();
+    private readonly System.Windows.Forms.Timer _searchDebounce = new() { Interval = 180 };
     private bool _startupActionInProgress;
     private bool _cleanupActionInProgress;
 
@@ -42,6 +44,12 @@ public sealed class MainForm : Form
         AutoScaleMode = AutoScaleMode.Dpi;
 
         BuildUi();
+        _searchDebounce.Tick += (_, _) =>
+        {
+            _searchDebounce.Stop();
+            ApplyStartupFilters();
+        };
+        FormClosed += (_, _) => _searchDebounce.Dispose();
         Shown += async (_, _) =>
         {
             await ReloadStartupAsync();
@@ -93,7 +101,11 @@ public sealed class MainForm : Form
         _search.Width = 290;
         _search.Height = 32;
         _search.BorderStyle = BorderStyle.FixedSingle;
-        _search.TextChanged += (_, _) => ApplyStartupFilters();
+        _search.TextChanged += (_, _) =>
+        {
+            _searchDebounce.Stop();
+            _searchDebounce.Start();
+        };
         _category.DropDownStyle = ComboBoxStyle.DropDownList;
         _category.Width = 220;
         _category.Height = 32;
@@ -117,17 +129,22 @@ public sealed class MainForm : Form
         _startupGrid.Columns.Add(TextColumn("DisplayDetails", "路径 / 命令", 500, fill: true));
         var action = new DataGridViewButtonColumn { Name = "Action", HeaderText = "操作", DataPropertyName = "ActionText", Width = 100, FlatStyle = FlatStyle.Flat, UseColumnTextForButtonValue = false };
         _startupGrid.Columns.Add(action);
+        _startupGrid.VirtualMode = true;
+        _startupGrid.CellValueNeeded += StartupCellValueNeeded;
         _startupGrid.CellFormatting += StartupCellFormatting;
         _startupGrid.CellContentClick += async (_, e) =>
         {
             if (e.RowIndex < 0 || e.ColumnIndex < 0 || _startupGrid.Columns[e.ColumnIndex].Name != "Action") return;
-            if (_startupGrid.Rows[e.RowIndex].DataBoundItem is StartupEntry entry)
-                await ToggleStartupEntryAsync(entry);
+            if (e.RowIndex < _visibleEntries.Count)
+                await ToggleStartupEntryAsync(_visibleEntries[e.RowIndex]);
         };
         _startupGrid.CellToolTipTextNeeded += (_, e) =>
         {
-            if (e.RowIndex >= 0 && _startupGrid.Rows[e.RowIndex].DataBoundItem is StartupEntry item)
+            if (e.RowIndex >= 0 && e.RowIndex < _visibleEntries.Count)
+            {
+                var item = _visibleEntries[e.RowIndex];
                 e.ToolTipText = item.Warning ?? item.Details;
+            }
         };
 
         var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Padding = new Padding(2, 8, 2, 0) };
@@ -274,7 +291,8 @@ public sealed class MainForm : Form
 
     private void StartupCellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
     {
-        if (e.RowIndex < 0 || e.ColumnIndex < 0 || _startupGrid.Rows[e.RowIndex].DataBoundItem is not StartupEntry entry) return;
+        if (e.RowIndex < 0 || e.RowIndex >= _visibleEntries.Count || e.ColumnIndex < 0) return;
+        var entry = _visibleEntries[e.RowIndex];
         if (_startupGrid.Columns[e.ColumnIndex].Name == "Action")
         {
             e.Value = entry.ActionText;
@@ -283,6 +301,22 @@ public sealed class MainForm : Form
         }
         if (_startupGrid.Columns[e.ColumnIndex].Name == "MarkText" && entry.Hidden)
             e.CellStyle.ForeColor = Color.FromArgb(171, 92, 33);
+    }
+
+    private void StartupCellValueNeeded(object? sender, DataGridViewCellValueEventArgs e)
+    {
+        if (e.RowIndex < 0 || e.RowIndex >= _visibleEntries.Count || e.ColumnIndex < 0) return;
+        var entry = _visibleEntries[e.RowIndex];
+        e.Value = _startupGrid.Columns[e.ColumnIndex].Name switch
+        {
+            "Name" => entry.Name,
+            "Category" => entry.Category,
+            "MarkText" => entry.MarkText,
+            "StateText" => entry.StateText,
+            "DisplayDetails" => entry.DisplayDetails,
+            "Action" => entry.ActionText,
+            _ => null
+        };
     }
 
     private async Task ReloadStartupAsync()
@@ -322,17 +356,19 @@ public sealed class MainForm : Form
 
     private void ApplyStartupFilters()
     {
+        _searchDebounce.Stop();
         if (_startupGrid.Columns.Count == 0) return;
         var category = _category.SelectedItem?.ToString() ?? "全部来源";
         var query = _search.Text.Trim();
-        var filtered = _entries.Where(entry =>
+        _visibleEntries = _entries.Where(entry =>
                 (_showHidden.Checked || !entry.Hidden) &&
                 (category == "全部来源" || string.Equals(category, entry.Category, StringComparison.CurrentCultureIgnoreCase)) &&
-                (query.Length == 0 || $"{entry.Name} {entry.Category} {entry.Location} {entry.Details}".Contains(query, StringComparison.CurrentCultureIgnoreCase)))
+                (query.Length == 0 || entry.SearchText.Contains(query, StringComparison.CurrentCultureIgnoreCase)))
             .ToList();
-        _startupGrid.DataSource = new BindingList<StartupEntry>(filtered);
+        _startupGrid.RowCount = _visibleEntries.Count;
+        _startupGrid.Invalidate();
         var hiddenCount = _entries.Count(e => e.Hidden);
-        _startupSummary.Text = $"显示 {filtered.Count} 项 · 共 {_entries.Count} 项 · 隐藏项 {hiddenCount} 项 · 可操作 {filtered.Count(e => e.CanToggle)} 项";
+        _startupSummary.Text = $"显示 {_visibleEntries.Count} 项 · 共 {_entries.Count} 项 · 隐藏项 {hiddenCount} 项 · 可操作 {_visibleEntries.Count(e => e.CanToggle)} 项";
     }
 
     private void ShowScanWarnings()

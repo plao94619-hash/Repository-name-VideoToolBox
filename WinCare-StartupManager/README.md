@@ -23,6 +23,8 @@ WinCare 默认仅删除修改时间超过 7 天的临时文件，不扫描或删
 
 **1.3.0 性能优化：** 临时目录按需逐项枚举文件和子目录，不再为每个目录一次性建立完整数组；大目录扫描时可减少额外内存占用。此前 1.2.0 的单目标重新校验和管理员单目录预估也继续保留。清理年龄、目录白名单、跳过规则和确认步骤不变。
 
+**1.4.0 性能优化：** 启动项清单改为虚拟化表格；搜索输入增加短暂防抖，并缓存每项的搜索文本，减少大清单下的行对象、临时字符串和重复刷新。
+
 ## 使用
 
 1. 从 GitHub Releases 下载 `WinCare-Setup-x64.exe` 安装版，或下载 `WinCare-Portable-x64.exe` 单文件便携版；便携版可直接运行，无需安装。
@@ -57,7 +59,9 @@ dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true `
 ## 设计参考
 
 - [BleachBit](https://github.com/bleachbit/bleachbit)：借鉴删除前预览、逐项确认和清理边界说明。本项目只清理列明的两个临时目录，不扩大到浏览器、下载或系统组件。
-- [autostart-audit](https://github.com/rwrife/autostart-audit)：借鉴按来源呈现启动入口、保留恢复依据和明确显示扫描限制的做法。本项目自行实现 WinForms 界面和逐项恢复，没有复制其代码。
+- [autostart-audit](https://github.com/rwrife/autostart-audit)：借鉴按来源呈现启动入口、可筛选清单、保留恢复依据和明确显示扫描限制的做法。本项目自行实现 WinForms 界面和逐项恢复，没有复制其代码。
+- [Microsoft Sysinternals Autoruns](https://learn.microsoft.com/sysinternals/downloads/autoruns)：参考其分类和筛选大量自动启动项的方式。WinCare 保持自己的覆盖范围，不宣称具备 Autoruns 的全部扫描能力或签名验证功能。
+- [Microsoft PC Manager](https://pcmanager.microsoft.com/)：参考其把存储管理作为独立入口的产品组织方式；WinCare 清理仍限定于明确列出的临时目录。
 
 ## 许可证
 

@@ -1,5 +1,5 @@
 #define ProductName "WinCare 启动项管理与 C 盘清理"
-#define ProductVersion "1.3.0"
+#define ProductVersion "1.4.0"
 
 [Setup]
 AppId={{C3D00A46-3388-472A-8B6A-CC1B1051FB30}
