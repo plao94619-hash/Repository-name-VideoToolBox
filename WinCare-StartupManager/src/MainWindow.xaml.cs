@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -309,7 +310,7 @@ public sealed partial class MainWindow : Window
         WechatStatus.Text = "正在还原归档文件…";
         try
         {
-            var result = await Task.Run(WechatCleanupService.RestoreAll);
+            var result = await Task.Run(() => WechatCleanupService.RestoreAll());
             RefreshWechatArchiveSummary();
             WechatStatus.Text = $"还原完成：恢复 {result.Completed:N0} 项，跳过 {result.Skipped:N0} 项。";
             if (result.Warnings.Count > 0) await AlertAsync("还原提示", string.Join("\n", result.Warnings.Take(20)));
