@@ -11,14 +11,20 @@ public sealed partial class MainWindow : Window
 {
     private readonly List<StartupEntry> _entries = [];
     private List<StartupEntry> _visible = [];
+    private List<WechatMediaFile> _wechatFiles = [];
+    private readonly HashSet<string> _wechatSelection = new(StringComparer.OrdinalIgnoreCase);
     private List<string> _warnings = [];
     private bool _initialized, _busy;
+    private bool _wechatBusy;
+    private CancellationTokenSource? _wechatScanCancellation;
     private DispatcherTimer? _debounce;
     public MainWindow()
     {
         InitializeComponent();
         Title = "WinCare · 启动项管理与 C 盘清理";
         SystemBackdrop = new MicaBackdrop();
+        WechatRootBox.Text = WechatCleanupService.DefaultRoot;
+        RefreshWechatArchiveSummary();
         Navigation.SelectedItem = Navigation.MenuItems[0];
         Activated += FirstActivated;
     }
@@ -34,6 +40,7 @@ public sealed partial class MainWindow : Window
         var tag = (args.SelectedItem as NavigationViewItem)?.Tag?.ToString();
         StartupPage.Visibility = tag == "startup" ? Visibility.Visible : Visibility.Collapsed;
         CleanupPage.Visibility = tag == "cleanup" ? Visibility.Visible : Visibility.Collapsed;
+        WechatPage.Visibility = tag == "wechat" ? Visibility.Visible : Visibility.Collapsed;
     }
     private async Task ReloadStartupAsync()
     {
@@ -176,4 +183,145 @@ public sealed partial class MainWindow : Window
     private async void Warnings_Click(object sender, RoutedEventArgs e) => await AlertAsync("扫描提示", _warnings.Count == 0 ? "本次扫描未报告读取错误。" : string.Join("\n", _warnings.Take(35)));
     private void StorageSettings_Click(object sender, RoutedEventArgs e) => Process.Start(new ProcessStartInfo("ms-settings:storage") { UseShellExecute = true });
     private void LargeFiles_Click(object sender, RoutedEventArgs e) { var w = new LargeFileWindow(); w.Activate(); }
+    private void WechatDefaultPath_Click(object sender, RoutedEventArgs e) => WechatRootBox.Text = WechatCleanupService.DefaultRoot;
+    private async void WechatScan_Click(object sender, RoutedEventArgs e)
+    {
+        if (_wechatBusy) return;
+        var age = int.Parse(((ComboBoxItem)WechatAgeBox.SelectedItem).Tag.ToString()!);
+        if (WechatImagesBox.IsChecked != true && WechatVideosBox.IsChecked != true)
+        {
+            await AlertAsync("微信专项清理", "至少选择一种媒体类型。");
+            return;
+        }
+        _wechatBusy = true;
+        var cancellation = new CancellationTokenSource();
+        _wechatScanCancellation = cancellation;
+        WechatCancelButton.IsEnabled = true;
+        WechatStatus.Text = "正在扫描所选微信文件目录…";
+        try
+        {
+            var root = WechatRootBox.Text;
+            var includeImages = WechatImagesBox.IsChecked == true;
+            var includeVideos = WechatVideosBox.IsChecked == true;
+            var result = await Task.Run(() => WechatCleanupService.Scan(root, age, includeImages, includeVideos, cancellation.Token), cancellation.Token);
+            _wechatFiles = result.Files.ToList();
+            _wechatSelection.Clear();
+            RenderWechatFiles();
+            var total = _wechatFiles.Sum(x => x.Bytes);
+            WechatStatus.Text = $"扫描完成：识别 {result.Accounts:N0} 个账号，找到 {_wechatFiles.Count:N0} 个符合条件的文件，共 {StartupScanner.FormatSize(total)}。时间按文件系统创建时间筛选；图片仅扫描 MsgAttach 下 Image 目录中的 .dat 文件。{(result.Warnings.Count > 0 ? $" 另有 {result.Warnings.Count} 条读取提示。" : "")}";
+            if (result.Warnings.Count > 0) await AlertAsync("微信扫描提示", string.Join("\n", result.Warnings.Take(20)));
+        }
+        catch (OperationCanceledException) { WechatStatus.Text = "扫描已取消。"; }
+        catch (Exception ex) { WechatStatus.Text = "扫描失败"; await AlertAsync("微信扫描失败", ex.Message); }
+        finally { WechatCancelButton.IsEnabled = false; _wechatScanCancellation = null; cancellation.Dispose(); _wechatBusy = false; }
+    }
+    private void RenderWechatFiles()
+    {
+        WechatResults.Items.Clear();
+        foreach (var media in _wechatFiles)
+        {
+            var grid = new Grid { ColumnSpacing = 12, Margin = new Thickness(10, 7, 10, 7) };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(135) });
+            var check = new CheckBox { IsChecked = _wechatSelection.Contains(media.Path), Tag = media.Path, VerticalAlignment = VerticalAlignment.Center };
+            AutomationProperties.SetName(check, $"归档 {media.Account} {media.Kind} 文件");
+            check.Checked += WechatFileSelection_Changed;
+            check.Unchecked += WechatFileSelection_Changed;
+            var details = new StackPanel { Spacing = 2 };
+            details.Children.Add(new TextBlock { Text = $"{media.Account} · {media.Kind}", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
+            details.Children.Add(new TextBlock { Text = media.Path, FontSize = 12, Foreground = B("MutedTextBrush"), TextTrimming = TextTrimming.CharacterEllipsis });
+            var metadata = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            metadata.Children.Add(new TextBlock { Text = StartupScanner.FormatSize(media.Bytes), HorizontalAlignment = HorizontalAlignment.Right });
+            metadata.Children.Add(new TextBlock { Text = media.CreatedUtc.ToLocalTime().ToString("d"), FontSize = 12, Foreground = B("MutedTextBrush"), HorizontalAlignment = HorizontalAlignment.Right });
+            Grid.SetColumn(details, 1); Grid.SetColumn(metadata, 2);
+            grid.Children.Add(check); grid.Children.Add(details); grid.Children.Add(metadata);
+            var card = new Border { CornerRadius = new CornerRadius(14), Background = B("CardBrush"), BorderBrush = B("CardStrokeBrush"), BorderThickness = new Thickness(1), Padding = new Thickness(6), Child = grid };
+            WechatResults.Items.Add(new ListViewItem { Content = card, Tag = media });
+        }
+        UpdateWechatSelectionSummary();
+    }
+    private void WechatFileSelection_Changed(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox { Tag: string path } check) return;
+        if (check.IsChecked == true) _wechatSelection.Add(path); else _wechatSelection.Remove(path);
+        UpdateWechatSelectionSummary();
+    }
+    private void UpdateWechatSelectionSummary()
+    {
+        var selected = _wechatFiles.Where(x => _wechatSelection.Contains(x.Path)).ToList();
+        WechatSelectionSummary.Text = $"已选择 {selected.Count:N0} 项 · {StartupScanner.FormatSize(selected.Sum(x => x.Bytes))}";
+    }
+    private void WechatSelectAll_Click(object sender, RoutedEventArgs e)
+    {
+        _wechatSelection.Clear();
+        foreach (var item in _wechatFiles) _wechatSelection.Add(item.Path);
+        RenderWechatFiles();
+    }
+    private void WechatClearSelection_Click(object sender, RoutedEventArgs e)
+    {
+        _wechatSelection.Clear();
+        RenderWechatFiles();
+    }
+    private async void WechatArchive_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = _wechatFiles.Where(x => _wechatSelection.Contains(x.Path)).ToList();
+        if (selected.Count == 0) { await AlertAsync("微信专项清理", "先扫描并选择要归档的文件。"); return; }
+        var size = StartupScanner.FormatSize(selected.Sum(x => x.Bytes));
+        if (!await ConfirmAsync($"将把 {selected.Count:N0} 个文件（约 {size}）移动到 WinCare 本地归档区。请先完全退出微信。归档期间，这些图片或视频可能无法从对应聊天中打开；可用“还原全部归档”恢复。原文件已不存在或正在使用时会跳过。继续吗？", "确认微信文件归档")) return;
+        if (_wechatBusy) return;
+        _wechatBusy = true;
+        WechatStatus.Text = "正在归档所选文件…";
+        try
+        {
+            var root = WechatRootBox.Text;
+            var result = await Task.Run(() => WechatCleanupService.Archive(root, selected));
+            _wechatSelection.Clear();
+            RefreshWechatArchiveSummary();
+            WechatStatus.Text = $"归档完成：移动 {result.Completed:N0} 项，释放约 {StartupScanner.FormatSize(result.Bytes)}；跳过 {result.Skipped:N0} 项。";
+            if (result.Warnings.Count > 0) await AlertAsync("归档提示", string.Join("\n", result.Warnings.Take(20)));
+            await WechatScan_ClickRefresh();
+        }
+        catch (Exception ex) { await AlertAsync("微信归档失败", ex.Message); }
+        finally { _wechatBusy = false; }
+    }
+    private async Task WechatScan_ClickRefresh()
+    {
+        try
+        {
+            var age = int.Parse(((ComboBoxItem)WechatAgeBox.SelectedItem).Tag.ToString()!);
+            var root = WechatRootBox.Text;
+            var includeImages = WechatImagesBox.IsChecked == true;
+            var includeVideos = WechatVideosBox.IsChecked == true;
+            var result = await Task.Run(() => WechatCleanupService.Scan(root, age, includeImages, includeVideos));
+            _wechatFiles = result.Files.ToList();
+            RenderWechatFiles();
+        }
+        catch { }
+    }
+    private async void WechatRestore_Click(object sender, RoutedEventArgs e)
+    {
+        var archived = WechatCleanupService.GetArchivedSummary();
+        if (archived.Files == 0) { await AlertAsync("微信归档", "没有可还原的归档文件。"); return; }
+        if (!await ConfirmAsync($"尝试还原 {archived.Files:N0} 个归档文件（约 {StartupScanner.FormatSize(archived.Bytes)}）到原微信目录。若原路径已有同名文件，将跳过且不会覆盖。继续吗？", "确认还原微信文件")) return;
+        if (_wechatBusy) return;
+        _wechatBusy = true;
+        WechatStatus.Text = "正在还原归档文件…";
+        try
+        {
+            var result = await Task.Run(WechatCleanupService.RestoreAll);
+            RefreshWechatArchiveSummary();
+            WechatStatus.Text = $"还原完成：恢复 {result.Completed:N0} 项，跳过 {result.Skipped:N0} 项。";
+            if (result.Warnings.Count > 0) await AlertAsync("还原提示", string.Join("\n", result.Warnings.Take(20)));
+            await WechatScan_ClickRefresh();
+        }
+        catch (Exception ex) { await AlertAsync("微信还原失败", ex.Message); }
+        finally { _wechatBusy = false; }
+    }
+    private void RefreshWechatArchiveSummary()
+    {
+        var state = WechatCleanupService.GetArchivedSummary();
+        WechatArchiveSummary.Text = $"归档中 {state.Files:N0} 项 · {StartupScanner.FormatSize(state.Bytes)}";
+    }
+    private void WechatCancelScan_Click(object sender, RoutedEventArgs e) => _wechatScanCancellation?.Cancel();
 }

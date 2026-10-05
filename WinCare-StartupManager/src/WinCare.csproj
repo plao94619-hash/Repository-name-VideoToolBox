@@ -13,7 +13,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>WinCare</AssemblyName>
     <RootNamespace>WinCare</RootNamespace>
-    <Version>1.8.0</Version>
+    <Version>1.9.0</Version>
     <Product>WinCare 启动项管理与 C 盘清理</Product>
     <PublishSingleFile Condition="'$(Configuration)' == 'Release'">true</PublishSingleFile>
   </PropertyGroup>

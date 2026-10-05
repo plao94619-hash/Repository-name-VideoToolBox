@@ -21,6 +21,7 @@
                     <NavigationView.MenuItems>
                         <NavigationViewItem Content="启动项管理" Tag="startup" Icon="Setting"/>
                         <NavigationViewItem Content="C 盘空间" Tag="cleanup" Icon="Storage"/>
+                        <NavigationViewItem Content="微信专项清理" Tag="wechat" Icon="Pictures"/>
                     </NavigationView.MenuItems>
                 </NavigationView>
                 <Border Grid.Row="3" Padding="12" CornerRadius="18" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
@@ -54,6 +55,60 @@
                     <Border Padding="14" CornerRadius="18" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1"><TextBlock Text="仅扫描 C 盘的当前用户 TEMP 与 Windows\Temp，默认只清理修改时间超过 7 天的文件。清理会永久删除文件（不进入回收站），并跳过链接、正在使用或无权限访问的文件。" TextWrapping="Wrap" Foreground="{ThemeResource MutedTextBrush}"/></Border>
                     <StackPanel x:Name="CleanupRows" Spacing="8"/>
                     <TextBlock x:Name="CleanupSummary" Foreground="{ThemeResource MutedTextBrush}" Margin="4,2"/>
+                </StackPanel>
+            </ScrollViewer>
+            <ScrollViewer x:Name="WechatPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="12">
+                    <Border Padding="20,16" CornerRadius="22" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="微信专项清理" FontSize="24" FontWeight="SemiBold"/>
+                            <TextBlock Text="按账号、媒体类型和时间筛选微信本地原图与视频；先归档，可随时还原。" Foreground="{ThemeResource MutedTextBrush}" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Padding="14" CornerRadius="18" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <StackPanel Spacing="9">
+                            <TextBlock Text="仅扫描当前选择的微信文件目录。不会读取聊天数据库或解密图片。归档后相应媒体可能暂时无法从聊天记录打开；还原时不会覆盖原路径中已存在的文件。" TextWrapping="Wrap" Foreground="{ThemeResource MutedTextBrush}"/>
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBox x:Name="WechatRootBox" PlaceholderText="微信文件根目录，例如 Windows“文档”里的 WeChat Files"/>
+                                <Button Grid.Column="1" Content="使用默认目录" Click="WechatDefaultPath_Click"/>
+                            </Grid>
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <TextBlock Text="保留最近" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="WechatAgeBox" SelectedIndex="2" MinWidth="130">
+                                    <ComboBoxItem Content="30 天前" Tag="30"/>
+                                    <ComboBoxItem Content="90 天前" Tag="90"/>
+                                    <ComboBoxItem Content="180 天前" Tag="180"/>
+                                    <ComboBoxItem Content="365 天前" Tag="365"/>
+                                    <ComboBoxItem Content="730 天前" Tag="730"/>
+                                </ComboBox>
+                                <CheckBox x:Name="WechatImagesBox" Content="图片原图（.dat）" IsChecked="True"/>
+                                <CheckBox x:Name="WechatVideosBox" Content="视频" IsChecked="True"/>
+                                <Button Content="扫描预览" Click="WechatScan_Click"/>
+                                <Button x:Name="WechatCancelButton" Content="取消扫描" IsEnabled="False" Click="WechatCancelScan_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <Border Padding="10" CornerRadius="18" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="全选结果" Click="WechatSelectAll_Click"/>
+                            <Button Content="清除选择" Click="WechatClearSelection_Click"/>
+                            <Button Content="归档所选文件" Click="WechatArchive_Click"/>
+                            <Button Content="还原全部归档" Click="WechatRestore_Click"/>
+                            <TextBlock x:Name="WechatArchiveSummary" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{ThemeResource MutedTextBrush}"/>
+                            <TextBlock x:Name="WechatSelectionSummary" VerticalAlignment="Center" Foreground="{ThemeResource MutedTextBrush}"/>
+                        </StackPanel>
+                    </Border>
+                    <ListView x:Name="WechatResults" SelectionMode="None" MaxHeight="520">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,0,0,6"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                    </ListView>
+                    <TextBlock x:Name="WechatStatus" Foreground="{ThemeResource MutedTextBrush}" TextWrapping="Wrap" Margin="4,2"/>
                 </StackPanel>
             </ScrollViewer>
         </Grid>
