@@ -2,7 +2,7 @@
 
 一个面向 Windows 10 / 11 x64 的轻量桌面工具。它扫描常见的登录和开机启动入口，可逐项关闭并恢复；C 盘清理页只处理安全范围内的临时文件。
 
-界面沿用 WinForms 和 Windows 标准窗口框架，以系统消息字体、启动时读取的系统深浅色和高对比度设置为基础；Windows 11 22H2 及以上版本请求 DWM Mica 窗口背景，支持时请求系统圆角。内容区参考 Apple Liquid Glass 的分层、半透明面板和高光描边，不替换系统标题栏、窗口按钮、键盘焦点或无障碍导航。WinForms 内容区仍绘制自有渐变底色，因此系统 Mica 不会穿透这些不透明区域；面板的毛玻璃观感由 GDI+ 半透明渐变模拟，并非 Acrylic 或实时模糊。高对比度开启时跳过自定义 DWM 材质，采用系统颜色；Windows 10 与不支持 Mica 的版本回退到渐变背景。
+1.8.0 将界面迁移到 WinUI 3 与 Windows App SDK，并继续使用 Windows 原生窗口和 XAML 控件。Windows 11 上主窗口使用系统 Mica backdrop；导航与信息卡片使用 AcrylicBrush 在应用窗口内呈现真实的背景模糊和着色。系统浅色、深色主题会切换材质色调；高对比度资源和不支持背景模糊的环境回退为纯色，保留文字对比度和控件可读性。设计参考 iOS 26/27 Liquid Glass 的层次、留白和材质，但采用 Windows Fluent 控件和 Windows 原生材质，不仿制 Apple 系统控件。
 
 ## 功能
 
@@ -34,7 +34,9 @@ Windows 程序可以通过许多机制自动运行，因此任何独立清理工
 
 **1.6.0 文件系统统计：** 按微软 `FILE_STANDARD_INFO.AllocationSize` 显示和排序文件的分配空间，同时保留逻辑大小；逐个查询文件分配信息，不按逻辑长度预筛，以免漏掉预留空间大于 EOF 的文件。对 `NumberOfLinks` 大于 1 的文件使用 `FILE_ID_INFO` 按卷和 128 位 ID 合并扫描范围内的硬链接。用 `CreateFileW` 的零访问请求查询元数据，并以 `FILE_FLAG_OPEN_REPARSE_POINT` 打开后识别重解析点，避免把链接目标当作普通文件跟随。目录枚举显式设置 `AttributesToSkip = 0`，避免 .NET 默认跳过隐藏和系统项；不可访问路径不静默忽略，而是计入读取错误。
 
-**1.7.0 界面优化：** 改用侧边栏导航和响应式内容布局，表格、搜索和筛选仍使用 Windows WinForms 原生控件。读取 Windows 当前应用配色和高对比度设置；在 Windows 11 通过 `DwmSetWindowAttribute` 请求系统 Mica 窗口背景、圆角和深色标题栏支持。高对比度下不覆盖系统材质。内容卡片采用轻量 GDI+ 半透明渐变、圆角和边缘高光，参考 iOS 26/27 Liquid Glass 的视觉层次；这层效果不是系统实时模糊。Windows 10、早期 Windows 11 或不支持 Mica 时保留浅色或深色背景渐变。
+**1.7.0 界面优化：** 提供 WinForms 侧边栏、深浅色和 DWM 窗口外观尝试；内容玻璃层为绘制模拟。
+
+**1.8.0 原生界面：** 将主界面和大文件窗口迁移到 WinUI 3，使用 Windows App SDK 的 MicaBackdrop、XAML AcrylicBrush、NavigationView、TextBox、ComboBox、CheckBox、Button、ListView 和 ContentDialog。启动扫描、临时目录清理、文件元数据读取和逐项恢复逻辑继续复用原服务层；高权限确认使用 Windows 原生 MessageBoxW。发布仍提供单文件便携 EXE 和 Inno Setup 安装包。便携版采用 Windows App SDK 自包含部署，会比纯 WinForms 版本更大，并在首次启动时从单文件中解包运行时内容。
 
 ## 使用
 
@@ -49,11 +51,11 @@ Windows 程序可以通过许多机制自动运行，因此任何独立清理工
 
 ## 构建
 
-项目使用 .NET 10 LTS WinForms。该自包含发布命令会生成可直接运行的单文件 EXE；GitHub Actions 再用 Inno Setup 生成安装版：
+项目使用 .NET 10、WinUI 3 和 Windows App SDK。该自包含发布命令会生成可直接运行的单文件 EXE；GitHub Actions 再用 Inno Setup 生成安装版：
 
 ```powershell
 dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true `
-  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+  -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -o publish
 ```
 
 随后使用 Inno Setup 编译 `installer/WinCare.iss`。现有仓库的 WinCare 工作流会同时发布安装版和便携版构建产物，并将便携版附加到 WinCare Release。
@@ -70,7 +72,7 @@ dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true `
 ## 设计参考
 
 - [BleachBit](https://github.com/bleachbit/bleachbit)：借鉴删除前预览、逐项确认和清理边界说明。本项目只清理列明的两个临时目录，不扩大到浏览器、下载或系统组件。
-- [autostart-audit](https://github.com/rwrife/autostart-audit)：借鉴按来源呈现启动入口、可筛选清单、保留恢复依据和明确显示扫描限制的做法。本项目自行实现 WinForms 界面和逐项恢复，没有复制其代码。
+- [autostart-audit](https://github.com/rwrife/autostart-audit)：借鉴按来源呈现启动入口、可筛选清单、保留恢复依据和明确显示扫描限制的做法。本项目自行实现 WinUI 3 界面和逐项恢复，没有复制其代码。
 - [Microsoft Sysinternals Autoruns](https://learn.microsoft.com/sysinternals/downloads/autoruns)：参考其分类和筛选大量自动启动项的方式。WinCare 保持自己的覆盖范围，不宣称具备 Autoruns 的全部扫描能力或签名验证功能。
 - [Microsoft PC Manager](https://pcmanager.microsoft.com/)：参考其把存储管理作为独立入口的产品组织方式；WinCare 清理仍限定于明确列出的临时目录。
 - [WinDirStat](https://github.com/windirstat/windirstat)：参考其按大小检查磁盘文件并提供文件列表的思路。WinCare 当前提供可取消的最大文件列表和资源管理器定位，不包含 WinDirStat 的 treemap 可视化。
@@ -90,6 +92,9 @@ dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true `
 - [DWM_SYSTEMBACKDROP_TYPE](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwm_systembackdrop_type)：`DWMSBT_MAINWINDOW` 在 Windows 11 映射为系统 Mica 窗口材质。
 - [Windows 窗口圆角](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/ui/apply-rounded-corners)：WinForms 可通过 DWM 原生窗口角属性请求系统圆角。
 - [Apple Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/liquid-glass) 与 [Adopting Liquid Glass](https://developer.apple.com/documentation/TechnologyOverviews/adopting-liquid-glass)：参考其系统材质、前景控件层与背景内容之间的视觉层次；WinCare 使用 Windows 原生窗口 API 实现本平台界面。
+- [Windows App SDK system backdrops](https://learn.microsoft.com/windows/apps/develop/ui/system-backdrops)：主窗口用 Mica 系统背景材质，并依系统能力回退。
+- [WinUI 3 AcrylicBrush](https://learn.microsoft.com/windows/apps/develop/ui/controls/acrylic)：信息卡片在窗口内用 AcrylicBrush 实现半透明背景模糊和色调。
+- [Unpackaged WinUI 3 single-file deployment](https://learn.microsoft.com/windows/apps/windows-app-sdk/single-project-msix)：便携包以自包含 Windows App SDK 和单文件发布；首次启动会解包部分运行内容到临时目录。
 
 ## 许可证
 

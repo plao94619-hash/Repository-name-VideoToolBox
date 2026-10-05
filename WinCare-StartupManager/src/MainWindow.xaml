@@ -1,0 +1,61 @@
+<Window
+    x:Class="WinCare.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="WinCare">
+    <Grid Background="Transparent">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="252" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Border Grid.Column="0" Margin="18" Padding="14" CornerRadius="28" Background="{ThemeResource NavBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="4,8,4,28">
+                    <Border Width="44" Height="44" CornerRadius="15" Background="{ThemeResource AccentBrush}"><TextBlock Text="W" Foreground="White" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                    <StackPanel VerticalAlignment="Center"><TextBlock Text="WinCare" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="Windows 系统管理" Foreground="{ThemeResource MutedTextBrush}" FontSize="12"/></StackPanel>
+                </StackPanel>
+                <NavigationView x:Name="Navigation" Grid.Row="1" PaneDisplayMode="Left" IsPaneOpen="True" IsSettingsVisible="False" IsBackButtonVisible="Collapsed" OpenPaneLength="210" SelectionChanged="Navigation_SelectionChanged" Background="Transparent">
+                    <NavigationView.MenuItems>
+                        <NavigationViewItem Content="启动项管理" Tag="startup" Icon="Setting"/>
+                        <NavigationViewItem Content="C 盘空间" Tag="cleanup" Icon="Storage"/>
+                    </NavigationView.MenuItems>
+                </NavigationView>
+                <Border Grid.Row="3" Padding="12" CornerRadius="18" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                    <TextBlock Text="预览后再操作&#10;启动项逐项确认 · 清理范围固定" TextWrapping="Wrap" Foreground="{ThemeResource MutedTextBrush}"/>
+                </Border>
+            </Grid>
+        </Border>
+        <Grid x:Name="PageHost" Grid.Column="1" Margin="0,18,18,18">
+            <ScrollViewer x:Name="StartupPage" Visibility="Visible" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="12">
+                    <Border Padding="20,16" CornerRadius="22" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="启动项管理" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="查看开机与登录入口；隐藏项默认显示，系统关键项保持只读。" Foreground="{ThemeResource MutedTextBrush}" Margin="0,5,0,0"/></StackPanel><Button Grid.Column="1" Content="重新扫描" Click="RefreshStartup_Click" VerticalAlignment="Center"/></Grid>
+                    </Border>
+                    <Border Padding="12" CornerRadius="18" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBox x:Name="SearchBox" Width="300" PlaceholderText="搜索名称、路径或启动命令" TextChanged="SearchBox_TextChanged"/>
+                            <ComboBox x:Name="CategoryBox" Width="220" PlaceholderText="全部来源" SelectionChanged="CategoryBox_SelectionChanged"/>
+                            <CheckBox x:Name="ShowHiddenBox" Content="显示隐藏项" IsChecked="True" Checked="ShowHidden_Changed" Unchecked="ShowHidden_Changed"/>
+                        </StackPanel>
+                    </Border>
+                    <StackPanel x:Name="StartupRows" Spacing="8"/>
+                    <TextBlock x:Name="StartupSummary" Foreground="{ThemeResource MutedTextBrush}" Margin="4,2"/>
+                    <Button x:Name="WarningsButton" HorizontalAlignment="Left" Click="Warnings_Click"/>
+                </StackPanel>
+            </ScrollViewer>
+            <ScrollViewer x:Name="CleanupPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="12">
+                    <Border Padding="20,16" CornerRadius="22" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="C 盘空间管理" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="临时文件清理前预览确认；大文件分析保持只读。" Foreground="{ThemeResource MutedTextBrush}" Margin="0,5,0,0"/></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><Button Content="查找大文件" Click="LargeFiles_Click"/><Button Content="Windows 存储设置" Click="StorageSettings_Click"/><Button Content="重新扫描" Click="RefreshCleanup_Click"/></StackPanel></Grid>
+                    </Border>
+                    <Border Padding="14" CornerRadius="18" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1"><TextBlock Text="仅扫描 C 盘的当前用户 TEMP 与 Windows\Temp，默认只清理修改时间超过 7 天的文件。清理会永久删除文件（不进入回收站），并跳过链接、正在使用或无权限访问的文件。" TextWrapping="Wrap" Foreground="{ThemeResource MutedTextBrush}"/></Border>
+                    <StackPanel x:Name="CleanupRows" Spacing="8"/>
+                    <TextBlock x:Name="CleanupSummary" Foreground="{ThemeResource MutedTextBrush}" Margin="4,2"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Window>

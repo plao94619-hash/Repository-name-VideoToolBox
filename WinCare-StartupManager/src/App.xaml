@@ -1,0 +1,44 @@
+<Application
+    x:Class="WinCare.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    RequestedTheme="Default">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <AcrylicBrush x:Key="CardBrush" BackgroundSource="Backdrop" TintColor="#FFF9FAFF" TintOpacity="0.72" FallbackColor="#FFF2F3F8" />
+                    <AcrylicBrush x:Key="NavBrush" BackgroundSource="Backdrop" TintColor="#FFE9ECF7" TintOpacity="0.58" FallbackColor="#FFE9ECF7" />
+                    <SolidColorBrush x:Key="AppTextBrush" Color="#FF1A1B22" />
+                    <SolidColorBrush x:Key="MutedTextBrush" Color="#FF626573" />
+                    <SolidColorBrush x:Key="CardStrokeBrush" Color="#99FFFFFF" />
+                    <SolidColorBrush x:Key="AccentBrush" Color="#FF5149C8" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <AcrylicBrush x:Key="CardBrush" BackgroundSource="Backdrop" TintColor="#FFF9FAFF" TintOpacity="0.72" FallbackColor="#FFF2F3F8" />
+                    <AcrylicBrush x:Key="NavBrush" BackgroundSource="Backdrop" TintColor="#FFE9ECF7" TintOpacity="0.58" FallbackColor="#FFE9ECF7" />
+                    <SolidColorBrush x:Key="AppTextBrush" Color="#FF1A1B22" />
+                    <SolidColorBrush x:Key="MutedTextBrush" Color="#FF626573" />
+                    <SolidColorBrush x:Key="CardStrokeBrush" Color="#99FFFFFF" />
+                    <SolidColorBrush x:Key="AccentBrush" Color="#FF5149C8" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <AcrylicBrush x:Key="CardBrush" BackgroundSource="Backdrop" TintColor="#FF20222D" TintOpacity="0.70" FallbackColor="#FF242631" />
+                    <AcrylicBrush x:Key="NavBrush" BackgroundSource="Backdrop" TintColor="#FF171923" TintOpacity="0.66" FallbackColor="#FF171923" />
+                    <SolidColorBrush x:Key="AppTextBrush" Color="#FFF4F4F8" />
+                    <SolidColorBrush x:Key="MutedTextBrush" Color="#FFB5B7C2" />
+                    <SolidColorBrush x:Key="CardStrokeBrush" Color="#44FFFFFF" />
+                    <SolidColorBrush x:Key="AccentBrush" Color="#FFAAA5FF" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="CardBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="NavBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="AppTextBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="MutedTextBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="CardStrokeBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="AccentBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
