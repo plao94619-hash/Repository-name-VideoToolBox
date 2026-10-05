@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
@@ -5,9 +6,16 @@ namespace WinCare.UI;
 
 internal sealed class GlassSurface : Panel
 {
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public int CornerRadius { get; set; } = 22;
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Color TopColor { get; set; } = WinCareTheme.GlassTop;
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Color BottomColor { get; set; } = WinCareTheme.GlassBottom;
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Color OutlineColor { get; set; } = WinCareTheme.GlassOutline;
 
     public GlassSurface()
