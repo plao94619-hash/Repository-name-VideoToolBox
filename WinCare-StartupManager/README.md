@@ -49,9 +49,11 @@ Windows 程序可以通过许多机制自动运行，因此任何独立清理工
 
 **1.9.0 微信专项清理：** 新增微信媒体文件按时间和类型扫描、空间预览、手动选择归档、归档记录及还原。归档后不删除副本，跨磁盘复制会校验 SHA-256 后才移除源文件；还原时检查来源白名单、链接目录和目标冲突。操作期间需退出微信。
 
+**1.9.1 启动修复：** 便携版保留发布时的原始文件名 `WinCare.exe`，避免 WinUI 3 单文件程序改名后发生 XAML 启动错误。安装版改为包含完整的自包含发布目录，同时提供解压即用的完整目录 ZIP。Windows 构建会实际启动两种发布形式并加载主窗口 XAML；启动异常写入 `%LOCALAPPDATA%\WinCare\Logs\startup.log`，不上传日志。
+
 ## 使用
 
-1. 从 GitHub Releases 下载 `WinCare-Setup-x64.exe` 安装版，或下载 `WinCare-Portable-x64.exe` 单文件便携版；便携版可直接运行，无需安装。
+1. 从 GitHub Releases 下载 `WinCare-Setup-x64.exe` 安装版，或下载 `WinCare.exe` 单文件便携版。也可下载 `WinCare-Portable-Folder-x64.zip`，完整解压后运行其中的 `WinCare.exe`。便携版无需安装，单文件 EXE 请保留 `WinCare.exe` 原名。
 2. 程序以普通权限启动，仅在需要修改系统范围启动项或清理 Windows 临时目录时请求 UAC。
 3. 在“启动项管理”页查看入口；用每行的“一键关闭”关闭单项，已由 WinCare 关闭的项目可按“恢复”。
 4. 在“C 盘清理”页查看临时文件预估，逐个目录确认后清理；选择“查找大文件”可单独进行只读分析。
@@ -62,14 +64,16 @@ Windows 程序可以通过许多机制自动运行，因此任何独立清理工
 
 ## 构建
 
-项目使用 .NET 10、WinUI 3 和 Windows App SDK。该自包含发布命令会生成可直接运行的单文件 EXE；GitHub Actions 再用 Inno Setup 生成安装版：
+项目使用 .NET 10、WinUI 3 和 Windows App SDK。GitHub Actions 分别发布自包含的完整目录与单文件 EXE：
 
 ```powershell
 dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true `
-  -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -o publish
+  -p:PublishSingleFile=false -o publish-folder
+dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -o publish-single
 ```
 
-随后使用 Inno Setup 编译 `installer/WinCare.iss`。现有仓库的 WinCare 工作流会同时发布安装版和便携版构建产物，并将便携版附加到 WinCare Release。
+随后用 Inno Setup 将 `publish-folder` 的全部文件编入安装包；单文件便携版沿用 `publish-single/WinCare.exe` 原名。工作流分别运行两个版本的启动验证，通过后才上传 Release。
 
 ## 安全与隐私
 
@@ -105,7 +109,7 @@ dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true `
 - [Apple Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/liquid-glass) 与 [Adopting Liquid Glass](https://developer.apple.com/documentation/TechnologyOverviews/adopting-liquid-glass)：参考其系统材质、前景控件层与背景内容之间的视觉层次；WinCare 使用 Windows 原生窗口 API 实现本平台界面。
 - [Windows App SDK system backdrops](https://learn.microsoft.com/windows/apps/develop/ui/system-backdrops)：主窗口用 Mica 系统背景材质，并依系统能力回退。
 - [WinUI 3 AcrylicBrush](https://learn.microsoft.com/windows/apps/develop/ui/controls/acrylic)：信息卡片在窗口内用 AcrylicBrush 实现半透明背景模糊和色调。
-- [Unpackaged WinUI 3 single-file deployment](https://learn.microsoft.com/windows/apps/windows-app-sdk/single-project-msix)：便携包以自包含 Windows App SDK 和单文件发布；首次启动会解包部分运行内容到临时目录。
+- [Unpackaged WinUI 3 single-file deployment](https://learn.microsoft.com/windows/apps/package-and-deploy/unpackage-winui-app)：便携包以自包含 Windows App SDK 和单文件发布；首次启动会解包部分运行内容到临时目录。
 
 ## 许可证
 

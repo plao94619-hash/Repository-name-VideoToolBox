@@ -1,5 +1,5 @@
 #define ProductName "WinCare 启动项管理与 C 盘清理"
-#define ProductVersion "1.9.0"
+#define ProductVersion "1.9.1"
 
 [Setup]
 AppId={{C3D00A46-3388-472A-8B6A-CC1B1051FB30}
@@ -25,7 +25,7 @@ VersionInfoVersion={#ProductVersion}.0
 VersionInfoProductName={#ProductName}
 
 [Files]
-Source: "..\publish\WinCare.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\publish-folder\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\WinCare"; Filename: "{app}\WinCare.exe"

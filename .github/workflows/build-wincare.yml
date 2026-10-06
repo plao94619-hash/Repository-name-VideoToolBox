@@ -26,9 +26,43 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Publish self-contained app
+      - name: Publish self-contained folder
         shell: pwsh
-        run: dotnet publish WinCare-StartupManager/src/WinCare.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o WinCare-StartupManager/publish
+        run: dotnet publish WinCare-StartupManager/src/WinCare.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o WinCare-StartupManager/publish-folder
+
+      - name: Publish self-contained single file
+        shell: pwsh
+        run: dotnet publish WinCare-StartupManager/src/WinCare.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -p:IncludeNativeLibrariesForSelfExtract=true -o WinCare-StartupManager/publish-single
+
+      - name: Prepare portable artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path WinCare-StartupManager/artifacts | Out-Null
+          Copy-Item WinCare-StartupManager/publish-single/WinCare.exe WinCare-StartupManager/artifacts/WinCare.exe
+          Compress-Archive -Path WinCare-StartupManager/publish-folder/* -DestinationPath WinCare-StartupManager/artifacts/WinCare-Portable-Folder-x64.zip -CompressionLevel Optimal
+
+      - name: Verify startup on Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $paths = @(
+            'WinCare-StartupManager/publish-folder/WinCare.exe',
+            'WinCare-StartupManager/artifacts/WinCare.exe'
+          )
+          foreach ($path in $paths) {
+            $exe = (Resolve-Path -LiteralPath $path).Path
+            $process = Start-Process -FilePath $exe -ArgumentList '--verify-startup' -PassThru
+            if (-not $process.WaitForExit(45000)) {
+              $process.Kill()
+              throw "Startup timed out: $path"
+            }
+            if ($process.ExitCode -ne 0) {
+              $logPath = Join-Path $env:LOCALAPPDATA 'WinCare\Logs\startup.log'
+              if (Test-Path $logPath) { Get-Content $logPath -Tail 100 }
+              throw "Startup failed ($($process.ExitCode)): $path"
+            }
+            Write-Host "Startup verified: $path"
+          }
 
       - name: Install Inno Setup if needed
         shell: pwsh
@@ -47,17 +81,12 @@ jobs:
           & $compiler "WinCare-StartupManager\installer\WinCare.iss"
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE." }
 
-      - name: Prepare portable executable
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path WinCare-StartupManager/artifacts | Out-Null
-          Copy-Item WinCare-StartupManager/publish/WinCare.exe WinCare-StartupManager/artifacts/WinCare-Portable-x64.exe
-
       - name: Calculate SHA-256
         shell: pwsh
         run: |
           Get-FileHash WinCare-StartupManager/artifacts/WinCare-Setup-x64.exe -Algorithm SHA256 | Format-List
-          Get-FileHash WinCare-StartupManager/artifacts/WinCare-Portable-x64.exe -Algorithm SHA256 | Format-List
+          Get-FileHash WinCare-StartupManager/artifacts/WinCare.exe -Algorithm SHA256 | Format-List
+          Get-FileHash WinCare-StartupManager/artifacts/WinCare-Portable-Folder-x64.zip -Algorithm SHA256 | Format-List
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
@@ -71,7 +100,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: WinCare-Portable-x64
-          path: WinCare-StartupManager/artifacts/WinCare-Portable-x64.exe
+          path: WinCare-StartupManager/artifacts/WinCare.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload portable folder artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinCare-Portable-Folder-x64
+          path: WinCare-StartupManager/artifacts/WinCare-Portable-Folder-x64.zip
           if-no-files-found: error
           retention-days: 30
 
@@ -97,13 +134,19 @@ jobs:
           name: WinCare-Portable-x64
           path: release
 
+      - name: Download portable folder artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: WinCare-Portable-Folder-x64
+          path: release
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="wincare-v${GITHUB_REF_NAME##*/}"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$tag" release/WinCare-Setup-x64.exe release/WinCare-Portable-x64.exe --clobber --repo "$GITHUB_REPOSITORY"
+            gh release upload "$tag" release/WinCare-Setup-x64.exe release/WinCare.exe release/WinCare-Portable-Folder-x64.zip --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$tag" release/WinCare-Setup-x64.exe release/WinCare-Portable-x64.exe --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "WinCare $tag" --generate-notes
+            gh release create "$tag" release/WinCare-Setup-x64.exe release/WinCare.exe release/WinCare-Portable-Folder-x64.zip --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "WinCare $tag" --generate-notes
           fi
