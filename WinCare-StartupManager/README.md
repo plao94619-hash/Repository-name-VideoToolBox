@@ -49,7 +49,7 @@ Windows 程序可以通过许多机制自动运行，因此任何独立清理工
 
 **1.9.0 微信专项清理：** 新增微信媒体文件按时间和类型扫描、空间预览、手动选择归档、归档记录及还原。归档后不删除副本，跨磁盘复制会校验 SHA-256 后才移除源文件；还原时检查来源白名单、链接目录和目标冲突。操作期间需退出微信。
 
-**1.9.1 启动修复：** 便携版保留发布时的原始文件名 `WinCare.exe`，避免 WinUI 3 单文件程序改名后发生 XAML 启动错误。安装版改为包含完整的自包含发布目录，同时提供解压即用的完整目录 ZIP。Windows 构建会实际启动两种发布形式并加载主窗口 XAML；启动异常写入 `%LOCALAPPDATA%\WinCare\Logs\startup.log`，不上传日志。
+**1.9.1 启动修复：** 补齐 WinUI 3 默认控件资源 `XamlControlsResources`，修复创建主窗口时缺少 `TabViewButtonBackground` 导致的启动崩溃。便携版保留发布时的原始文件名 `WinCare.exe`；安装版包含完整的自包含发布目录，同时提供解压即用的完整目录 ZIP。Windows 构建会实际启动两种发布形式并加载主窗口 XAML；启动异常写入 `%LOCALAPPDATA%\WinCare\Logs\startup.log`，不上传日志。
 
 ## 使用
 
@@ -110,6 +110,7 @@ dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true `
 - [Windows App SDK system backdrops](https://learn.microsoft.com/windows/apps/develop/ui/system-backdrops)：主窗口用 Mica 系统背景材质，并依系统能力回退。
 - [WinUI 3 AcrylicBrush](https://learn.microsoft.com/windows/apps/develop/ui/controls/acrylic)：信息卡片在窗口内用 AcrylicBrush 实现半透明背景模糊和色调。
 - [Unpackaged WinUI 3 single-file deployment](https://learn.microsoft.com/windows/apps/package-and-deploy/unpackage-winui-app)：便携包以自包含 Windows App SDK 和单文件发布；首次启动会解包部分运行内容到临时目录。
+- [XamlControlsResources](https://learn.microsoft.com/windows/apps/winui/winui3/desktop-winui3-app-with-basic-interop)：在应用资源中合并 WinUI 3 控件默认样式，避免启动时缺少控件资源键。
 
 ## 许可证
 
