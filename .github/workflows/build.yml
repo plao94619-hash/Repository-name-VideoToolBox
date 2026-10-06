@@ -1,0 +1,158 @@
+name: Build WinCare installer
+
+on:
+  push:
+    branches:
+      - main
+      - "wincare/**"
+    paths:
+      - "src/**"
+      - "installer/**"
+      - "tests/**"
+      - "README.md"
+      - ".github/workflows/build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Verify WeChat archive and restore
+        run: dotnet run --project tests/WinCare.ServiceChecks.csproj -c Release
+
+      - name: Publish self-contained folder
+        shell: pwsh
+        run: dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o publish-folder
+
+      - name: Publish self-contained single file
+        shell: pwsh
+        run: dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish-single
+
+      - name: Prepare portable artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          Copy-Item publish-single/WinCare.exe artifacts/WinCare.exe
+          Compress-Archive -Path publish-folder/* -DestinationPath artifacts/WinCare-Portable-Folder-x64.zip -CompressionLevel Optimal
+
+      - name: Verify startup on Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $paths = @(
+            'publish-folder/WinCare.exe',
+            'artifacts/WinCare.exe'
+          )
+          foreach ($path in $paths) {
+            $exe = (Resolve-Path -LiteralPath $path).Path
+            $process = Start-Process -FilePath $exe -ArgumentList '--verify-startup' -PassThru
+            if (-not $process.WaitForExit(45000)) {
+              $process.Kill()
+              throw "Startup timed out: $path"
+            }
+            if ($process.ExitCode -ne 0) {
+              $logPath = Join-Path $env:LOCALAPPDATA 'WinCare\Logs\startup.log'
+              if (Test-Path $logPath) { Get-Content $logPath -Tail 100 }
+              throw "Startup failed ($($process.ExitCode)): $path"
+            }
+            Write-Host "Startup verified: $path"
+          }
+
+      - name: Install Inno Setup if needed
+        shell: pwsh
+        run: |
+          $programFilesX86 = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFilesX86)
+          $programFiles = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
+          $candidates = @(
+            "$programFilesX86\Inno Setup 6\ISCC.exe",
+            "$programFiles\Inno Setup 6\ISCC.exe"
+          )
+          if (-not ($candidates | Where-Object { Test-Path $_ })) {
+            choco install innosetup --yes --no-progress
+          }
+          $compiler = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $compiler) { throw "Inno Setup compiler was not found." }
+          & $compiler "installer\WinCare.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE." }
+
+      - name: Calculate SHA-256
+        shell: pwsh
+        run: |
+          Get-FileHash artifacts/WinCare-Setup-x64.exe -Algorithm SHA256 | Format-List
+          Get-FileHash artifacts/WinCare.exe -Algorithm SHA256 | Format-List
+          Get-FileHash artifacts/WinCare-Portable-Folder-x64.zip -Algorithm SHA256 | Format-List
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinCare-Setup-x64
+          path: artifacts/WinCare-Setup-x64.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload portable executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinCare-Portable-x64
+          path: artifacts/WinCare.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload portable folder artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinCare-Portable-Folder-x64
+          path: artifacts/WinCare-Portable-Folder-x64.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    if: startsWith(github.ref, 'refs/heads/wincare/')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Download installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: WinCare-Setup-x64
+          path: release
+
+      - name: Download portable executable artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: WinCare-Portable-x64
+          path: release
+
+      - name: Download portable folder artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: WinCare-Portable-Folder-x64
+          path: release
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="wincare-v${GITHUB_REF_NAME##*/}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" release/WinCare-Setup-x64.exe release/WinCare.exe release/WinCare-Portable-Folder-x64.zip --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$tag" release/WinCare-Setup-x64.exe release/WinCare.exe release/WinCare-Portable-Folder-x64.zip --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "WinCare $tag" --generate-notes
+          fi

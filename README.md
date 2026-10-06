@@ -1,176 +1,123 @@
-# 万能音视频工具箱
+# WinCare · Windows 启动项与 C 盘空间管理
 
-一款面向 Windows 10/11 的音视频工具。图形界面使用 Qt for Python，转换核心使用 FFmpeg；本地媒体处理不会上传用户文件，并提供边界明确的授权音频直链下载模式。
+[下载 WinCare 1.10.0](https://github.com/plao94619-hash/Repository-name-VideoToolBox/releases/tag/wincare-v1.10.0) · [Windows 构建状态](https://github.com/plao94619-hash/Repository-name-VideoToolBox/actions/workflows/build.yml)
+
+此仓库的主线专用于 WinCare。原“万能音视频工具箱”源码及说明保留在 [`legacy/videotoolbox`](https://github.com/plao94619-hash/Repository-name-VideoToolBox/tree/legacy/videotoolbox) 分支；旧版本 Release 保留。
+
+一个面向 Windows 10 / 11 x64 的轻量桌面工具。它扫描常见的登录和开机启动入口，可逐项关闭并恢复；C 盘清理页只处理安全范围内的临时文件。
+
+自 1.8.0 起，界面迁移到 WinUI 3 与 Windows App SDK，并继续使用 Windows 原生窗口和 XAML 控件。Windows 11 上主窗口使用系统 Mica backdrop；导航与信息卡片使用 AcrylicBrush 在应用窗口内呈现真实的背景模糊和着色。系统浅色、深色主题会切换材质色调；高对比度资源和不支持背景模糊的环境回退为纯色，保留文字对比度和控件可读性。设计参考 iOS 26/27 Liquid Glass 的层次、留白和材质，但采用 Windows Fluent 控件和 Windows 原生材质，不仿制 Apple 系统控件。
 
 ## 功能
 
-- 视频格式转换：MP4、MKV、MOV、WebM、AVI
-- 音频格式转换：MP3、M4A、AAC、FLAC、WAV、OGG、OPUS
-- 本地音乐文件解锁：支持 NCM、QMC/MFLAC/MGG、KGM/KGMA/VPR、KWM、TM、XM/X2M/X3M 等格式，自动识别原始音频格式
-- 授权音频下载：支持公开 HTTP/HTTPS 音频文件直链、批量粘贴、实时进度、安全取消、格式识别和同名保护
-- 视频提取音频：支持“原始音轨（无损提取）”，直接复制音频码流，不重新编码
-- 视频压缩：画质优先、均衡压缩、极限压缩
-- 视频清晰度增强：降噪、Lanczos 高质量缩放与边缘增强，可按原比例输出至 1080p、2K 或 4K MP4
-- 图片清晰度增强：支持 JPG、PNG、WebP、BMP、TIFF 输入，可输出无损 PNG、高质量 JPG 或 WebP，最高 4K
-- 图片可见水印区域修复：在原图预览上框选最多 12 个区域，支持撤销、清空、批量套用相对位置与精细/标准/扩展边缘覆盖
-- 图片隐藏水印处理：三档像素低位归一化与轻度平滑，可选择不复制 EXIF/XMP 等常见元数据，保留原图并批量导出新文件
-- AI 图片水印修复：在同一次导出中框选修复可见角标，并可选择对简单像素低位标记做标准强度处理；不保证清除 SynthID 等鲁棒指纹
-- 编码器：H.264、H.265/HEVC、AV1
-- 硬件加速：自动检测 NVIDIA NVENC、Intel QSV、AMD AMF；编码中途失败时自动用 CPU 重试一次
-- 转换分辨率限制：保持原尺寸，或限制到 4K、1080p、720p、480p
-- 增强输出分辨率：保持原尺寸（超过 4K 时安全限制），或提升至 1080p、2K、4K；横屏最高 3840×2160，竖屏最高 2160×3840
-- 批量处理、拖放添加、实时进度、安全取消、自动避免覆盖同名文件
-- 使用临时输出文件，只有转换成功后才生成最终文件；失败和取消时清理临时文件
-- 跳过媒体中的封面图片，选择真正的视频流进行转换
-- 软件界面支持简体中文、繁体中文和英语，即时切换并记住上次选择
-- Fluent 风格的响应式工作台、现代化明暗主题（可跟随系统）与窗口位置记忆
-- 11 个独立功能界面，按视频、音频、图片分组；宽窗口使用侧边导航，窄窗口使用可滚动的顶部导航
-- 支持选择本地图片作为自定义背景，可随时更换或恢复默认背景
-- 空列表拖放引导、统一线性图标、语义状态徽章与更清晰的任务层级
-- 在完成行双击或右键复制输出路径；失败行可查看完整错误详情
-- 安装向导支持英语、简体中文和繁体中文，按照 Windows 界面语言自动匹配
-- 本地媒体转换与解锁不会上传用户文件；授权下载只连接用户提供的源服务器
+- **启动项扫描**：当前用户与所有用户的 Run / RunOnce / RunServices / 策略 Run 注册表项，32 位和 64 位注册表视图，以及当前加载的其他用户配置单元。
+- **文件夹和计划任务**：当前用户与所有用户的启动文件夹；递归查看任务计划程序中的隐藏任务，并显示登录、开机、注册、事件和会话触发项。
+- **服务与系统项**：列出自动启动服务、Boot / System 启动服务和驱动，以及 Windows 的 Winlogon / Load / Run 关键值。Boot / System 驱动和关键注册表值只读。
+- **隐藏项标记**：标记计划任务中的隐藏任务、启动文件夹中的隐藏文件、无显示名称的服务，以及 Windows 关键启动位置。列表默认包含这些项目。
+- **逐项关闭与恢复**：注册表值会移至同一位置下的 `WinCareDisabled` 子项；启动文件会移至用户配置目录的恢复区；新版本的计划任务和服务恢复标记存放在管理员保护的注册表位置。管理员操作会在 UAC 后再次显示对象名称、位置和动作供确认。WinCare 不会替用户重新启用由 Windows 或其他工具禁用的项目。
+- **安全清理**：扫描 C 盘的当前用户临时目录和 `Windows\\Temp`，预览超过 7 天未修改的文件和预计空间。链接、被占用和无权访问的文件会跳过。也可打开 Windows 存储设置。
+- **大文件查找**：按 100 MiB、250 MiB、500 MiB、1 GiB 或 2 GiB 磁盘分配空间门槛只读扫描 C 盘文件，包含隐藏和系统项；分别显示 Windows 报告的分配空间和逻辑大小，并合并扫描范围内可识别的硬链接。仅保留最大的 2,000 项，支持取消和资源管理器定位，不提供从结果列表直接删除。
+- **微信专项清理**：扫描用户选择的微信文件目录，按账号、文件系统创建日期和媒体类型筛选 FileStorage\Video 视频及 FileStorage\MsgAttach\…\Image 下的 .dat 原图。先显示文件清单和空间，再将勾选项移动到指定归档目录；可一键尝试还原，不覆盖同名原文件。不会读取聊天数据库、解密图片、删除聊天记录或自动后台清理。
 
-## 下载 Windows 安装包
+## 微信专项清理
 
-打开仓库的 [Releases 页面](https://github.com/plao94619-hash/Repository-name-VideoToolBox/releases/latest)，下载最新正式版：
+微信页默认使用 Windows“文档”目录下的 WeChat Files。若微信数据放在其他位置，可在路径框粘贴实际根目录。此版本只识别账号文件夹下的 FileStorage\Video 与 FileStorage\MsgAttach\…\Image\*.dat 结构；微信版本或自定义目录结构可能不同，扫描结果为空时请先核对根目录。
 
-- Universal-Media-Toolbox-Setup-1.12.0.exe：安装版
-- Universal-Media-Toolbox-Portable-1.12.0.zip：免安装便携版
-- SHA256SUMS.txt：校验值
+按 30、90、180、365 或 730 天筛选时，日期以文件系统创建时间为准，不等同于聊天发送时间。微信图片 .dat 文件保持原样移动，不尝试解密。归档会让对应图片或视频暂时无法从聊天记录打开；“还原全部归档”把文件移回原路径。若原位置已存在同名文件，WinCare 会跳过并保留归档副本。请先退出微信再归档。默认归档目录为 `%LOCALAPPDATA%\WinCare\WeChatArchive`。如微信文件和归档都在 C 盘，归档**不会释放 C 盘空间**；要腾出 C 盘空间，请在界面中把归档保存目录设为其他磁盘的专用文件夹，例如 `D:\WinCare-WeChatArchive`，并确保该磁盘有足够空间。WinCare 记录归档位置，还原时检查所有已记录且可访问的目录；外接磁盘离线时请重新连接。手动删除归档文件会永久丢失尚未还原的数据。
 
-每次成功构建后也可在 Actions 下载近期构建产物。新版安装版可直接安装到旧版的位置，原有设置会保留。
+此功能参考 [StevenQi7/wechatClean](https://github.com/StevenQi7/wechatClean) 的按时间筛选、移动媒体文件和还原工作流；WinCare 独立实现文件扫描、校验和归档，不包含该项目的 .dat 解密功能。
 
-> 本项目暂未购买代码签名证书。Windows SmartScreen 可能显示“未知发布者”，这是未签名个人软件的常见提示，并不等于检测到病毒。建议从本仓库下载并核对 SHA-256。
+## 覆盖范围说明
 
-## 使用方法
+Windows 程序可以通过许多机制自动运行，因此任何独立清理工具都不应声称能枚举每一种启动方式。WinCare 覆盖上面列出的常见注册表、启动文件夹、计划任务和服务入口；它**不枚举** WMI 永久事件消费者、组策略启动/登录脚本、每个应用的专有启动机制、所有 Store/UWP `StartupTask` 或驱动程序内部配置。配置单元未加载、权限不足或 Task Scheduler 无法访问的项目也可能无法读取。若扫描发生读取错误，页面会显示“扫描提示”。
 
-1. 点击“添加文件”或直接把文件拖入窗口。
-2. 选择任务类型、输出格式和质量方案。
-3. 选择输出目录。
-4. 点击“开始处理”。
+启动项“隐藏”表示该项目在其来源中带有隐藏/系统标记，或位于关键系统启动位置；不是对所有软件厂商私有机制的完整判定。
 
-### 功能界面
+## C 盘清理边界
 
-视频转换、视频增强、视频压缩、提取音频、音频转换、本地音乐解锁、授权音频下载、图片增强、可见水印修复、隐藏水印处理与 AI 图片水印修复分别拥有独立的工作界面。宽窗口使用左侧分类导航，较窄窗口使用顶部的“类别＋功能”导航；也可以继续使用原有“任务类型”下拉框切换。每个界面显示当前功能说明和适用设置，授权音频下载的链接输入区固定在该界面任务队列上方。
+清理动作仅处理修改时间超过 7 天的白名单临时文件；不会删除下载、文档、浏览器数据、回收站或 WinSxS 中的文件。正在使用或权限不足的文件会跳过。清理系统临时目录会由 Windows 请求管理员权限。组件存储清理请使用 Windows 自带维护入口；本工具不会接管 WinSxS 权限、修改 ACL 或使用 `/ResetBase`。
 
-切换功能会保留当前文件队列和输出目录。开始处理之前，请确认队列中的文件或链接适用于所选功能；不匹配的文件仍会按原有规则提示。原有快捷键、任务取消、进度、文件输出及自定义背景设置继续可用。
+大文件分析是独立的只读功能：它会检查当前账户有权限枚举的 C 盘路径，包括用户文件夹，但不读取文件内容、不移动或删除文件。它通过文件句柄查询 Windows 报告的分配空间和文件 ID，结果按分配空间排序；相同卷序列号与文件 ID 的硬链接在扫描范围内只计一次。分析跳过链接及其他重解析点，权限不足或无法读取文件 ID 的项目会记录为读取错误；列表最多显示最大的 2,000 个唯一文件。文件 ID 不会识别扫描范围之外的其他硬链接，因此分配空间不等于删除某一路径后一定能释放的空间。稀疏文件和云端占位文件也可能令逻辑大小与本地磁盘占用不同；清理前请核实文件用途。
 
-### 图片与视频清晰度增强
+**1.3.0 性能优化：** 临时目录按需逐项枚举文件和子目录，不再为每个目录一次性建立完整数组；大目录扫描时可减少额外内存占用。此前 1.2.0 的单目标重新校验和管理员单目录预估也继续保留。清理年龄、目录白名单、跳过规则和确认步骤不变。
 
-1. 将“任务类型”切换为“视频清晰度增强”或“图片清晰度增强”。
-2. 添加文件或整个文件夹，也可以直接拖入窗口。
-3. 选择自然、标准或强力增强，并选择保持原尺寸、1080p、2K 或 4K。
-4. 视频可选择 H.264、H.265/HEVC 或 AV1 编码；图片可选择 PNG、JPG 或 WebP 输出。
-5. 选择输出目录，点击“开始增强”。
+**1.4.0 性能优化：** 启动项清单改为虚拟化表格；搜索输入增加短暂防抖，并缓存每项的搜索文本，减少大清单下的行对象、临时字符串和重复刷新。
 
-增强处理完全在本机完成，源文件不会修改。程序先进行分级降噪，再使用 Lanczos 高质量缩放，并以克制的锐化改善边缘观感；横屏输出不会超过 3840×2160，竖屏不会超过 2160×3840，长宽比始终保持不变。任务仍使用临时文件和原有安全取消机制，只有完整成功后才发布最终文件。
+**1.5.0 存储分析：** 增加可取消的 C 盘大文件扫描、文件大小门槛、最大的 2,000 项结果和资源管理器定位。分析与清理分开，扫描结果不会自动删除。
 
-这是一项确定性的画质增强与高质量放大功能，不会虚构画面内容。它可以改善噪点、轻微模糊和低分辨率素材的观看效果，但无法凭空恢复源文件中从未记录的真实细节。通常先使用“标准增强”；清晰素材可用“自然增强”，噪点或模糊较明显时再尝试“强力增强”。4K 视频处理量较大，速度取决于素材时长、CPU/GPU 和所选编码器。
+**1.6.0 文件系统统计：** 按微软 `FILE_STANDARD_INFO.AllocationSize` 显示和排序文件的分配空间，同时保留逻辑大小；逐个查询文件分配信息，不按逻辑长度预筛，以免漏掉预留空间大于 EOF 的文件。对 `NumberOfLinks` 大于 1 的文件使用 `FILE_ID_INFO` 按卷和 128 位 ID 合并扫描范围内的硬链接。用 `CreateFileW` 的零访问请求查询元数据，并以 `FILE_FLAG_OPEN_REPARSE_POINT` 打开后识别重解析点，避免把链接目标当作普通文件跟随。目录枚举显式设置 `AttributesToSkip = 0`，避免 .NET 默认跳过隐藏和系统项；不可访问路径不静默忽略，而是计入读取错误。
 
-### 图片可见水印区域修复
+**1.7.0 界面优化：** 提供 WinForms 侧边栏、深浅色和 DWM 窗口外观尝试；内容玻璃层为绘制模拟。
 
-1. 将“任务类型”切换为“图片水印区域修复”。
-2. 添加一张或多张 JPG、PNG、WebP、BMP 或 TIFF 图片。
-3. 点击“框选修复区域”，在预览图上拖动鼠标标出一处或多处可见水印；可撤销或清空后重选。
-4. 选择精细、标准或扩展修复，以及 PNG、JPG 或 WebP 输出，点击“开始修复”。
+**1.8.0 原生界面：** 将主界面和大文件窗口迁移到 WinUI 3，使用 Windows App SDK 的 MicaBackdrop、XAML AcrylicBrush、NavigationView、TextBox、ComboBox、CheckBox、Button、ListView 和 ContentDialog。启动扫描、临时目录清理、文件元数据读取和逐项恢复逻辑继续复用原服务层；高权限确认使用 Windows 原生 MessageBoxW。发布仍提供单文件便携 EXE 和 Inno Setup 安装包。便携版采用 Windows App SDK 自包含部署，会比纯 WinForms 版本更大，并在首次启动时从单文件中解包运行时内容。
 
-修复在本机使用 FFmpeg `removelogo` 完成：根据用户明确框选的遮罩，从周围像素重建区域。标准修复会略微扩展边缘以覆盖抗锯齿，扩展修复适合带描边或阴影的标记。队列中的图片会套用同一组相对位置，适合批量处理固定角落的自有标识；尺寸和 EXIF 旋转方向会自动适配。源图不会修改，临时遮罩及未完成输出会在成功、失败或取消后清理。
+**1.9.0 微信专项清理：** 新增微信媒体文件按时间和类型扫描、空间预览、手动选择归档、归档记录及还原。归档后不删除副本，跨磁盘复制会校验 SHA-256 后才移除源文件；还原时检查来源白名单、链接目录和目标冲突。操作期间需退出微信。
 
-此功能仅用于你拥有或获授权编辑的图片，画面修复只针对手动框选的可见区域。它不检测、不定位，也不提供针对 C2PA 内容凭证、版权归属、平台溯源、隐写标记或其他不可见指纹的定向清除能力。导出会重新编码整张图片，可能改变元数据或使内容凭证失效；源图始终保留，建议妥善保存。
+**1.9.1 启动修复：** 补齐 WinUI 3 默认控件资源 `XamlControlsResources`，修复创建主窗口时缺少 `TabViewButtonBackground` 导致的启动崩溃；将无效的导航图标 `Storage` 改为 WinUI 支持的 `Folder`。便携版保留发布时的原始文件名 `WinCare.exe`；安装版包含完整的自包含发布目录，同时提供解压即用的完整目录 ZIP。Windows 构建会实际启动两种发布形式并加载主窗口 XAML；启动异常写入 `%LOCALAPPDATA%\WinCare\Logs\startup.log`，不上传日志。
 
-### 图片隐藏水印处理
+**1.10.0 仓库与归档优化：** 仓库主线整理为 WinCare 专用，源码、安装脚本、Windows CI 和验证程序位于根目录。微信归档可以选择独立磁盘；归档位置持久记录供还原。界面区分同盘移动与跨盘移动，不再把同盘归档误写成释放磁盘空间。CI 除启动两种发布形式，还验证微信媒体归档、同名文件保护与还原。
 
-1. 将“任务类型”切换为“图片隐藏水印处理”，添加 JPG、PNG、WebP、BMP 或 TIFF 图片。
-2. 选择“轻度处理”“标准处理”或“强力处理”与输出格式。建议先使用标准处理与 PNG 输出。
-3. 如果还要清理常见文件元数据，可勾选“同时清理 EXIF/XMP 元数据”；点击“开始处理”。
+## 使用
 
-此模式在本机通过 FFmpeg 对 RGB 像素低位做固定处理：轻度固定最低 1 位，标准与强力分别在适度平滑后固定最低 2、3 位。对依靠这些位编码的简单隐藏标记有效，但会改变所有像素，增强平滑会损失部分细节。输出到 JPG/WebP 后有损编码会再次改变低位结果；需要可预测的像素低位时请选 PNG。透明 PNG 的透明度在 PNG 输出时保留，16 位素材处理后会成为 8 位；JPG 输出不保留透明度。
+1. 从 [WinCare 1.10.0 发布页](https://github.com/plao94619-hash/Repository-name-VideoToolBox/releases/tag/wincare-v1.10.0) 下载 `WinCare-Setup-x64.exe` 安装版，或下载 `WinCare.exe` 单文件便携版。也可下载 `WinCare-Portable-Folder-x64.zip`，完整解压后运行其中的 `WinCare.exe`。便携版无需安装，单文件 EXE 请保留 `WinCare.exe` 原名。
+2. 程序以普通权限启动，仅在需要修改系统范围启动项或清理 Windows 临时目录时请求 UAC。
+3. 在“启动项管理”页查看入口；用每行的“一键关闭”关闭单项，已由 WinCare 关闭的项目可按“恢复”。
+4. 在“C 盘清理”页查看临时文件预估，逐个目录确认后清理；选择“查找大文件”可单独进行只读分析。
 
-选填的元数据清理会阻止复制常见嵌入元数据，可能移除色彩信息、EXIF、XMP，也可能影响内容凭证。此工具不会自动判断图片是否含隐藏水印，不保证消除未知嵌入算法、鲁棒指纹或可恢复的 C2PA 溯源信息；建议只处理有权编辑的图片，保留原图，并用原水印系统自行检查导出效果。批量任务支持取消与进度反馈，完整成功后才发布新文件。
+便携版不在 EXE 所在目录保存状态；启动文件恢复数据保存在 `%LOCALAPPDATA%\\WinCare`，系统级服务和任务恢复标记保存在受保护的注册表位置。
 
-### AI 图片水印修复
+修改系统范围启动项和清理 Windows 临时目录前，WinCare 会在 UAC 授权后再次显示确认提示。服务设置一般在下次启动时生效；请先检查说明和任务动作。
 
-1. 将“任务类型”切换为“AI 图片水印修复”，添加你有权编辑的图片。
-2. 如果图片上有可见角标或文字，点击“框选修复区域”，在预览中准确框出需要处理的区域。可为批量图片套用相同的相对位置。
-3. 如果还想处理部分简单的像素隐藏标记，可勾选“同时处理像素隐藏标记（可选）”。此时即使没有可见角标，也可以直接导出。
-4. 选择修复边缘覆盖和输出格式后点击“开始修复”；想保持处理后像素低位确定，建议选择 PNG。
+## 构建
 
-此任务将可见区域的 FFmpeg `removelogo` 修复与可选的标准强度低位处理组合在**一次**导出中，保留原图、支持取消、自动避开同名输出并清理中间遮罩。它不会自动识别角标的具体位置、生成平台或所用水印算法。Google 的 SynthID 等标记专门设计为能耐受裁切、滤镜及有损压缩；此工具无法验证或保证清除它们，也无法保证 C2PA 等内容凭证或可恢复的溯源关联被消除。仅处理有权修改的图片，导出后请用适合该平台的方式自行核验。
+项目使用 .NET 10、WinUI 3 和 Windows App SDK。请在仓库根目录运行。GitHub Actions 分别发布自包含的完整目录与单文件 EXE：
 
-### 本地音乐解锁
+```powershell
+dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=false -o publish-folder
+dotnet publish src/WinCare.csproj -c Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -o publish-single
+```
 
-1. 将“任务类型”切换为“音乐文件解锁”。
-2. 添加待处理的本地音乐文件或整个文件夹；也可以直接拖入窗口。
-3. 选择输出目录，点击“开始解锁”。
+先运行 `dotnet run --project tests/WinCare.ServiceChecks.csproj -c Release` 验证微信归档与还原，随后用 Inno Setup 将 `publish-folder` 的全部文件编入安装包；单文件便携版沿用 `publish-single/WinCare.exe` 原名。工作流分别运行两个版本的启动验证，通过后才上传 Release。
 
-应用会自动识别解锁后的 MP3、FLAC、M4A、OGG、WAV 等原始音频格式。处理会先写入临时目录，成功后才发布结果；源文件不会删除，已有同名输出也不会被覆盖。该模式默认离线运行，不下载音乐、不访问账号，也不启用联网元数据更新。
+## 安全与隐私
 
-音乐解锁仅适用于你合法拥有或获授权处理的本地文件。请遵守内容来源平台的服务条款及所在地法律；该模式不提供平台音乐下载、流媒体抓取或账号绕过功能。
+- 默认以普通用户运行，不常驻、不联网、不收集遥测。
+- 系统范围操作按需请求 UAC。
+- 启动文件备份和旧版服务/任务恢复记录保存在 `%LOCALAPPDATA%\\WinCare`。
+- 新版本的计划任务和服务恢复标记写入 `HKLM\\SOFTWARE\\WinCare\\StartupRestore`，避免把用户可改写的恢复文件直接当作管理员操作依据。旧版 JSON 恢复记录仍可识别；恢复前会标出旧记录并要求在管理员确认框中核对对象。
+- 服务和系统任务具有依赖关系；只对单项提供操作，不提供批量禁用按钮。
+- 安装包未进行代码签名，Windows SmartScreen 可能显示未知发布者提示。
 
-### 授权音频下载
+## 设计参考
 
-1. 将“任务类型”切换为“授权音频下载”。
-2. 在链接框中每行粘贴一个公开的 HTTP/HTTPS 音频文件直链，点击“添加链接”。
-3. 选择输出目录，点击“开始下载”。
+- [BleachBit](https://github.com/bleachbit/bleachbit)：借鉴删除前预览、逐项确认和清理边界说明。本项目只清理列明的两个临时目录，不扩大到浏览器、下载或系统组件。
+- [autostart-audit](https://github.com/rwrife/autostart-audit)：借鉴按来源呈现启动入口、可筛选清单、保留恢复依据和明确显示扫描限制的做法。本项目自行实现 WinUI 3 界面和逐项恢复，没有复制其代码。
+- [Microsoft Sysinternals Autoruns](https://learn.microsoft.com/sysinternals/downloads/autoruns)：参考其分类和筛选大量自动启动项的方式。WinCare 保持自己的覆盖范围，不宣称具备 Autoruns 的全部扫描能力或签名验证功能。
+- [Microsoft PC Manager](https://pcmanager.microsoft.com/)：参考其把存储管理作为独立入口的产品组织方式；WinCare 清理仍限定于明确列出的临时目录。
+- [WinDirStat](https://github.com/windirstat/windirstat)：参考其按大小检查磁盘文件并提供文件列表的思路。WinCare 当前提供可取消的最大文件列表和资源管理器定位，不包含 WinDirStat 的 treemap 可视化。
+- [Windows 存储设置与存储感知](https://support.microsoft.com/windows/manage-drive-space-with-storage-sense)：参考 Windows 对临时文件、存储类别和清理建议的区分。WinCare 将临时文件清理与大文件分析分开，避免把大文件误当成垃圾文件。
 
-该模式支持 MP3、M4A、AAC、FLAC、WAV、OGG、OPUS、WMA、AIFF、APE 等普通音频文件。程序会根据响应文件名和 Content-Type 确定格式，先写入临时文件，完整下载并检查后才生成最终文件；已有同名文件不会被覆盖。带查询参数的签名链接可以使用，但界面不会显示查询参数，也不会把链接写入设置或历史记录。
+## Microsoft 技术文档
 
-该模式不会读取浏览器 Cookie、不会要求 Spotify 或 Apple Music 账号，也不接受 Spotify/Apple Music 页面、M3U8/DASH 播放清单、带账号密码的 URL 或检测到加密标记的媒体。它不是订阅音乐提取器；Spotify 和 Apple Music 的离线内容请继续使用官方客户端。请只下载你拥有版权、处于公共领域或已明确获权保存的内容。下载时软件会直接连接链接所在服务器，因此该服务器可以看到正常网络请求所包含的 IP 地址等信息。
+- [FILE_STANDARD_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_standard_info)：使用 `AllocationSize` 显示文件系统报告的已分配字节，并保留 `EndOfFile` 作为逻辑大小。
+- [FILE_ALLOCATION_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_allocation_info)：文件系统分配大小可独立于 EOF，因而扫描器不依赖逻辑长度过滤候选文件。
+- [GetFileInformationByHandleEx](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfileinformationbyhandleex)：通过已打开的文件句柄查询标准信息、属性和文件 ID。
+- [FILE_ID_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_info)：卷序列号与 128 位文件 ID 组合，用于识别重复目录项所指向的同一文件。
+- [CreateFileW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew)：零访问请求可在适当权限下查询文件元数据；`FILE_FLAG_OPEN_REPARSE_POINT` 用于打开重解析点本身。
+- [Hard Links and Junctions](https://learn.microsoft.com/en-us/windows/win32/fileio/hard-links-and-junctions)：说明多个路径可以指向同一文件，因此不能简单把每个路径的大小都累加为独立磁盘占用。
+- [.NET EnumerationOptions.AttributesToSkip](https://learn.microsoft.com/en-us/dotnet/api/system.io.enumerationoptions.attributestoskip?view=net-10.0)：其默认值包含 Hidden 和 System；扫描器显式设为零以枚举这些项，并自行跳过重解析点。
+- [Maximum Path Length Limitation](https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation)：为清单加入 `longPathAware` 声明，并在原生文件句柄调用中使用扩展路径形式。
+- [DwmSetWindowAttribute](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/nf-dwmapi-dwmsetwindowattribute)：通过 Windows Desktop Window Manager 设置系统窗口属性。
+- [DWM_SYSTEMBACKDROP_TYPE](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwm_systembackdrop_type)：`DWMSBT_MAINWINDOW` 在 Windows 11 映射为系统 Mica 窗口材质。
+- [Windows 窗口圆角](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/ui/apply-rounded-corners)：WinForms 可通过 DWM 原生窗口角属性请求系统圆角。
+- [Apple Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/liquid-glass) 与 [Adopting Liquid Glass](https://developer.apple.com/documentation/TechnologyOverviews/adopting-liquid-glass)：参考其系统材质、前景控件层与背景内容之间的视觉层次；WinCare 使用 Windows 原生窗口 API 实现本平台界面。
+- [Windows App SDK system backdrops](https://learn.microsoft.com/windows/apps/develop/ui/system-backdrops)：主窗口用 Mica 系统背景材质，并依系统能力回退。
+- [WinUI 3 AcrylicBrush](https://learn.microsoft.com/windows/apps/develop/ui/controls/acrylic)：信息卡片在窗口内用 AcrylicBrush 实现半透明背景模糊和色调。
+- [Unpackaged WinUI 3 single-file deployment](https://learn.microsoft.com/windows/apps/package-and-deploy/unpackage-winui-app)：便携包以自包含 Windows App SDK 和单文件发布；首次启动会解包部分运行内容到临时目录。
+- [XamlControlsResources](https://learn.microsoft.com/windows/apps/winui/winui3/desktop-winui3-app-with-basic-interop)：在应用资源中合并 WinUI 3 控件默认样式，避免启动时缺少控件资源键。
 
-首次启动会按 Windows 界面语言选择最接近的界面语言。窗口右上角的语言下拉菜单可在简体中文、繁体中文和英语之间切换。切换不会改变正在选择的任务类型、格式或输出目录；之前版本保存的设置仍然可用。转换期间语言菜单暂时锁定，任务完成后即可切换。
+## 许可证
 
-外观菜单可选择跟随系统、浅色或深色；窗口会记住上次的大小与位置。宽窗口使用“文件队列＋处理设置”双栏工作台，较窄窗口会自动回流为单栏，底部开始与取消按钮始终可见。任务完成后，双击输出文件列或右键选择“复制输出路径”；失败行可双击状态或右键选择“查看错误详情”。
-
-“背景”菜单可选择 PNG、JPG、JPEG、WebP 或 BMP 图片作为软件背景。图片仅从本机读取，按窗口比例居中裁切，并自动叠加明暗遮罩以保持文字清晰；可从同一菜单随时更换图片或恢复默认背景。软件会记住图片路径，如果原图片被移动或删除，下次启动会安全恢复默认背景。
-
-### 质量方案
-
-| 方案 | 适用场景 | 特点 |
-|---|---|---|
-| 画质优先 | 收藏、剪辑前处理 | 接近视觉无损，文件相对较大 |
-| 均衡压缩 | 日常分享与存储 | 兼顾画质、体积和速度 |
-| 极限压缩 | 空间非常有限 | 优先 AV1/HEVC，体积更小但耗时明显增加 |
-
-“无损提取”指复制视频文件中原有的音频码流，输出音质与源音轨一致。把有损音频转换成 FLAC/WAV 不会恢复已经丢失的细节。
-
-## 本地开发
-
-要求 Python 3.12 和系统可用的 FFmpeg/FFprobe：
-
-~~~powershell
-py -3.12 -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements-build.txt
-python src\main.py
-~~~
-
-运行测试：
-
-~~~powershell
-$env:PYTHONPATH = "src"
-python -m unittest discover -s tests -v
-~~~
-
-构建 Windows 版本：
-
-~~~powershell
-python scripts\make_icon.py
-pyinstaller build.spec --noconfirm --clean
-& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\videotoolbox.iss
-~~~
-
-GitHub Actions 会自动下载 FFmpeg Windows GPL 静态构建、使用 Go 1.23.3 构建固定版本的 Unlock Music CLI v0.2.12、运行单元测试、真实音频转换、图片/视频增强与 4K 输出测试、可见水印区域修复、EXIF 方向、本地 HTTP 下载和高 DPI UI 检查、打包程序、自检两个内置处理组件，并生成安装包和便携包。CLI v0.2.12 依赖的旧 vanity 地址现已停止提供模块元数据，因此构建脚本从 Unlock Music 官方 GitHub 组织读取完全相同的 `go-mmkv` v0.1.0 源码作为本地依赖，不修改其实现。
-
-## 技术与许可
-
-- 应用源码：MIT License
-- FFmpeg：安装包内附 GNU GPL v3 文本；来源及源代码地址见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-- Unlock Music CLI v0.2.12：MIT License；安装包内附许可文本，来源及源代码地址见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-- Qt for Python / PySide6：LGPLv3/GPLv3 或商业许可
-
-授权音频下载器仅使用 Python 标准库，不引入新的第三方下载组件。
-
-界面翻译集中存放于 [src/i18n.py](src/i18n.py)，新增或更新界面提示时请同时更新英文和繁体中文翻译；自动测试会检查翻译表的键及模板占位符是否一致。安装向导的简繁体译文来自 Inno Setup 官方源码。
-
-FFmpeg、Qt 及各编解码器商标属于各自权利人。
+本项目按 MIT License 发布。
