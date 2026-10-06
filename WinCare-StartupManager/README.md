@@ -49,7 +49,7 @@ Windows 程序可以通过许多机制自动运行，因此任何独立清理工
 
 **1.9.0 微信专项清理：** 新增微信媒体文件按时间和类型扫描、空间预览、手动选择归档、归档记录及还原。归档后不删除副本，跨磁盘复制会校验 SHA-256 后才移除源文件；还原时检查来源白名单、链接目录和目标冲突。操作期间需退出微信。
 
-**1.9.1 启动修复：** 补齐 WinUI 3 默认控件资源 `XamlControlsResources`，修复创建主窗口时缺少 `TabViewButtonBackground` 导致的启动崩溃。便携版保留发布时的原始文件名 `WinCare.exe`；安装版包含完整的自包含发布目录，同时提供解压即用的完整目录 ZIP。Windows 构建会实际启动两种发布形式并加载主窗口 XAML；启动异常写入 `%LOCALAPPDATA%\WinCare\Logs\startup.log`，不上传日志。
+**1.9.1 启动修复：** 补齐 WinUI 3 默认控件资源 `XamlControlsResources`，修复创建主窗口时缺少 `TabViewButtonBackground` 导致的启动崩溃；将无效的导航图标 `Storage` 改为 WinUI 支持的 `Folder`。便携版保留发布时的原始文件名 `WinCare.exe`；安装版包含完整的自包含发布目录，同时提供解压即用的完整目录 ZIP。Windows 构建会实际启动两种发布形式并加载主窗口 XAML；启动异常写入 `%LOCALAPPDATA%\WinCare\Logs\startup.log`，不上传日志。
 
 ## 使用
 

@@ -20,7 +20,7 @@
                 <NavigationView x:Name="Navigation" Grid.Row="1" PaneDisplayMode="Left" IsPaneOpen="True" IsSettingsVisible="False" IsBackButtonVisible="Collapsed" OpenPaneLength="210" SelectionChanged="Navigation_SelectionChanged" Background="Transparent">
                     <NavigationView.MenuItems>
                         <NavigationViewItem Content="启动项管理" Tag="startup" Icon="Setting"/>
-                        <NavigationViewItem Content="C 盘空间" Tag="cleanup" Icon="Storage"/>
+                        <NavigationViewItem Content="C 盘空间" Tag="cleanup" Icon="Folder"/>
                         <NavigationViewItem Content="微信专项清理" Tag="wechat" Icon="Pictures"/>
                     </NavigationView.MenuItems>
                 </NavigationView>
