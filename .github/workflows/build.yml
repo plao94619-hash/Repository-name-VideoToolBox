@@ -29,7 +29,7 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Verify WeChat archive and restore
+      - name: Verify startup cancellation and WeChat archive
         run: dotnet run --project tests/WinCare.ServiceChecks.csproj -c Release
 
       - name: Publish self-contained folder
