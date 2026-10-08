@@ -7,5 +7,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../src/Services/WechatCleanupService.cs" Link="WechatCleanupService.cs" />
+    <Compile Include="../src/Services/StartupScanner.cs" Link="StartupScanner.cs" />
+    <Compile Include="../src/Services/StartupActions.cs" Link="StartupActions.cs" />
+    <Compile Include="../src/Models/StartupEntry.cs" Link="StartupEntry.cs" />
   </ItemGroup>
 </Project>
