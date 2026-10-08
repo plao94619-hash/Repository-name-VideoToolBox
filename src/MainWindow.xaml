@@ -5,112 +5,366 @@
     Title="WinCare">
     <Grid Background="Transparent">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="252" />
+            <ColumnDefinition Width="264" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <Border Grid.Column="0" Margin="18" Padding="14" CornerRadius="28" Background="{ThemeResource NavBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+
+        <Border Grid.Column="0" Margin="16,16,8,16" Padding="14" CornerRadius="28"
+                Background="{ThemeResource NavBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <StackPanel Orientation="Horizontal" Spacing="12" Margin="4,8,4,28">
-                    <Border Width="44" Height="44" CornerRadius="15" Background="{ThemeResource AccentBrush}"><TextBlock Text="W" Foreground="White" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                    <StackPanel VerticalAlignment="Center"><TextBlock Text="WinCare" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="Windows 系统管理" Foreground="{ThemeResource MutedTextBrush}" FontSize="12"/></StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="5,7,5,20">
+                    <Border Width="48" Height="48" CornerRadius="17" Background="{ThemeResource AccentBrush}">
+                        <TextBlock Text="W" Foreground="{ThemeResource AccentOnBrush}" FontSize="22" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center" Spacing="1">
+                        <TextBlock Text="WinCare" FontSize="21" FontWeight="SemiBold" />
+                        <TextBlock Text="Windows 系统工具" Foreground="{ThemeResource MutedTextBrush}" FontSize="12" />
+                    </StackPanel>
                 </StackPanel>
-                <NavigationView x:Name="Navigation" Grid.Row="1" PaneDisplayMode="Left" IsPaneOpen="True" IsSettingsVisible="False" IsBackButtonVisible="Collapsed" OpenPaneLength="210" SelectionChanged="Navigation_SelectionChanged" Background="Transparent">
+
+                <NavigationView x:Name="Navigation" Grid.Row="1" PaneDisplayMode="Left" IsPaneOpen="True"
+                                IsPaneToggleButtonVisible="False" IsSettingsVisible="False" IsBackButtonVisible="Collapsed"
+                                OpenPaneLength="220" CompactPaneLength="48" SelectionChanged="Navigation_SelectionChanged"
+                                Background="Transparent">
                     <NavigationView.MenuItems>
-                        <NavigationViewItem Content="启动项管理" Tag="startup" Icon="Setting"/>
-                        <NavigationViewItem Content="C 盘空间" Tag="cleanup" Icon="Folder"/>
-                        <NavigationViewItem Content="微信专项清理" Tag="wechat" Icon="Pictures"/>
+                        <NavigationViewItem Content="启动项管理" Tag="startup" Icon="Setting" />
+                        <NavigationViewItem Content="C 盘空间" Tag="cleanup" Icon="Folder" />
+                        <NavigationViewItem Content="微信专项清理" Tag="wechat" Icon="Pictures" />
                     </NavigationView.MenuItems>
                 </NavigationView>
-                <Border Grid.Row="3" Padding="12" CornerRadius="18" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
-                    <TextBlock Text="预览后再操作&#10;启动项逐项确认 · 清理范围固定" TextWrapping="Wrap" Foreground="{ThemeResource MutedTextBrush}"/>
+
+                <Border Grid.Row="2" Padding="13" CornerRadius="19" Background="{ThemeResource CardBrush}"
+                        BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1" Margin="2,16,2,2">
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="34" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="32" Height="32" CornerRadius="12" Background="{ThemeResource AccentSoftBrush}">
+                            <TextBlock Text="✓" Foreground="{ThemeResource AccentBrush}" FontSize="17" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="本地优先" FontWeight="SemiBold" />
+                            <TextBlock Text="操作前预览 · 可恢复项目优先" Foreground="{ThemeResource MutedTextBrush}"
+                                       FontSize="11" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Grid>
                 </Border>
             </Grid>
         </Border>
-        <Grid x:Name="PageHost" Grid.Column="1" Margin="0,18,18,18">
+
+        <Grid x:Name="PageHost" Grid.Column="1" Margin="8,16,16,16">
             <ScrollViewer x:Name="StartupPage" Visibility="Visible" VerticalScrollBarVisibility="Auto">
-                <StackPanel Spacing="12">
-                    <Border Padding="20,16" CornerRadius="22" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
-                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="启动项管理" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="查看开机与登录入口；隐藏项默认显示，系统关键项保持只读。" Foreground="{ThemeResource MutedTextBrush}" Margin="0,5,0,0"/></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><Button x:Name="CancelStartupScanButton" Content="取消扫描" IsEnabled="False" Click="CancelStartupScan_Click"/><Button x:Name="StartupRefreshButton" Content="重新扫描" Click="RefreshStartup_Click"/></StackPanel></Grid>
-                    </Border>
-                    <Border Padding="12" CornerRadius="18" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <TextBox x:Name="SearchBox" Width="300" PlaceholderText="搜索名称、路径或启动命令" TextChanged="SearchBox_TextChanged"/>
-                            <ComboBox x:Name="CategoryBox" Width="220" PlaceholderText="全部来源" SelectionChanged="CategoryBox_SelectionChanged"/>
-                            <CheckBox x:Name="ShowHiddenBox" Content="显示隐藏项" IsChecked="True" Checked="ShowHidden_Changed" Unchecked="ShowHidden_Changed"/>
-                        </StackPanel>
-                    </Border>
-                    <StackPanel x:Name="StartupRows" Spacing="8"/>
-                    <TextBlock x:Name="StartupSummary" Foreground="{ThemeResource MutedTextBrush}" Margin="4,2"/>
-                    <Button x:Name="WarningsButton" HorizontalAlignment="Left" Click="Warnings_Click"/>
-                </StackPanel>
-            </ScrollViewer>
-            <ScrollViewer x:Name="CleanupPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
-                <StackPanel Spacing="12">
-                    <Border Padding="20,16" CornerRadius="22" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
-                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="C 盘空间管理" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="临时文件清理前预览确认；大文件分析保持只读。" Foreground="{ThemeResource MutedTextBrush}" Margin="0,5,0,0"/></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><Button Content="查找大文件" Click="LargeFiles_Click"/><Button Content="Windows 存储设置" Click="StorageSettings_Click"/><Button Content="重新扫描" Click="RefreshCleanup_Click"/></StackPanel></Grid>
-                    </Border>
-                    <Border Padding="14" CornerRadius="18" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1"><TextBlock Text="仅扫描 C 盘的当前用户 TEMP 与 Windows\Temp，默认只清理修改时间超过 7 天的文件。清理会永久删除文件（不进入回收站），并跳过链接、正在使用或无权限访问的文件。" TextWrapping="Wrap" Foreground="{ThemeResource MutedTextBrush}"/></Border>
-                    <StackPanel x:Name="CleanupRows" Spacing="8"/>
-                    <TextBlock x:Name="CleanupSummary" Foreground="{ThemeResource MutedTextBrush}" Margin="4,2"/>
-                </StackPanel>
-            </ScrollViewer>
-            <ScrollViewer x:Name="WechatPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
-                <StackPanel Spacing="12">
-                    <Border Padding="20,16" CornerRadius="22" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="微信专项清理" FontSize="24" FontWeight="SemiBold"/>
-                            <TextBlock Text="按账号、媒体类型和时间筛选微信本地原图与视频；先归档，可随时还原。" Foreground="{ThemeResource MutedTextBrush}" Margin="0,5,0,0"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Padding="14" CornerRadius="18" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
-                        <StackPanel Spacing="9">
-                            <TextBlock Text="仅扫描当前选择的微信文件目录。不会读取聊天数据库或解密图片。归档后相应媒体可能暂时无法从聊天记录打开；还原时不会覆盖原路径中已存在的文件。" TextWrapping="Wrap" Foreground="{ThemeResource MutedTextBrush}"/>
-                            <Grid ColumnSpacing="8">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBox x:Name="WechatRootBox" PlaceholderText="微信文件根目录，例如 Windows“文档”里的 WeChat Files"/>
-                                <Button Grid.Column="1" Content="使用默认目录" Click="WechatDefaultPath_Click"/>
+                <StackPanel Spacing="15" Margin="4,4,10,22">
+                    <Border Padding="22,20" CornerRadius="26" Background="{ThemeResource CardBrush}"
+                            BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <Grid RowSpacing="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid ColumnSpacing="15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="54" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="54" Height="54" CornerRadius="19" Background="{ThemeResource AccentSoftBrush}">
+                                    <SymbolIcon Symbol="Setting" Foreground="{ThemeResource AccentBrush}"
+                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                    <TextBlock Text="系统管理  /  启动入口" FontSize="12" FontWeight="SemiBold"
+                                               Foreground="{ThemeResource AccentBrush}" />
+                                    <TextBlock Text="启动项管理" FontSize="27" FontWeight="SemiBold" />
+                                    <TextBlock Text="集中查看开机启动位置；隐藏项默认展示，系统关键项保持只读。"
+                                               Foreground="{ThemeResource MutedTextBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
                             </Grid>
-                            <TextBlock Text="归档保存目录（可选其他磁盘以腾出源磁盘空间）" Foreground="{ThemeResource MutedTextBrush}"/>
-                            <TextBox x:Name="WechatArchiveRootBox" PlaceholderText="例如 D:\WinCare-WeChatArchive；同一磁盘归档不释放磁盘空间"/>
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <TextBlock Text="保留最近" VerticalAlignment="Center"/>
-                                <ComboBox x:Name="WechatAgeBox" SelectedIndex="2" MinWidth="130">
-                                    <ComboBoxItem Content="30 天前" Tag="30"/>
-                                    <ComboBoxItem Content="90 天前" Tag="90"/>
-                                    <ComboBoxItem Content="180 天前" Tag="180"/>
-                                    <ComboBoxItem Content="365 天前" Tag="365"/>
-                                    <ComboBoxItem Content="730 天前" Tag="730"/>
-                                </ComboBox>
-                                <CheckBox x:Name="WechatImagesBox" Content="图片原图（.dat）" IsChecked="True"/>
-                                <CheckBox x:Name="WechatVideosBox" Content="视频" IsChecked="True"/>
-                                <Button Content="扫描预览" Click="WechatScan_Click"/>
-                                <Button x:Name="WechatCancelButton" Content="取消扫描" IsEnabled="False" Click="WechatCancelScan_Click"/>
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="9" HorizontalAlignment="Right">
+                                <Button x:Name="CancelStartupScanButton" Content="取消扫描" IsEnabled="False"
+                                        Click="CancelStartupScan_Click" Padding="15,9" />
+                                <Button x:Name="StartupRefreshButton" Content="重新扫描" Click="RefreshStartup_Click"
+                                        Padding="16,9" Background="{ThemeResource AccentBrush}" Foreground="{ThemeResource AccentOnBrush}" BorderThickness="0" />
                             </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Padding="16,13" CornerRadius="19" Background="{ThemeResource CardBrush}"
+                                BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="全部入口" FontSize="12" Foreground="{ThemeResource MutedTextBrush}" />
+                                <TextBlock x:Name="StartupMetricTotal" Text="—" FontSize="28" FontWeight="SemiBold" />
+                                <TextBlock Text="本机扫描结果" FontSize="11" Foreground="{ThemeResource MutedTextBrush}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Margin="0" Padding="16,13" CornerRadius="19" Background="{ThemeResource CardBrush}"
+                                BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="已启用" FontSize="12" Foreground="{ThemeResource MutedTextBrush}" />
+                                <TextBlock x:Name="StartupMetricEnabled" Text="—" FontSize="28" FontWeight="SemiBold"
+                                           Foreground="{ThemeResource SuccessBrush}" />
+                                <TextBlock Text="可逐项关闭或恢复" FontSize="11" Foreground="{ThemeResource MutedTextBrush}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Padding="16,13" CornerRadius="19" Background="{ThemeResource CardBrush}"
+                                BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="隐藏项目" FontSize="12" Foreground="{ThemeResource MutedTextBrush}" />
+                                <TextBlock x:Name="StartupMetricHidden" Text="—" FontSize="28" FontWeight="SemiBold"
+                                           Foreground="{ThemeResource AccentBrush}" />
+                                <TextBlock Text="包含在扫描和筛选中" FontSize="11" Foreground="{ThemeResource MutedTextBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Padding="12" CornerRadius="19" Background="{ThemeResource CardBrush}"
+                            BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="190" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="SearchBox" PlaceholderText="搜索名称、路径或启动命令"
+                                     TextChanged="SearchBox_TextChanged" MinWidth="150" />
+                            <ComboBox x:Name="CategoryBox" Grid.Column="1" PlaceholderText="全部来源"
+                                      SelectionChanged="CategoryBox_SelectionChanged" MinWidth="160" />
+                            <CheckBox x:Name="ShowHiddenBox" Grid.Column="2" Content="显示隐藏项" IsChecked="True"
+                                      Checked="ShowHidden_Changed" Unchecked="ShowHidden_Changed"
+                                      VerticalAlignment="Center" Margin="5,0,7,0" />
+                        </Grid>
+                    </Border>
+
+                    <StackPanel x:Name="StartupRows" Spacing="8" />
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="StartupSummary" Foreground="{ThemeResource MutedTextBrush}"
+                                   Margin="4,5" VerticalAlignment="Center" />
+                        <Button x:Name="WarningsButton" Grid.Column="1" Click="Warnings_Click"
+                                Content="扫描提示" Padding="13,7" />
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+
+            <ScrollViewer x:Name="CleanupPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="15" Margin="4,4,10,22">
+                    <Border Padding="22,20" CornerRadius="26" Background="{ThemeResource CardBrush}"
+                            BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <Grid RowSpacing="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid ColumnSpacing="15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="54" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="54" Height="54" CornerRadius="19" Background="{ThemeResource AccentSoftBrush}">
+                                    <SymbolIcon Symbol="Folder" Foreground="{ThemeResource AccentBrush}"
+                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                    <TextBlock Text="磁盘管理  /  安全清理" FontSize="12" FontWeight="SemiBold"
+                                               Foreground="{ThemeResource AccentBrush}" />
+                                    <TextBlock Text="C 盘空间管理" FontSize="27" FontWeight="SemiBold" />
+                                    <TextBlock Text="先查看可清理范围与估算，再决定是否释放空间。"
+                                               Foreground="{ThemeResource MutedTextBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid Grid.Row="1" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="查找大文件" Click="LargeFiles_Click" Padding="10,9" />
+                                <Button Grid.Column="1" Content="存储设置" Click="StorageSettings_Click" Padding="10,9" />
+                                <Button Grid.Column="2" Content="重新扫描" Click="RefreshCleanup_Click" Padding="10,9"
+                                        Background="{ThemeResource AccentBrush}" Foreground="{ThemeResource AccentOnBrush}" BorderThickness="0" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Padding="16,13" CornerRadius="19" Background="{ThemeResource CardBrush}"
+                                BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="可清理文件" FontSize="12" Foreground="{ThemeResource MutedTextBrush}" />
+                                <TextBlock x:Name="CleanupMetricCount" Text="扫描后显示" FontSize="23" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Padding="16,13" CornerRadius="19" Background="{ThemeResource CardBrush}"
+                                BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="预计可释放" FontSize="12" Foreground="{ThemeResource MutedTextBrush}" />
+                                <TextBlock x:Name="CleanupMetricSize" Text="扫描后显示" FontSize="23" FontWeight="SemiBold"
+                                           Foreground="{ThemeResource AccentBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Padding="15,13" CornerRadius="18" Background="{ThemeResource WarningSoftBrush}"
+                            BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <Grid ColumnSpacing="11">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="!" FontSize="19" FontWeight="Bold" Foreground="{ThemeResource WarningBrush}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Top" />
+                            <TextBlock Grid.Column="1"
+                                       Text="仅扫描当前用户 TEMP 与 Windows\Temp；默认只处理修改时间超过 7 天的文件。清理会永久删除（不进入回收站），并跳过链接、占用中或无权限访问的文件。"
+                                       TextWrapping="Wrap" Foreground="{ThemeResource AppTextBrush}" />
+                        </Grid>
+                    </Border>
+
+                    <StackPanel x:Name="CleanupRows" Spacing="8" />
+                    <TextBlock x:Name="CleanupSummary" Foreground="{ThemeResource MutedTextBrush}" Margin="4,3" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <ScrollViewer x:Name="WechatPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="15" Margin="4,4,10,22">
+                    <Border Padding="22,20" CornerRadius="26" Background="{ThemeResource CardBrush}"
+                            BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <Grid ColumnSpacing="15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="54" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Border Width="54" Height="54" CornerRadius="19" Background="{ThemeResource AccentSoftBrush}">
+                                <SymbolIcon Symbol="Pictures" Foreground="{ThemeResource AccentBrush}"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                <TextBlock Text="微信文件  /  空间整理" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{ThemeResource AccentBrush}" />
+                                <TextBlock Text="微信专项清理" FontSize="27" FontWeight="SemiBold" />
+                                <TextBlock Text="按账号、媒体类型和时间筛选；归档后可随时还原。"
+                                           Foreground="{ThemeResource MutedTextBrush}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Border Grid.Column="2" Padding="11,7" CornerRadius="14" Background="{ThemeResource SuccessSoftBrush}"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="可还原归档" Foreground="{ThemeResource SuccessBrush}" FontSize="12" FontWeight="SemiBold" />
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <Border Padding="17" CornerRadius="21" Background="{ThemeResource CardBrush}"
+                            BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <StackPanel Spacing="13">
+                            <TextBlock Text="文件位置" FontSize="16" FontWeight="SemiBold" />
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="7">
+                                    <TextBlock Text="微信文件目录" FontSize="12" Foreground="{ThemeResource MutedTextBrush}" />
+                                    <TextBox x:Name="WechatRootBox" PlaceholderText="选择或粘贴 WeChat Files 路径" />
+                                    <Button Content="使用默认目录" Click="WechatDefaultPath_Click" HorizontalAlignment="Left" Padding="13,7" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="7">
+                                    <TextBlock Text="归档保存位置" FontSize="12" Foreground="{ThemeResource MutedTextBrush}" />
+                                    <TextBox x:Name="WechatArchiveRootBox" PlaceholderText="例如 D:\WinCare-WeChatArchive" />
+                                    <TextBlock Text="建议选择其他磁盘；同盘归档不会释放磁盘空间。"
+                                               FontSize="11" Foreground="{ThemeResource MutedTextBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
                         </StackPanel>
                     </Border>
-                    <Border Padding="10" CornerRadius="18" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Content="全选结果" Click="WechatSelectAll_Click"/>
-                            <Button Content="清除选择" Click="WechatClearSelection_Click"/>
-                            <Button Content="归档所选文件" Click="WechatArchive_Click"/>
-                            <Button Content="还原全部归档" Click="WechatRestore_Click"/>
-                            <TextBlock x:Name="WechatArchiveSummary" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{ThemeResource MutedTextBrush}"/>
-                            <TextBlock x:Name="WechatSelectionSummary" VerticalAlignment="Center" Foreground="{ThemeResource MutedTextBrush}"/>
+
+                    <Border Padding="17" CornerRadius="21" Background="{ThemeResource CardBrush}"
+                            BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="筛选与扫描" FontSize="16" FontWeight="SemiBold" />
+                            <Grid RowSpacing="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <TextBlock Text="保留最近" VerticalAlignment="Center" Foreground="{ThemeResource MutedTextBrush}" />
+                                    <ComboBox x:Name="WechatAgeBox" SelectedIndex="2" MinWidth="120">
+                                        <ComboBoxItem Content="30 天前" Tag="30" />
+                                        <ComboBoxItem Content="90 天前" Tag="90" />
+                                        <ComboBoxItem Content="180 天前" Tag="180" />
+                                        <ComboBoxItem Content="365 天前" Tag="365" />
+                                        <ComboBoxItem Content="730 天前" Tag="730" />
+                                    </ComboBox>
+                                    <CheckBox x:Name="WechatImagesBox" Content="图片原图" IsChecked="True" />
+                                    <CheckBox x:Name="WechatVideosBox" Content="视频" IsChecked="True" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                    <Button Content="扫描预览" Click="WechatScan_Click" Padding="15,9"
+                                            Background="{ThemeResource AccentBrush}" Foreground="{ThemeResource AccentOnBrush}" BorderThickness="0" />
+                                    <Button x:Name="WechatCancelButton" Content="取消扫描" IsEnabled="False"
+                                            Click="WechatCancelScan_Click" Padding="13,9" />
+                                </StackPanel>
+                            </Grid>
+                            <Border Padding="12,10" CornerRadius="15" Background="{ThemeResource WarningSoftBrush}">
+                                <TextBlock Text="仅扫描当前选择的微信文件目录，不读取聊天数据库或解密图片。归档后媒体可能暂时无法从聊天记录打开；还原时不会覆盖原路径中的同名文件。"
+                                           TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource AppTextBrush}" />
+                            </Border>
                         </StackPanel>
                     </Border>
-                    <ListView x:Name="WechatResults" SelectionMode="None" MaxHeight="520">
+
+                    <Border Padding="11" CornerRadius="19" Background="{ThemeResource CardBrush}"
+                            BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
+                        <Grid RowSpacing="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="全选" Click="WechatSelectAll_Click" Padding="13,8" />
+                                <Button Content="清除选择" Click="WechatClearSelection_Click" Padding="13,8" />
+                                <Button Content="归档所选" Click="WechatArchive_Click" Padding="13,8" />
+                                <Button Content="还原归档" Click="WechatRestore_Click" Padding="13,8" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="14">
+                                <TextBlock x:Name="WechatSelectionSummary" Foreground="{ThemeResource AccentBrush}"
+                                           FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="WechatArchiveSummary" Foreground="{ThemeResource MutedTextBrush}"
+                                           FontSize="11" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <ListView x:Name="WechatResults" SelectionMode="None" MaxHeight="520"
+                              Background="Transparent" BorderThickness="0">
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
-                                <Setter Property="Padding" Value="0"/>
-                                <Setter Property="Margin" Value="0,0,0,6"/>
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Margin" Value="0,0,0,7" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                             </Style>
                         </ListView.ItemContainerStyle>
                     </ListView>
-                    <TextBlock x:Name="WechatStatus" Foreground="{ThemeResource MutedTextBrush}" TextWrapping="Wrap" Margin="4,2"/>
+                    <TextBlock x:Name="WechatStatus" Foreground="{ThemeResource MutedTextBrush}" TextWrapping="Wrap" Margin="4,2" />
                 </StackPanel>
             </ScrollViewer>
         </Grid>
