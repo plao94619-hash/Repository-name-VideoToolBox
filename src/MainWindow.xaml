@@ -33,7 +33,7 @@
             <ScrollViewer x:Name="StartupPage" Visibility="Visible" VerticalScrollBarVisibility="Auto">
                 <StackPanel Spacing="12">
                     <Border Padding="20,16" CornerRadius="22" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
-                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="启动项管理" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="查看开机与登录入口；隐藏项默认显示，系统关键项保持只读。" Foreground="{ThemeResource MutedTextBrush}" Margin="0,5,0,0"/></StackPanel><Button Grid.Column="1" Content="重新扫描" Click="RefreshStartup_Click" VerticalAlignment="Center"/></Grid>
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="启动项管理" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="查看开机与登录入口；隐藏项默认显示，系统关键项保持只读。" Foreground="{ThemeResource MutedTextBrush}" Margin="0,5,0,0"/></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><Button x:Name="CancelStartupScanButton" Content="取消扫描" IsEnabled="False" Click="CancelStartupScan_Click"/><Button x:Name="StartupRefreshButton" Content="重新扫描" Click="RefreshStartup_Click"/></StackPanel></Grid>
                     </Border>
                     <Border Padding="12" CornerRadius="18" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource CardStrokeBrush}" BorderThickness="1">
                         <StackPanel Orientation="Horizontal" Spacing="10">

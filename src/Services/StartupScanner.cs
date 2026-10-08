@@ -9,11 +9,13 @@ public static class StartupScanner
     private const string DisabledChild = "WinCareDisabled";
     private sealed record RegistryLocation(RegistryHive Hive, RegistryView View, string Path, string Category, bool Writable, bool Hidden, bool System);
 
-    public static ScanResult Scan()
+    public static ScanResult Scan(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var result = new ScanResult();
-        ScanRegistry(result);
-        ScanStartupFolders(result);
+        ScanRegistry(result, cancellationToken);
+        ScanStartupFolders(result, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         StartupActions.RestoreSnapshot restoreSnapshot;
         try { restoreSnapshot = StartupActions.LoadRestoreSnapshot(); }
         catch (Exception ex)
@@ -21,8 +23,10 @@ public static class StartupScanner
             result.Warnings.Add($"无法读取 WinCare 的恢复记录，已关闭项目将保持只读：{ex.Message}");
             restoreSnapshot = new StartupActions.RestoreSnapshot();
         }
-        ScanScheduledTasks(result, restoreSnapshot);
-        ScanServices(result, restoreSnapshot);
+        cancellationToken.ThrowIfCancellationRequested();
+        ScanScheduledTasks(result, restoreSnapshot, cancellationToken);
+        ScanServices(result, restoreSnapshot, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         result.Entries.Sort((a, b) =>
         {
             var enabled = b.Enabled.CompareTo(a.Enabled);
@@ -30,10 +34,11 @@ public static class StartupScanner
             var category = string.Compare(a.Category, b.Category, StringComparison.CurrentCultureIgnoreCase);
             return category != 0 ? category : string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase);
         });
+        cancellationToken.ThrowIfCancellationRequested();
         return result;
     }
 
-    private static IEnumerable<RegistryLocation> GetRegistryLocations()
+    private static IEnumerable<RegistryLocation> GetRegistryLocations(ScanResult result, CancellationToken cancellationToken)
     {
         var views = Environment.Is64BitOperatingSystem
             ? new[] { RegistryView.Registry64, RegistryView.Registry32 }
@@ -42,11 +47,14 @@ public static class StartupScanner
 
         foreach (var view in views)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             foreach (var hive in new[] { RegistryHive.CurrentUser, RegistryHive.LocalMachine })
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var scope = hive == RegistryHive.CurrentUser ? "当前用户" : "所有用户";
                 foreach (var leaf in new[] { "Run", "RunOnce", "RunServices", "RunServicesOnce" })
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var path = $"Software\\Microsoft\\Windows\\CurrentVersion\\{leaf}";
                     yield return new(hive, view, path, $"注册表 {leaf} · {scope}", true, false, hive == RegistryHive.LocalMachine);
                 }
@@ -56,15 +64,29 @@ public static class StartupScanner
 
             if (Environment.Is64BitOperatingSystem)
             {
-                using var users = RegistryKey.OpenBaseKey(RegistryHive.Users, view);
-                foreach (var sid in users.GetSubKeyNames().Where(s =>
+                string[] otherUserSids = [];
+                try
+                {
+                    using var users = RegistryKey.OpenBaseKey(RegistryHive.Users, view);
+                    otherUserSids = users.GetSubKeyNames();
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+                {
+                    result.Warnings.Add($"无法列出 HKEY_USERS 中已加载的其他用户：{ex.Message}");
+                }
+
+                foreach (var sid in otherUserSids.Where(s =>
                              s.Contains('-') &&
                              !s.EndsWith("_Classes", StringComparison.OrdinalIgnoreCase) &&
                              !string.Equals(s, currentSid, StringComparison.OrdinalIgnoreCase)))
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var prefix = $"{sid}\\Software\\Microsoft\\Windows\\CurrentVersion";
                     foreach (var leaf in new[] { "Run", "RunOnce", "RunServices", "RunServicesOnce" })
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
                         yield return new(RegistryHive.Users, view, $"{prefix}\\{leaf}", $"注册表 {leaf} · 已加载的其他用户", true, false, true);
+                    }
                     yield return new(RegistryHive.Users, view, $"{prefix}\\Policies\\Explorer\\Run", "策略启动项 · 已加载的其他用户", true, false, true);
                 }
             }
@@ -72,24 +94,27 @@ public static class StartupScanner
 
         foreach (var hive in new[] { RegistryHive.LocalMachine, RegistryHive.CurrentUser })
         {
-            yield return new(hive, RegistryView.Registry64, "Software\\Microsoft\\Windows NT\\CurrentVersion\\Windows",
+            cancellationToken.ThrowIfCancellationRequested();
+            var systemView = Environment.Is64BitOperatingSystem ? RegistryView.Registry64 : RegistryView.Default;
+            yield return new(hive, systemView, "Software\\Microsoft\\Windows NT\\CurrentVersion\\Windows",
                 "Windows Load/Run（系统位置）", false, true, hive == RegistryHive.LocalMachine);
-            yield return new(hive, RegistryView.Registry64, "Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon",
+            yield return new(hive, systemView, "Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon",
                 "Winlogon Shell/Userinit（关键项）", false, true, true);
         }
     }
 
-    private static void ScanRegistry(ScanResult result)
+    private static void ScanRegistry(ScanResult result, CancellationToken cancellationToken)
     {
-        foreach (var location in GetRegistryLocations())
+        foreach (var location in GetRegistryLocations(result, cancellationToken))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 using var root = RegistryKey.OpenBaseKey(location.Hive, location.View);
                 using var active = root.OpenSubKey(location.Path, writable: false);
                 using var disabled = location.Writable ? root.OpenSubKey($"{location.Path}\\{DisabledChild}", writable: false) : null;
-                AddRegistryValues(result, location, active, isWinCareDisabled: false);
-                if (location.Writable) AddRegistryValues(result, location, disabled, isWinCareDisabled: true);
+                AddRegistryValues(result, location, active, isWinCareDisabled: false, cancellationToken);
+                if (location.Writable) AddRegistryValues(result, location, disabled, isWinCareDisabled: true, cancellationToken);
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
             {
@@ -98,11 +123,12 @@ public static class StartupScanner
         }
     }
 
-    private static void AddRegistryValues(ScanResult result, RegistryLocation location, RegistryKey? key, bool isWinCareDisabled)
+    private static void AddRegistryValues(ScanResult result, RegistryLocation location, RegistryKey? key, bool isWinCareDisabled, CancellationToken cancellationToken)
     {
         if (key is null) return;
         foreach (var valueName in key.GetValueNames())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 var value = key.GetValue(valueName, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
@@ -148,16 +174,17 @@ public static class StartupScanner
         }
     }
 
-    private static void ScanStartupFolders(ScanResult result)
+    private static void ScanStartupFolders(ScanResult result, CancellationToken cancellationToken)
     {
-        AddStartupFolder(result, Environment.GetFolderPath(Environment.SpecialFolder.Startup), "当前用户启动文件夹", false);
-        AddStartupFolder(result, Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup), "所有用户启动文件夹", true);
+        AddStartupFolder(result, Environment.GetFolderPath(Environment.SpecialFolder.Startup), "当前用户启动文件夹", false, cancellationToken);
+        AddStartupFolder(result, Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup), "所有用户启动文件夹", true, cancellationToken);
 
         try
         {
             if (!Directory.Exists(StartupActions.DisabledFilesRoot)) return;
             foreach (var metadataPath in Directory.EnumerateFiles(StartupActions.DisabledFilesRoot, "*.entry.json", SearchOption.TopDirectoryOnly))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
                     var meta = System.Text.Json.JsonSerializer.Deserialize<StartupActions.DisabledFile>(File.ReadAllText(metadataPath));
@@ -190,13 +217,14 @@ public static class StartupScanner
         }
     }
 
-    private static void AddStartupFolder(ScanResult result, string folder, string category, bool common)
+    private static void AddStartupFolder(ScanResult result, string folder, string category, bool common, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return;
         try
         {
             foreach (var path in Directory.EnumerateFiles(folder, "*", SearchOption.TopDirectoryOnly))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
                     var info = new FileInfo(path);
@@ -233,11 +261,12 @@ public static class StartupScanner
         }
     }
 
-    private static void ScanScheduledTasks(ScanResult result, StartupActions.RestoreSnapshot restoreSnapshot)
+    private static void ScanScheduledTasks(ScanResult result, StartupActions.RestoreSnapshot restoreSnapshot, CancellationToken cancellationToken)
     {
         object? serviceObject = null;
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var serviceType = Type.GetTypeFromProgID("Schedule.Service");
             if (serviceType is null)
             {
@@ -247,9 +276,11 @@ public static class StartupScanner
             serviceObject = Activator.CreateInstance(serviceType);
             dynamic service = serviceObject!;
             service.Connect();
+            cancellationToken.ThrowIfCancellationRequested();
             dynamic root = service.GetFolder("\\");
-            WalkTaskFolder(result, root, "\\", restoreSnapshot);
+            WalkTaskFolder(result, root, "\\", restoreSnapshot, cancellationToken);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             result.Warnings.Add($"计划任务扫描不完整：{Unwrap(ex).Message}");
@@ -260,13 +291,15 @@ public static class StartupScanner
         }
     }
 
-    private static void WalkTaskFolder(ScanResult result, dynamic folder, string folderPath, StartupActions.RestoreSnapshot restoreSnapshot)
+    private static void WalkTaskFolder(ScanResult result, dynamic folder, string folderPath, StartupActions.RestoreSnapshot restoreSnapshot, CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             dynamic tasks = folder.GetTasks(1); // TASK_ENUM_HIDDEN
             for (int i = 1; i <= (int)tasks.Count; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
                     dynamic task = tasks.Item(i);
@@ -275,6 +308,7 @@ public static class StartupScanner
                     var triggerNames = new List<string>();
                     for (int j = 1; j <= (int)triggers.Count; j++)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         dynamic trigger = triggers.Item(j);
                         int type = (int)trigger.Type;
                         if (type is 0 or 7 or 8 or 9 or 11)
@@ -308,6 +342,7 @@ public static class StartupScanner
                             microsoft ? "Microsoft 任务可能影响 Windows 功能，关闭前请核对动作。" : null
                     });
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     result.Warnings.Add($"计划任务读取失败：{Unwrap(ex).Message}");
@@ -316,11 +351,13 @@ public static class StartupScanner
             dynamic folders = folder.GetFolders(0);
             for (int i = 1; i <= (int)folders.Count; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 dynamic child = folders.Item(i);
                 string childPath = folderPath == "\\" ? $"\\{child.Name}" : $"{folderPath}\\{child.Name}";
-                WalkTaskFolder(result, child, childPath, restoreSnapshot);
+                WalkTaskFolder(result, child, childPath, restoreSnapshot, cancellationToken);
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             result.Warnings.Add($"读取计划任务目录 {folderPath} 失败：{Unwrap(ex).Message}");
@@ -349,15 +386,17 @@ public static class StartupScanner
         catch { return "任务动作不可读"; }
     }
 
-    private static void ScanServices(ScanResult result, StartupActions.RestoreSnapshot restoreSnapshot)
+    private static void ScanServices(ScanResult result, StartupActions.RestoreSnapshot restoreSnapshot, CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             using var root = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, Environment.Is64BitOperatingSystem ? RegistryView.Registry64 : RegistryView.Default)
                 .OpenSubKey(@"SYSTEM\CurrentControlSet\Services", writable: false);
             if (root is null) return;
             foreach (var name in root.GetSubKeyNames())
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
                     using var key = root.OpenSubKey(name, writable: false);
@@ -402,6 +441,7 @@ public static class StartupScanner
                 }
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             result.Warnings.Add($"服务扫描不完整：{ex.Message}");

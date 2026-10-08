@@ -1,6 +1,6 @@
 # WinCare · Windows 启动项与 C 盘空间管理
 
-[下载 WinCare 1.10.0](https://github.com/plao94619-hash/Repository-name-VideoToolBox/releases/tag/wincare-v1.10.0) · [Windows 构建状态](https://github.com/plao94619-hash/Repository-name-VideoToolBox/actions/workflows/build.yml)
+[下载 WinCare 1.11.0](https://github.com/plao94619-hash/Repository-name-VideoToolBox/releases/tag/wincare-v1.11.0) · [Windows 构建状态](https://github.com/plao94619-hash/Repository-name-VideoToolBox/actions/workflows/build.yml)
 
 此仓库的主线专用于 WinCare。原“万能音视频工具箱”源码及说明保留在 [`legacy/videotoolbox`](https://github.com/plao94619-hash/Repository-name-VideoToolBox/tree/legacy/videotoolbox) 分支；旧版本 Release 保留。
 
@@ -57,9 +57,11 @@ Windows 程序可以通过许多机制自动运行，因此任何独立清理工
 
 **1.10.0 仓库与归档优化：** 仓库主线整理为 WinCare 专用，源码、安装脚本、Windows CI 和验证程序位于根目录。微信归档可以选择独立磁盘；归档位置持久记录供还原。界面区分同盘移动与跨盘移动，不再把同盘归档误写成释放磁盘空间。CI 除启动两种发布形式，还验证微信媒体归档、同名文件保护与还原。
 
+**1.11.0 启动扫描优化：** 启动项扫描增加可取消令牌，并在注册表、启动文件夹、隐藏计划任务和自动启动服务的遍历中检查取消状态。取消时保留上一次完整结果，不用半份清单覆盖；注册表无法列出其他已加载用户时显示扫描提示并继续检查其余入口。修复启动项操作后列表按钮可能因忙碌状态而一直禁用的问题。
+
 ## 使用
 
-1. 从 [WinCare 1.10.0 发布页](https://github.com/plao94619-hash/Repository-name-VideoToolBox/releases/tag/wincare-v1.10.0) 下载 `WinCare-Setup-x64.exe` 安装版，或下载 `WinCare.exe` 单文件便携版。也可下载 `WinCare-Portable-Folder-x64.zip`，完整解压后运行其中的 `WinCare.exe`。便携版无需安装，单文件 EXE 请保留 `WinCare.exe` 原名。
+1. 从 [WinCare 1.11.0 发布页](https://github.com/plao94619-hash/Repository-name-VideoToolBox/releases/tag/wincare-v1.11.0) 下载 `WinCare-Setup-x64.exe` 安装版，或下载 `WinCare.exe` 单文件便携版。也可下载 `WinCare-Portable-Folder-x64.zip`，完整解压后运行其中的 `WinCare.exe`。便携版无需安装，单文件 EXE 请保留 `WinCare.exe` 原名。
 2. 程序以普通权限启动，仅在需要修改系统范围启动项或清理 Windows 临时目录时请求 UAC。
 3. 在“启动项管理”页查看入口；用每行的“一键关闭”关闭单项，已由 WinCare 关闭的项目可按“恢复”。
 4. 在“C 盘清理”页查看临时文件预估，逐个目录确认后清理；选择“查找大文件”可单独进行只读分析。

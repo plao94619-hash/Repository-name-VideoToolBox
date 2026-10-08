@@ -16,6 +16,8 @@ public sealed partial class MainWindow : Window
     private readonly HashSet<string> _wechatSelection = new(StringComparer.OrdinalIgnoreCase);
     private List<string> _warnings = [];
     private bool _initialized, _busy;
+    private bool _startupScanBusy;
+    private CancellationTokenSource? _startupScanCancellation;
     private bool _wechatBusy;
     private CancellationTokenSource? _wechatScanCancellation;
     private DispatcherTimer? _debounce;
@@ -46,10 +48,19 @@ public sealed partial class MainWindow : Window
     }
     private async Task ReloadStartupAsync()
     {
-        StartupSummary.Text = "正在扫描启动入口…";
+        if (_startupScanBusy) return;
+        _startupScanBusy = true;
+        using var cancellation = new CancellationTokenSource();
+        _startupScanCancellation = cancellation;
+        CancelStartupScanButton.IsEnabled = true;
+        StartupRefreshButton.IsEnabled = false;
+        StartupRows.IsHitTestVisible = false;
+        StartupRows.Opacity = 0.72;
+        StartupSummary.Text = "正在扫描启动入口…可以取消。";
         try
         {
-            var scan = await Task.Run(StartupScanner.Scan);
+            var scan = await Task.Run(() => StartupScanner.Scan(cancellation.Token), cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
             _entries.Clear(); _entries.AddRange(scan.Entries); _warnings = scan.Warnings;
             CategoryBox.Items.Clear(); CategoryBox.Items.Add("全部来源");
             foreach (var category in _entries.Select(x => x.Category).Distinct(StringComparer.CurrentCultureIgnoreCase).OrderBy(x => x)) CategoryBox.Items.Add(category);
@@ -57,7 +68,20 @@ public sealed partial class MainWindow : Window
             WarningsButton.Content = _warnings.Count == 0 ? "未发现扫描错误" : $"扫描提示：{_warnings.Count} 条";
             RenderStartupRows();
         }
+        catch (OperationCanceledException)
+        {
+            StartupSummary.Text = _entries.Count == 0 ? "扫描已取消；当前没有扫描结果。" : $"扫描已取消；保留上次结果，共 {_entries.Count:N0} 项。";
+        }
         catch (Exception ex) { StartupSummary.Text = "扫描失败"; await AlertAsync("WinCare", ex.Message); }
+        finally
+        {
+            if (ReferenceEquals(_startupScanCancellation, cancellation)) _startupScanCancellation = null;
+            _startupScanBusy = false;
+            CancelStartupScanButton.IsEnabled = false;
+            StartupRefreshButton.IsEnabled = true;
+            StartupRows.IsHitTestVisible = true;
+            StartupRows.Opacity = 1;
+        }
     }
     private void RenderStartupRows()
     {
@@ -108,7 +132,7 @@ public sealed partial class MainWindow : Window
         }
         catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223) { }
         catch (Exception ex) { await AlertAsync("操作未完成", ex.Message); await ReloadStartupAsync(); }
-        finally { _busy = false; }
+        finally { _busy = false; RenderStartupRows(); }
     }
     private async Task ReloadCleanupAsync()
     {
@@ -173,6 +197,7 @@ public sealed partial class MainWindow : Window
     }
     private static Brush B(string key) => (Brush)Application.Current.Resources[key];
     private async void RefreshStartup_Click(object sender, RoutedEventArgs e) => await ReloadStartupAsync();
+    private void CancelStartupScan_Click(object sender, RoutedEventArgs e) => _startupScanCancellation?.Cancel();
     private async void RefreshCleanup_Click(object sender, RoutedEventArgs e) => await ReloadCleanupAsync();
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {

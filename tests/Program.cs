@@ -1,5 +1,17 @@
 using WinCare.Services;
 
+using var canceledStartupScan = new CancellationTokenSource();
+canceledStartupScan.Cancel();
+try
+{
+    StartupScanner.Scan(canceledStartupScan.Token);
+    throw new Exception("已取消的启动项扫描仍继续执行。");
+}
+catch (OperationCanceledException)
+{
+    Console.WriteLine("Startup scan cancellation verified.");
+}
+
 var fixture = Path.Combine(Path.GetTempPath(), "WinCare-archive-check-" + Guid.NewGuid().ToString("N"));
 var root = Path.Combine(fixture, "WeChat Files");
 var archive = Path.Combine(fixture, "Archive");
