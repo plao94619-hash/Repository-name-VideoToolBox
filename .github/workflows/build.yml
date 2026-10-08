@@ -29,7 +29,7 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Verify startup cancellation and WeChat archive
+      - name: Verify WeChat archive and restore
         run: dotnet run --project tests/WinCare.ServiceChecks.csproj -c Release
 
       - name: Publish self-contained folder
@@ -150,9 +150,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag="wincare-v${GITHUB_REF_NAME##*/}"
+          version="${GITHUB_REF_NAME##*/}"
+          tag="wincare-v${version}"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$tag" release/WinCare-Setup-x64.exe release/WinCare.exe release/WinCare-Portable-Folder-x64.zip --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$tag" release/WinCare-Setup-x64.exe release/WinCare.exe release/WinCare-Portable-Folder-x64.zip --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "WinCare $tag" --generate-notes
+            gh release create "$tag" release/WinCare-Setup-x64.exe release/WinCare.exe release/WinCare-Portable-Folder-x64.zip --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "WinCare $version" --generate-notes
           fi

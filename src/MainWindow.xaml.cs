@@ -91,25 +91,117 @@ public sealed partial class MainWindow : Window
         StartupRows.Children.Clear();
         foreach (var entry in _visible)
         {
-            var row = new Grid { Margin = new Thickness(14, 11, 14, 11), ColumnSpacing = 12 };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.3, GridUnitType.Star) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.8, GridUnitType.Star) });
+            var row = new Grid { ColumnSpacing = 12 };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(42) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            var name = new StackPanel();
-            name.Children.Add(new TextBlock { Text = entry.Name, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
-            name.Children.Add(new TextBlock { Text = $"{entry.Category} · {entry.StateText}{(entry.Hidden ? " · 隐藏项" : "")}{(entry.SystemItem ? " · 系统项" : "")}", Foreground = B("MutedTextBrush"), FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis });
-            var cat = new TextBlock { Text = entry.Category, VerticalAlignment = VerticalAlignment.Center, Foreground = B("MutedTextBrush"), TextTrimming = TextTrimming.CharacterEllipsis };
-            var details = new TextBlock { Text = entry.DisplayDetails, VerticalAlignment = VerticalAlignment.Center, Foreground = B("MutedTextBrush"), TextTrimming = TextTrimming.CharacterEllipsis };
-            var button = new Button { Content = entry.ActionText, IsEnabled = entry.CanToggle && !_busy, MinWidth = 96, VerticalAlignment = VerticalAlignment.Center, Tag = entry };
+
+            var glyph = entry.Kind switch
+            {
+                StartupEntryKind.RegistryValue => "R",
+                StartupEntryKind.StartupFile => "F",
+                StartupEntryKind.ScheduledTask => "T",
+                StartupEntryKind.Service => "S",
+                _ => "•"
+            };
+            var icon = new Border
+            {
+                Width = 40,
+                Height = 40,
+                CornerRadius = new CornerRadius(14),
+                Background = B("AccentSoftBrush"),
+                VerticalAlignment = VerticalAlignment.Center,
+                Child = new TextBlock
+                {
+                    Text = glyph,
+                    FontSize = 13,
+                    FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                    Foreground = B("AccentBrush"),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+
+            var titleLine = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+            titleLine.Children.Add(new TextBlock
+            {
+                Text = entry.Name,
+                FontSize = 14,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            titleLine.Children.Add(CreateChip(entry.Enabled ? "已启用" : "已关闭", entry.Enabled ? "SuccessSoftBrush" : "NeutralSoftBrush",
+                entry.Enabled ? "SuccessBrush" : "MutedTextBrush"));
+            if (!string.IsNullOrWhiteSpace(entry.MarkText))
+                titleLine.Children.Add(CreateChip(entry.MarkText, "NeutralSoftBrush", "MutedTextBrush"));
+
+            var details = new StackPanel { Spacing = 4 };
+            details.Children.Add(titleLine);
+            details.Children.Add(new TextBlock
+            {
+                Text = $"{entry.Category}  ·  {entry.DisplayDetails}",
+                Foreground = B("MutedTextBrush"),
+                FontSize = 11,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+
+            var button = new Button
+            {
+                Content = entry.ActionText,
+                IsEnabled = entry.CanToggle && !_busy,
+                MinWidth = 94,
+                VerticalAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(13, 8, 13, 8),
+                Tag = entry
+            };
+            if (entry.CanToggle && entry.Enabled)
+            {
+                button.Background = B("AccentBrush");
+                button.Foreground = B("AccentOnBrush");
+                button.BorderThickness = new Thickness(0);
+            }
             button.Click += async (_, _) => await ToggleEntryAsync((StartupEntry)button.Tag);
-            Grid.SetColumn(cat, 1); Grid.SetColumn(details, 2); Grid.SetColumn(button, 3);
-            row.Children.Add(name); row.Children.Add(cat); row.Children.Add(details); row.Children.Add(button);
-            var card = new Border { CornerRadius = new CornerRadius(17), Background = B("CardBrush"), BorderBrush = B("CardStrokeBrush"), BorderThickness = new Thickness(1), Padding = new Thickness(12), Child = row };
+            Grid.SetColumn(details, 1);
+            Grid.SetColumn(button, 2);
+            row.Children.Add(icon);
+            row.Children.Add(details);
+            row.Children.Add(button);
+            var card = new Border
+            {
+                CornerRadius = new CornerRadius(18),
+                Background = B("RowBrush"),
+                BorderBrush = B("CardStrokeBrush"),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(13, 11, 13, 11),
+                Child = row
+            };
             ToolTipService.SetToolTip(card, entry.Warning ?? entry.Details);
             StartupRows.Children.Add(card);
         }
+        StartupMetricTotal.Text = _entries.Count.ToString("N0");
+        StartupMetricEnabled.Text = _entries.Count(x => x.Enabled).ToString("N0");
+        StartupMetricHidden.Text = _entries.Count(x => x.Hidden).ToString("N0");
         StartupSummary.Text = $"显示 {_visible.Count} 项 · 共 {_entries.Count} 项 · 隐藏项 {_entries.Count(x => x.Hidden)} 项 · 可操作 {_visible.Count(x => x.CanToggle)} 项";
+    }
+
+    private static Border CreateChip(string text, string background, string foreground)
+    {
+        return new Border
+        {
+            CornerRadius = new CornerRadius(9),
+            Background = B(background),
+            Padding = new Thickness(8, 3, 8, 3),
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = new TextBlock
+            {
+                Text = text,
+                FontSize = 10,
+                Foreground = B(foreground),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxLines = 1
+            }
+        };
     }
     private async Task ToggleEntryAsync(StartupEntry entry)
     {
@@ -137,31 +229,102 @@ public sealed partial class MainWindow : Window
     private async Task ReloadCleanupAsync()
     {
         CleanupSummary.Text = "正在扫描临时文件…";
+        CleanupMetricCount.Text = "扫描中…";
+        CleanupMetricSize.Text = "扫描中…";
         try
         {
             var targets = await Task.Run(CleanupService.ScanCDrive);
             CleanupRows.Children.Clear();
             foreach (var target in targets)
             {
-                var grid = new Grid { Margin = new Thickness(15, 12, 15, 12), ColumnSpacing = 14 };
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.2, GridUnitType.Star) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(125) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(130) });
+                var grid = new Grid { ColumnSpacing = 12 };
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(42) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                grid.Children.Add(new TextBlock { Text = target.Name, VerticalAlignment = VerticalAlignment.Center });
-                var path = new TextBlock { Text = target.Path, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Foreground = B("MutedTextBrush") };
-                var files = new TextBlock { Text = $"{target.EligibleFiles:N0} 个文件", VerticalAlignment = VerticalAlignment.Center };
-                var size = new TextBlock { Text = StartupScanner.FormatSize(target.EstimatedBytes), VerticalAlignment = VerticalAlignment.Center };
-                var button = new Button { Content = target.EligibleFiles > 0 ? "清理 7 天前文件" : "暂无可清理项", IsEnabled = target.EligibleFiles > 0, Tag = target, VerticalAlignment = VerticalAlignment.Center };
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                var icon = new Border
+                {
+                    Width = 40,
+                    Height = 40,
+                    CornerRadius = new CornerRadius(14),
+                    Background = B("AccentSoftBrush"),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Child = new TextBlock
+                    {
+                        Text = "C",
+                        FontSize = 13,
+                        FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                        Foreground = B("AccentBrush"),
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center
+                    }
+                };
+                var info = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
+                info.Children.Add(new TextBlock { Text = target.Name, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 14 });
+                info.Children.Add(new TextBlock { Text = target.Path, TextTrimming = TextTrimming.CharacterEllipsis, Foreground = B("MutedTextBrush"), FontSize = 11 });
+                var count = new TextBlock
+                {
+                    Text = $"{target.EligibleFiles:N0} 个文件",
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = B("MutedTextBrush"),
+                    FontSize = 12
+                };
+                var size = new TextBlock
+                {
+                    Text = StartupScanner.FormatSize(target.EstimatedBytes),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                    Foreground = B("AccentBrush"),
+                    Margin = new Thickness(8, 0, 8, 0)
+                };
+                var button = new Button
+                {
+                    Content = target.EligibleFiles > 0 ? "清理 7 天前文件" : "暂无可清理项",
+                    IsEnabled = target.EligibleFiles > 0,
+                    Tag = target,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Padding = new Thickness(13, 8, 13, 8)
+                };
+                if (target.EligibleFiles > 0)
+                {
+                    button.Background = B("AccentBrush");
+                    button.Foreground = B("AccentOnBrush");
+                    button.BorderThickness = new Thickness(0);
+                }
                 button.Click += async (_, _) => await CleanTargetAsync((CleanupTarget)button.Tag);
-                Grid.SetColumn(path, 1); Grid.SetColumn(files, 2); Grid.SetColumn(size, 3); Grid.SetColumn(button, 4);
-                grid.Children.Add(path); grid.Children.Add(files); grid.Children.Add(size); grid.Children.Add(button);
-                CleanupRows.Children.Add(new Border { CornerRadius = new CornerRadius(17), Background = B("CardBrush"), BorderBrush = B("CardStrokeBrush"), BorderThickness = new Thickness(1), Padding = new Thickness(8), Child = grid });
+                Grid.SetColumn(info, 1);
+                Grid.SetColumn(count, 2);
+                Grid.SetColumn(size, 3);
+                Grid.SetColumn(button, 4);
+                grid.Children.Add(icon);
+                grid.Children.Add(info);
+                grid.Children.Add(count);
+                grid.Children.Add(size);
+                grid.Children.Add(button);
+                CleanupRows.Children.Add(new Border
+                {
+                    CornerRadius = new CornerRadius(18),
+                    Background = B("RowBrush"),
+                    BorderBrush = B("CardStrokeBrush"),
+                    BorderThickness = new Thickness(1),
+                    Padding = new Thickness(13, 11, 13, 11),
+                    Child = grid
+                });
             }
+            var totalFiles = targets.Sum(x => x.EligibleFiles);
+            var totalBytes = targets.Sum(x => x.EstimatedBytes);
+            CleanupMetricCount.Text = $"{totalFiles:N0}";
+            CleanupMetricSize.Text = StartupScanner.FormatSize(totalBytes);
             CleanupSummary.Text = $"共发现 {targets.Sum(x => x.EligibleFiles):N0} 个符合条件的文件，预计释放 {StartupScanner.FormatSize(targets.Sum(x => x.EstimatedBytes))}。";
         }
-        catch (Exception ex) { CleanupSummary.Text = "扫描失败"; await AlertAsync("WinCare", ex.Message); }
+        catch (Exception ex)
+        {
+            CleanupMetricCount.Text = "扫描失败";
+            CleanupMetricSize.Text = "—";
+            CleanupSummary.Text = "扫描失败";
+            await AlertAsync("WinCare", ex.Message);
+        }
     }
     private async Task CleanTargetAsync(CleanupTarget target)
     {
@@ -263,7 +426,7 @@ public sealed partial class MainWindow : Window
             metadata.Children.Add(new TextBlock { Text = media.CreatedUtc.ToLocalTime().ToString("d"), FontSize = 12, Foreground = B("MutedTextBrush"), HorizontalAlignment = HorizontalAlignment.Right });
             Grid.SetColumn(details, 1); Grid.SetColumn(metadata, 2);
             grid.Children.Add(check); grid.Children.Add(details); grid.Children.Add(metadata);
-            var card = new Border { CornerRadius = new CornerRadius(14), Background = B("CardBrush"), BorderBrush = B("CardStrokeBrush"), BorderThickness = new Thickness(1), Padding = new Thickness(6), Child = grid };
+            var card = new Border { CornerRadius = new CornerRadius(16), Background = B("RowBrush"), BorderBrush = B("CardStrokeBrush"), BorderThickness = new Thickness(1), Padding = new Thickness(9, 5, 9, 5), Child = grid };
             WechatResults.Items.Add(new ListViewItem { Content = card, Tag = media });
         }
         UpdateWechatSelectionSummary();
